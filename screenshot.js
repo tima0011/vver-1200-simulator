@@ -14,7 +14,7 @@ const path = require('path');
 
   const page = await context.newPage();
 
-  const filePath = path.resolve(__dirname, 'атомнаяинженирия.html');
+  const filePath = path.resolve(__dirname, 'index.html');
   const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
   console.log(`Opening page: ${fileUrl}`);
 

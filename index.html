@@ -7,33 +7,33 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" async onerror="window.__threeLoadError = true;"></script>
 <style>
   :root {
-    /* Строгая матовая инженерная палитра (IAEA SMR Simulator Style) */
+    /* Строгая матовая инженерная палитра SCADA */
     --bg-deep: #0b0f17;
-    --bg-panel: #0e1420;
-    --bg-card: #121824;
-    --bg-card-hover: #172030;
+    --bg-panel: #111722;
+    --bg-card: #161f2e;
+    --bg-card-hover: #1c273a;
     --border-dim: #1e293b;
     --border-bright: #334155;
 
     /* Функциональные технологические цвета */
     --cold-water: #38bdf8;
     --cyan: #38bdf8;
-    --cyan-dim: rgba(56, 189, 248, 0.14);
+    --cyan-dim: rgba(56, 189, 248, 0.12);
     --blue-cherenkov: #38bdf8;
 
     --hot-coolant: #f97316;
-    --hot-dim: rgba(249, 115, 22, 0.15);
+    --hot-dim: rgba(249, 115, 22, 0.12);
 
     --steam-silver: #cbd5e1;
-    --steam-dim: rgba(203, 213, 225, 0.14);
+    --steam-dim: rgba(203, 213, 225, 0.12);
 
     /* Инженерные статусы */
     --green: #10b981;
-    --green-dim: rgba(16, 185, 129, 0.14);
+    --green-dim: rgba(16, 185, 129, 0.12);
     --amber: #f59e0b;
-    --amber-dim: rgba(245, 158, 11, 0.15);
+    --amber-dim: rgba(245, 158, 11, 0.12);
     --red: #ef4444;
-    --red-dim: rgba(239, 68, 68, 0.18);
+    --red-dim: rgba(239, 68, 68, 0.15);
     --purple: #a78bfa;
 
     --text-main: #f1f5f9;
@@ -161,7 +161,6 @@
     background: var(--bg-card);
     color: var(--text-main);
     border-color: var(--cold-water);
-    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.2);
   }
 
   /* ПРАВЫЙ БЛОК ШАПКИ (РЕЖИМ ОБУЧЕНИЯ, СЦЕНАРИИ, ВРЕМЯ, ЗВУК) */
@@ -416,6 +415,55 @@
     border-color: rgba(56, 189, 248, 0.35);
   }
 
+  /* ВЕРХНЯЯ ЛЕНТА ТЕХНОЛОГИЧЕСКИХ ЭТАПОВ [01]–[06] */
+  .stages-ribbon {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0 14px;
+    position: absolute;
+    top: 48px;
+    left: 0;
+    right: 0;
+    z-index: 15;
+    pointer-events: none;
+  }
+
+  .stage-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    pointer-events: auto;
+  }
+
+  .stage-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-card-hover);
+  }
+
+  .stage-code {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: clamp(9px, 0.75vw, 11px);
+    flex-shrink: 0;
+  }
+
+  .stage-name {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: clamp(9px, 0.75vw, 11px);
+    color: var(--steam-silver);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* КОНТЕЙНЕР THREE.JS 3D TWIN */
   .three-container {
     position: absolute;
@@ -501,12 +549,11 @@
     position: absolute;
     pointer-events: none;
     background: rgba(14, 20, 32, 0.96);
-    border: 1px solid var(--border-bright);
+    border: 1px solid var(--border-dim);
     border-left: 3px solid var(--cold-water);
     border-radius: 6px;
     padding: 9px 11px;
     max-width: 350px;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
     z-index: 50;
     display: none;
   }
@@ -1156,6 +1203,34 @@
             <button class="btn-mini" id="btnZoomIn" style="border:1px solid var(--border-dim);border-radius:4px;">+</button>
             <button class="btn-mini" id="btnZoomOut" style="border:1px solid var(--border-dim);border-radius:4px;">−</button>
             <button class="btn-mini" id="btnResetView" style="border:1px solid var(--border-dim);border-radius:4px;">Сброс вида</button>
+          </div>
+        </div>
+
+        <!-- Верхняя лента технологических этапов [01]–[06] -->
+        <div class="stages-ribbon" id="stagesRibbon">
+          <div class="stage-card">
+            <span class="stage-code" style="color:var(--hot-coolant);">[01]</span>
+            <span class="stage-name" title="РЕАКТОР ВВЭР-1200 И ЗАЩИТА">РЕАКТОР ВВЭР-1200 И ЗАЩИТА</span>
+          </div>
+          <div class="stage-card">
+            <span class="stage-code" style="color:var(--amber);">[02]</span>
+            <span class="stage-name" title="КОМПЕНСАТОР ДАВЛ. (КД)">КОМПЕНСАТОР ДАВЛ. (КД)</span>
+          </div>
+          <div class="stage-card">
+            <span class="stage-code" style="color:var(--cyan);">[03]</span>
+            <span class="stage-name" title="ПАРОГЕНЕРАТОРЫ ПГВ И ГЦНА">ПАРОГЕНЕРАТОРЫ ПГВ И ГЦНА</span>
+          </div>
+          <div class="stage-card">
+            <span class="stage-code" style="color:var(--steam-silver);">[04]</span>
+            <span class="stage-name" title="ГПК И КЛАПАНЫ БРУ-К/А">ГПК И КЛАПАНЫ БРУ-К/А</span>
+          </div>
+          <div class="stage-card">
+            <span class="stage-code" style="color:var(--green);">[05]</span>
+            <span class="stage-name" title="ТУРБИНА И ГЕНЕРАТОР">ТУРБИНА И ГЕНЕРАТОР</span>
+          </div>
+          <div class="stage-card">
+            <span class="stage-code" style="color:var(--cyan);">[06]</span>
+            <span class="stage-name" title="КОНДЕНСАТОР И НАСОСЫ ПЭН">КОНДЕНСАТОР И НАСОСЫ ПЭН</span>
           </div>
         </div>
 
@@ -2384,6 +2459,8 @@ function setSystemsSubMode(subMode) {
   document.getElementById('btnSubPanorama').classList.toggle('active', subMode === 'panorama');
   document.getElementById('btnSubLoops').classList.toggle('active', subMode === 'loops');
   document.getElementById('btnSubCross').classList.toggle('active', subMode === 'cross');
+  const ribbon = document.getElementById('stagesRibbon');
+  if (ribbon) ribbon.style.display = (subMode === 'panorama' && sim.viewMode === 'systems') ? 'grid' : 'none';
   sound.click(610);
 }
 document.getElementById('btnSubPanorama').addEventListener('click', () => setSystemsSubMode('panorama'));
@@ -2411,6 +2488,8 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     viewportScreen.style.display = isControls ? 'none' : 'flex';
 
     document.getElementById('systemsSubSwitch').style.display = isSystems ? 'flex' : 'none';
+    const ribbon = document.getElementById('stagesRibbon');
+    if (ribbon) ribbon.style.display = (isSystems && sim.systemsSubMode === 'panorama') ? 'grid' : 'none';
     document.getElementById('canvasOverlayTop').style.display = is3D ? 'none' : 'flex';
     document.getElementById('threeContainer').style.display = is3D ? 'block' : 'none';
     document.getElementById('threeToolbar').style.display = is3D ? 'flex' : 'none';
@@ -2597,32 +2676,6 @@ function renderPanoramicSystemsView() {
 
   ctx.save();
 
-  // Верхняя навигационная шкала этапов технологической цепочки (7 ступеней слева направо)
-  const stages = [
-    { x: 25, w: 220, num: '01', name: 'РЕАКТОР ВВЭР-1200 И ЗАЩИТА', col: '#f97316' },
-    { x: 255, w: 155, num: '02', name: 'КОМПЕНСАТОР ДАВЛ. (КД)', col: '#f59e0b' },
-    { x: 420, w: 225, num: '03', name: 'ПАРОГЕНЕРАТОРЫ ПГВ И ГЦНА', col: '#38bdf8' },
-    { x: 655, w: 165, num: '04', name: 'ГПК И КЛАПАНЫ БРУ-К/А', col: '#cbd5e1' },
-    { x: 830, w: 250, num: '05', name: 'ТУРБИНА И ГЕНЕРАТОР', col: '#10b981' },
-    { x: 1090, w: 245, num: '06–07', name: 'КОНДЕНСАТОР И НАСОСЫ ПЭН', col: '#38bdf8' }
-  ];
-
-  stages.forEach(st => {
-    roundRect(ctx, st.x, 54, st.w, 26, 4);
-    ctx.fillStyle = '#121824';
-    ctx.fill();
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = st.col;
-    ctx.font = 'bold 10px monospace';
-    ctx.fillText(`[${st.num}]`, st.x + 8, 71);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 9.5px "Segoe UI", sans-serif';
-    ctx.fillText(st.name, st.x + 38, 71);
-  });
-
   // Зонирование 1-го контура (Реакторное отделение) и 2-го контура (Машинный зал)
   roundRect(ctx, 25, 88, 620, 568, 8);
   ctx.fillStyle = 'rgba(18, 24, 36, 0.52)';
@@ -2723,9 +2776,9 @@ function renderPanoramicSystemsView() {
     drawParticlesOnPath(exhaustSteamPath, 5, (sim.turbineValvePct / 100) * 3.2, '#cbd5e1', 3.0);
   }
 
-  // 6) Конденсатно-питательный тракт (#38bdf8): из Конденсатора (x=1210,y=380) -> вниз к насосам ПЭН (x=1210,y=525) -> возврат влево в ПГВ (x=575,y=585 -> 575,y=390)
-  const condensateToPenPath = [[1210, 380], [1210, 500]];
-  const penToPgvPath = [[1165, 525], [1165, 585], [585, 585], [585, 390]];
+  // 6) Конденсатно-питательный тракт (#38bdf8): из Конденсатора (x=1190,y=380) -> вниз к насосам ПЭН (x=1190,y=488) -> возврат влево в ПГВ (x=585,y=585 -> 585,y=390)
+  const condensateToPenPath = [[1190, 380], [1190, 462]];
+  const penToPgvPath = [[1190, 514], [1190, 585], [585, 585], [585, 390]];
   ctx.strokeStyle = '#38bdf8';
   ctx.lineWidth = 7;
   ctx.beginPath();
@@ -2789,17 +2842,43 @@ function renderPanoramicSystemsView() {
     ctx.stroke();
   }
 
+  // Матовая SCADA-карточка ключевых параметров реактора ВВЭР-1200
+  const rxCardX = rxX + 5;
+  const rxCardW = rxW - 10;
+  roundRect(ctx, rxCardX, rxY + 10, rxCardW, 96, 5);
+  ctx.fillStyle = 'rgba(11, 15, 23, 0.94)';
+  ctx.fill();
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  const rxMidX = rxX + rxW / 2;
+
   ctx.fillStyle = '#f1f5f9';
-  ctx.font = 'bold 11px "Segoe UI", sans-serif';
-  ctx.fillText('РЕАКТОР ВВЭР-1200', rxX + 5, rxY + 36);
+  ctx.font = 'bold 9.5px "Segoe UI", sans-serif';
+  ctx.fillText('РЕАКТОР ВВЭР-1200', rxMidX, rxY + 25);
+
   ctx.fillStyle = '#f97316';
   ctx.font = 'bold 11px monospace';
-  ctx.fillText(`${sim.thermalPowerMW.toFixed(0)} МВт`, rxX + 24, rxY + 54);
+  ctx.fillText(`${sim.thermalPowerMW.toFixed(0)} МВт`, rxMidX, rxY + 43);
+
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '9.5px monospace';
+  ctx.fillText(`Tвых: ${sim.coreOutletTempC.toFixed(1)} °C`, rxMidX, rxY + 61);
+
   ctx.fillStyle = '#38bdf8';
   ctx.font = '9.5px monospace';
-  ctx.fillText(`Гр.10: ${sim.group10Pos.toFixed(0)}%`, rxX + 22, rxY + 70);
+  ctx.fillText(`P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа`, rxMidX, rxY + 79);
+
+  ctx.fillStyle = '#10b981';
+  ctx.font = '9px monospace';
+  ctx.fillText(`Гр.10: ${sim.group10Pos.toFixed(0)}%`, rxMidX, rxY + 95);
+
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText(`Tвых: ${sim.coreOutletTempC.toFixed(1)}°C`, rxX + 14, coreY + coreH + 18);
+  ctx.font = '9.5px monospace';
+  ctx.fillText(`Tвх: ${sim.coreInletTempC.toFixed(1)}°C`, rxMidX, coreY + coreH + 18);
+  ctx.textAlign = 'left';
 
   activeHotspots.push({
     x: rxX, y: rxY - 48, w: rxW, h: rxH + 48,
@@ -3289,7 +3368,7 @@ function renderPanoramicSystemsView() {
   });
 
   // Питательные электронасосы (ПЭН)
-  const penX = 1190, penY = 505;
+  const penX = 1190, penY = 488;
   ctx.save();
   ctx.beginPath();
   ctx.arc(penX, penY, 26, 0, Math.PI * 2);
@@ -3314,7 +3393,9 @@ function renderPanoramicSystemsView() {
 
   ctx.fillStyle = '#f1f5f9';
   ctx.font = 'bold 10px monospace';
-  ctx.fillText(`НАСОСЫ ПЭН (${sim.feedwaterFlowPct.toFixed(0)}%)`, penX - 52, penY + 42);
+  ctx.textAlign = 'center';
+  ctx.fillText(`НАСОСЫ ПЭН (${sim.feedwaterFlowPct.toFixed(0)}%)`, penX, penY + 38);
+  ctx.textAlign = 'left';
 
   activeHotspots.push({
     x: penX - 28, y: penY - 28, w: 56, h: 56,
@@ -4567,7 +4648,7 @@ const threeCtrl = {
     this.scene.add(dirLight2);
 
     // Точечный источник свечения Вавилова-Черенкова внутри активной зоны
-    this.coreGlowLight = new THREE.PointLight(0x00e5ff, 2.2, 22);
+    this.coreGlowLight = new THREE.PointLight(0x38bdf8, 2.2, 22);
     this.coreGlowLight.position.set(0, -0.5, 0);
     this.scene.add(this.coreGlowLight);
 
@@ -4688,8 +4769,8 @@ const threeCtrl = {
 
     // Активная зона внутри корпуса (163 ТВС-2М — гексагональная сборка с излучением Черенкова)
     const coreMat = new THREE.MeshStandardMaterial({
-      color: 0x00e5ff,
-      emissive: 0x00a8ff,
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
       emissiveIntensity: 1.2,
       roughness: 0.25,
       metalness: 0.3,
@@ -4711,7 +4792,7 @@ const threeCtrl = {
     // Подвижные 3D-кластеры ОР СУЗ (Рабочая группа №10 — голубые, Группы №1-9 — золотистые)
     this.group10ClusterMesh = new THREE.Group();
     this.groups1to9ClusterMesh = new THREE.Group();
-    const rodG10Mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x0088cc, emissiveIntensity: 0.8 });
+    const rodG10Mat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0369a1, emissiveIntensity: 0.8 });
     const rodG19Mat = new THREE.MeshStandardMaterial({ color: 0xffab00, emissive: 0xcc7700, emissiveIntensity: 0.6 });
 
     driveCoords.forEach(([dx, dz], idx) => {
@@ -4858,8 +4939,8 @@ const threeCtrl = {
       const statusRingGeo = new THREE.TorusGeometry(1.38, 0.12, 12, 24);
       statusRingGeo.rotateX(Math.PI / 2);
       const statusRingMat = new THREE.MeshStandardMaterial({
-        color: 0x00e676,
-        emissive: 0x00e676,
+        color: 0x10b981,
+        emissive: 0x10b981,
         emissiveIntensity: 0.9
       });
       const statusRingMesh = new THREE.Mesh(statusRingGeo, statusRingMat);
@@ -4870,7 +4951,7 @@ const threeCtrl = {
       const rotorGroup = new THREE.Group();
       rotorGroup.position.y = 2.25;
       const bladeGeo = new THREE.BoxGeometry(2.1, 0.22, 0.32);
-      const bladeMat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x0099cc, emissiveIntensity: 0.6 });
+      const bladeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.6 });
       const b1 = new THREE.Mesh(bladeGeo, bladeMat);
       const b2 = new THREE.Mesh(bladeGeo, bladeMat);
       b2.rotation.y = Math.PI / 2;
@@ -4918,7 +4999,7 @@ const threeCtrl = {
     // Водяной столб внутри КД (динамически меняет высоту от sim.pressurizerLevelM)
     const kdWaterGeo = new THREE.CylinderGeometry(1.22, 1.22, 6.8, 20);
     const kdWaterMat = new THREE.MeshStandardMaterial({
-      color: 0x00e5ff,
+      color: 0x38bdf8,
       emissive: 0x0284c7,
       emissiveIntensity: 0.55,
       transparent: true,
@@ -5020,7 +5101,7 @@ const threeCtrl = {
       const spGeo = new THREE.BoxGeometry(2.6, 3.4, 1.2);
       const spMat = new THREE.MeshStandardMaterial({
         color: 0x3a5578,
-        emissive: 0x00e5ff,
+        emissive: 0x38bdf8,
         emissiveIntensity: 0.1
       });
       const spMesh = new THREE.Mesh(spGeo, spMat);
@@ -5235,9 +5316,9 @@ const threeCtrl = {
 
     // 4. Обновление УЛР («Ловушки расплава»)
     if (sim.ulrCoolingActive) {
-      this.ulrCoreMesh.material.emissive.setHex(0x00a8ff);
+      this.ulrCoreMesh.material.emissive.setHex(0x0284c7);
       this.ulrCoreMesh.material.emissiveIntensity = 0.85 + 0.25 * Math.sin(sim.time * 5);
-      this.ulrGlowLight.color.setHex(0x00e5ff);
+      this.ulrGlowLight.color.setHex(0x38bdf8);
       this.ulrGlowLight.intensity = 1.8;
     } else {
       this.ulrCoreMesh.material.emissive.setHex(0x7c2d12);
@@ -5261,8 +5342,8 @@ const threeCtrl = {
 
       // Вращение ротора ГЦНА-1391 пропорционально оборотам RPM
       obj.rotorGroup.rotation.y += (lp.rpm / 1000.0) * 14.0 * dtReal;
-      obj.statusRingMat.color.setHex(lp.pumpOn ? 0x00e676 : 0xffab00);
-      obj.statusRingMat.emissive.setHex(lp.pumpOn ? 0x00e676 : 0xffab00);
+      obj.statusRingMat.color.setHex(lp.pumpOn ? 0x10b981 : 0xffab00);
+      obj.statusRingMat.emissive.setHex(lp.pumpOn ? 0x10b981 : 0xffab00);
     }
 
     // 6. Движение 3D-частиц потока теплоносителя по всем 4 петлям ГЦК
@@ -5295,12 +5376,12 @@ const threeCtrl = {
 
     // 8. Пассивные системы безопасности (САОЗ и СПОТ)
     this.saozPipes.forEach(mat => {
-      mat.color.setHex(sim.saozActive ? 0x00e676 : 0x1e3a5f);
-      mat.emissive.setHex(sim.saozActive ? 0x00e676 : 0x000000);
+      mat.color.setHex(sim.saozActive ? 0x10b981 : 0x1e3a5f);
+      mat.emissive.setHex(sim.saozActive ? 0x10b981 : 0x000000);
       mat.emissiveIntensity = sim.saozActive ? 0.8 : 0.0;
     });
     this.spotExchangers.forEach(mat => {
-      mat.color.setHex(sim.spotActive ? 0x00e5ff : 0x3a5578);
+      mat.color.setHex(sim.spotActive ? 0x38bdf8 : 0x3a5578);
       mat.emissiveIntensity = sim.spotActive ? 0.85 : 0.08;
     });
 

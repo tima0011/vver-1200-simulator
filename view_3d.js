@@ -305,6 +305,7 @@ const threeCtrl = {
   cherenkovPointLight: null,
   coreWarmLight: null,
   controlRodsGroup: null,
+  coreGroupRef: null,
   cherenkovVolumeMesh: null,
   tvsCoords: [],
 
@@ -741,20 +742,35 @@ const threeCtrl = {
       : THREE.MeshStandardMaterial;
 
     this.MATS = {
-      // Корпус реактора: конструкционная легированная сталь (#2b3038, roughness 0.42, metalness 0.88)
+      // Корпус реактора (RPV): цельный стальной сосуд (сталь 08Х18Н10Т, #334155, roughness 0.4, metalness 0.85)
+      // В режиме X-Ray внешней обечайке выставляется opacity: 0.25 и transparent: true
       rpvCarbonSteel: this.registerXrayMat(new THREE.MeshStandardMaterial({
-        color: 0x2b3038,
-        roughness: 0.42,
-        metalness: 0.88,
+        color: 0x334155,
+        roughness: 0.40,
+        metalness: 0.85,
         roughnessMap: brushedMap,
         side: THREE.DoubleSide
-      }), 1.0, 0.14),
+      }), 1.0, 0.25),
 
       rpvCarbonSteelSolid: new THREE.MeshStandardMaterial({
-        color: 0x2b3038,
-        roughness: 0.42,
-        metalness: 0.88,
+        color: 0x334155,
+        roughness: 0.40,
+        metalness: 0.85,
         roughnessMap: brushedMap
+      }),
+
+      // Монолитный тяжелый бетон биологической защиты и фундаментов (#1e2530, roughness 0.95, metalness 0.05)
+      bioShieldConcrete: this.registerXrayMat(new THREE.MeshStandardMaterial({
+        color: 0x1e2530,
+        roughness: 0.95,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      }), 1.0, 0.22),
+
+      concreteSolid: new THREE.MeshStandardMaterial({
+        color: 0x1e2530,
+        roughness: 0.95,
+        metalness: 0.05
       }),
 
       // Патрубки и фланцы: обработанная матовая кованая сталь (#4a5568, roughness 0.35, metalness 0.92)
@@ -764,7 +780,7 @@ const threeCtrl = {
         metalness: 0.92,
         roughnessMap: brushedMap,
         side: THREE.DoubleSide
-      }), 1.0, 0.22),
+      }), 1.0, 0.25),
 
       forgedSteelSolid: new THREE.MeshStandardMaterial({
         color: 0x4a5568,
@@ -780,7 +796,7 @@ const threeCtrl = {
         metalness: 0.35,
         roughnessMap: brushedMap,
         side: THREE.DoubleSide
-      }), 1.0, 0.16),
+      }), 1.0, 0.22),
 
       hotPipeInsulation: this.registerXrayMat(new THREE.MeshStandardMaterial({
         color: 0x94a3b8,
@@ -788,9 +804,9 @@ const threeCtrl = {
         metalness: 0.35,
         roughnessMap: brushedMap,
         emissive: new THREE.Color(0xff4500),
-        emissiveIntensity: 0.05,
+        emissiveIntensity: 0.04,
         side: THREE.DoubleSide
-      }), 1.0, 0.18),
+      }), 1.0, 0.22),
 
       coldPipeInsulation: this.registerXrayMat(new THREE.MeshStandardMaterial({
         color: 0x94a3b8,
@@ -798,9 +814,9 @@ const threeCtrl = {
         metalness: 0.35,
         roughnessMap: brushedMap,
         emissive: new THREE.Color(0x00a8ff),
-        emissiveIntensity: 0.04,
+        emissiveIntensity: 0.03,
         side: THREE.DoubleSide
-      }), 1.0, 0.18),
+      }), 1.0, 0.22),
 
       // Внутренняя антикоррозионная наплавка и ВКУ: аустенитная нержавеющая сталь (#cbd5e1, roughness 0.25, metalness 0.95)
       austeniticStainless: this.registerXrayMat(new THREE.MeshStandardMaterial({
@@ -809,7 +825,7 @@ const threeCtrl = {
         metalness: 0.95,
         roughnessMap: brushedMap,
         side: THREE.DoubleSide
-      }), 1.0, 0.22),
+      }), 1.0, 0.25),
 
       austeniticSolid: new THREE.MeshStandardMaterial({
         color: 0xcbd5e1,
@@ -839,22 +855,22 @@ const threeCtrl = {
       }),
 
       fuelAssemblyZircaloy: new THREE.MeshStandardMaterial({
-        color: 0xd97706,
-        roughness: 0.28,
-        metalness: 0.82,
-        emissive: new THREE.Color(0xff5500),
-        emissiveIntensity: 0.36
+        color: 0x94a3b8,
+        roughness: 0.30,
+        metalness: 0.88,
+        emissive: new THREE.Color(0x00e5ff),
+        emissiveIntensity: 0.22
       }),
 
-      // Мягкое оптическое Черенковское свечение (#00f0ff, MeshPhysicalMaterial с прозрачностью и динамической эмиссией)
+      // Черенковский аквамарин (#00e5ff), видимый ТОЛЬКО при включении режима «Разрез корпуса (X-Ray)»
       cherenkovPhysical: new CherenkovMatClass({
-        color: 0x00f0ff,
-        emissive: new THREE.Color(0x00f0ff),
-        emissiveIntensity: 1.25,
+        color: 0x00e5ff,
+        emissive: new THREE.Color(0x00e5ff),
+        emissiveIntensity: 1.35,
         roughness: 0.12,
         metalness: 0.05,
         transparent: true,
-        opacity: 0.34,
+        opacity: 0.0,
         transmission: 0.65,
         ior: 1.333,
         depthWrite: false,
@@ -866,21 +882,19 @@ const threeCtrl = {
         roughness: 0.25,
         metalness: 0.95,
         emissive: new THREE.Color(0xff5500),
-        emissiveIntensity: 0.28
+        emissiveIntensity: 0.22
       }),
 
       coriumSteel: new THREE.MeshStandardMaterial({
-        color: 0x3b4252,
+        color: 0x334155,
         roughness: 0.44,
         metalness: 0.84
       }),
 
       coriumSacrificial: new THREE.MeshStandardMaterial({
-        color: 0xb45309,
-        roughness: 0.38,
-        metalness: 0.55,
-        emissive: new THREE.Color(0xff5500),
-        emissiveIntensity: 0.32
+        color: 0x475569,
+        roughness: 0.52,
+        metalness: 0.60
       }),
 
       containmentGlass: new CherenkovMatClass({
@@ -919,41 +933,90 @@ const threeCtrl = {
     fillLight.position.set(-26, 16, -20);
     this.scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0x00f0ff, 0.95);
+    const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.95);
     rimLight.position.set(0, -20, -24);
     this.scene.add(rimLight);
 
-    this.cherenkovPointLight = new THREE.PointLight(0x00f0ff, 3.6, 14, 1.5);
-    this.cherenkovPointLight.position.set(0, -1.6, 0);
+    this.cherenkovPointLight = new THREE.PointLight(0x00e5ff, 0.0, 12, 1.5);
+    this.cherenkovPointLight.position.set(0, -1.8, 0);
     this.scene.add(this.cherenkovPointLight);
 
-    this.coreWarmLight = new THREE.PointLight(0xff5500, 1.8, 11, 1.5);
+    this.coreWarmLight = new THREE.PointLight(0x00e5ff, 0.0, 9, 1.5);
     this.coreWarmLight.position.set(0, -2.5, 0);
     this.scene.add(this.coreWarmLight);
   },
 
   buildIndustrialFloor() {
     const floorGroup = new THREE.Group();
-    floorGroup.name = 'IndustrialFloor';
+    floorGroup.name = 'IndustrialFloorAndBioShield';
+
+    const baseFloorY = -11.4;
+
+    // 1. Монолитная нижняя железобетонная плита пола гермооболочки (радиус 17.8 м на отметке основания)
+    const containmentSlabGeo = new THREE.CylinderGeometry(17.8, 18.2, 0.9, 72);
+    const containmentSlab = new THREE.Mesh(containmentSlabGeo, this.MATS.concreteSolid);
+    containmentSlab.position.y = baseFloorY - 0.45;
+    containmentSlab.receiveShadow = true;
+    containmentSlab.castShadow = true;
+    floorGroup.add(containmentSlab);
+
+    // Опорный кольцевой цоколь по периметру пола гермооболочки
+    const perimeterCurbGeo = new THREE.RingGeometry(16.8, 17.8, 72);
+    perimeterCurbGeo.rotateX(-Math.PI / 2);
+    const perimeterCurb = new THREE.Mesh(perimeterCurbGeo, this.MATS.concreteSolid);
+    perimeterCurb.position.y = baseFloorY + 0.02;
+    perimeterCurb.receiveShadow = true;
+    floorGroup.add(perimeterCurb);
+
+    // 2. Монолитная цилиндрическая бетонная шахта реактора (биологическая защита вокруг корпуса)
+    // Внутренний диаметр 5.8 м (r = 2.9 м), толщина бетонных стен 1.75 м (наружный r = 4.65 м)
+    const shaftInnerR = 2.90;
+    const shaftOuterR = 4.65;
+    const shaftBottomY = baseFloorY;
+    const shaftTopY = 0.85; // До опорного бурта корпуса реактора
+
+    const shaftProfilePts = [
+      new THREE.Vector2(shaftInnerR, shaftBottomY),
+      new THREE.Vector2(shaftOuterR, shaftBottomY),
+      new THREE.Vector2(shaftOuterR, shaftTopY),
+      new THREE.Vector2(2.48, shaftTopY), // Внутренняя опорная консоль под бурт корпуса реактора
+      new THREE.Vector2(2.48, 0.45),
+      new THREE.Vector2(shaftInnerR, 0.15),
+      new THREE.Vector2(shaftInnerR, shaftBottomY)
+    ];
+    const bioShieldShaftGeo = new THREE.LatheGeometry(shaftProfilePts, 64);
+    bioShieldShaftGeo.computeVertexNormals();
+    const bioShieldShaft = new THREE.Mesh(bioShieldShaftGeo, this.MATS.bioShieldConcrete);
+    bioShieldShaft.receiveShadow = true;
+    bioShieldShaft.castShadow = true;
+    floorGroup.add(bioShieldShaft);
+
+    // Верхнее стальное опорное кольцо фермы в бетонной шахте под корпус реактора
+    const supportBearingRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.65, 2.85, 0.28, 64),
+      this.MATS.forgedSteelSolid
+    );
+    supportBearingRing.position.y = 0.72;
+    floorGroup.add(supportBearingRing);
 
     const gridHelper = new THREE.GridHelper(64, 64, 0x1e3a5f, 0x112238);
-    gridHelper.position.y = -11.4;
+    gridHelper.position.y = baseFloorY + 0.01;
     gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.45;
+    gridHelper.material.opacity = 0.35;
     floorGroup.add(gridHelper);
 
-    const ringRadii = [3.6, 9.5, 16.0, 22.0];
+    const ringRadii = [4.7, 9.5, 14.5, 17.7];
     ringRadii.forEach((r, idx) => {
       const ringGeo = new THREE.RingGeometry(r - 0.05, r + 0.05, 96);
       ringGeo.rotateX(-Math.PI / 2);
       const ringMat = new THREE.MeshBasicMaterial({
-        color: idx === 0 ? 0xff5500 : 0x00f0ff,
+        color: idx === 0 ? 0x00e5ff : 0x38bdf8,
         transparent: true,
-        opacity: idx === 0 ? 0.35 : 0.18,
+        opacity: idx === 0 ? 0.28 : 0.16,
         side: THREE.DoubleSide
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.y = -11.38;
+      ring.position.y = baseFloorY + 0.02;
       floorGroup.add(ring);
     });
 
@@ -965,7 +1028,7 @@ const threeCtrl = {
       metalness: 0.08
     });
     const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
-    shadowPlane.position.y = -11.42;
+    shadowPlane.position.y = baseFloorY - 0.92;
     shadowPlane.receiveShadow = true;
     floorGroup.add(shadowPlane);
 
@@ -1127,13 +1190,13 @@ const threeCtrl = {
     const outerRadiusCore = 2.313; // Ø 4.626 м (стенка 0.197 м)
     const maxFlangeRadius = 2.7025; // Ø 5.405 м
 
-    // Профиль замкнутой стенки корпуса для THREE.LatheGeometry
+    // Профиль цельного закрытого стального сосуда корпуса с гладким эллиптическим днищем
     const lathePoints = [];
-    const ellipSteps = 20;
+    const ellipSteps = 28;
     const outerEllipCenterY = -4.850;
     const outerEllipB = outerEllipCenterY - rpvBottomY; // 1.335 м полуось эллиптического днища
 
-    // Наружный контур эллиптического глухого днища (от оси r = 0 до r = 2.313 м)
+    // Наружный контур гладкого эллиптического глухого днища (от оси r = 0 до r = 2.313 м)
     for (let i = 0; i <= ellipSteps; i++) {
       const t = (i / ellipSteps) * (Math.PI / 2);
       const r = Math.sin(t) * outerRadiusCore;
@@ -1143,7 +1206,7 @@ const threeCtrl = {
 
     // Цилиндрическая обечайка активной зоны (r = 2.313 м) и переход к опорному бурту и зоне патрубков
     lathePoints.push(new THREE.Vector2(outerRadiusCore, 0.35));
-    lathePoints.push(new THREE.Vector2(2.580, 0.65)); // Нижний опорный фланец/бурт корпуса
+    lathePoints.push(new THREE.Vector2(2.580, 0.65)); // Нижний опорный фланец/бурт корпуса (опирается на шахту)
     lathePoints.push(new THREE.Vector2(2.580, 0.98));
     lathePoints.push(new THREE.Vector2(2.495, 1.15)); // Утолщенная кованая обечайка зоны патрубков
     lathePoints.push(new THREE.Vector2(2.495, 3.85));
@@ -1167,19 +1230,6 @@ const threeCtrl = {
     rpvLatheGeo.computeVertexNormals();
     const rpvLatheMesh = new THREE.Mesh(rpvLatheGeo, this.MATS.rpvCarbonSteel);
     vesselBodyGroup.add(rpvLatheMesh);
-
-    // Внутренняя аустенитная антикоррозионная наплавка (#cbd5e1)
-    const cladPoints = [];
-    for (let i = 0; i <= ellipSteps; i++) {
-      const t = (i / ellipSteps) * (Math.PI / 2);
-      const r = Math.sin(t) * (innerRadiusCore - 0.008);
-      const y = outerEllipCenterY - Math.cos(t) * (innerEllipB - 0.008);
-      cladPoints.push(new THREE.Vector2(r, y));
-    }
-    cladPoints.push(new THREE.Vector2(innerRadiusCore - 0.008, rpvFlangeTopY - 0.02));
-    const cladGeo = new THREE.LatheGeometry(cladPoints, 64);
-    const cladMesh = new THREE.Mesh(cladGeo, this.MATS.austeniticStainless);
-    vesselBodyGroup.add(cladMesh);
 
     // Кованый поясок верхнего фланца (#4a5568)
     const flangeCollar = new THREE.Mesh(
@@ -1284,38 +1334,36 @@ const threeCtrl = {
 
     // ========================================================================
     // 2. ВНУТРИКОРПУСНЫЕ УСТРОЙСТВА (ВКУ) И АКТИВНАЯ ЗОНА (163 ТВС-2М)
-    // - Внутрикорпусная шахта: диаметр 4.112 м (r = 2.056 м), стенка 0.06 м (r_in = 1.996 м)
-    // - Выгородка активной зоны: массивная гранная обечайка
-    // - 163 шестигранные ТВС (высота 3.73 м, размер под ключ 0.234 м)
-    // - Блок защитных труб (БЗТ) над зоной с направляющими каналами
-    // - Мягкое Черенковское свечение (#00f0ff, MeshPhysicalMaterial с прозрачностью)
+    // - Находится СТРОГО ВНУТРИ корпуса (снаружи в обычном режиме не видна вообще)
+    // - Внутреннее свечение зоны (Черенковский аквамарин #00e5ff) видно ТОЛЬКО в X-Ray
     // ========================================================================
     const coreGroup = new THREE.Group();
     coreGroup.name = 'ВКУ_и_Активная_зона_163_ТВС';
+    this.coreGroupRef = coreGroup;
     rpvGroup.add(coreGroup);
 
-    const barrelOuterR = 2.056; // Ø 4.112 м (кольцевой опускной зазор 60 мм внутри RPV r = 2.116 м)
-    const barrelInnerR = 1.996; // толщина стенки шахты 0.060 м
+    const barrelOuterR = 1.96; // Строго внутри корпуса (innerRadiusCore = 2.116 м)
+    const barrelInnerR = 1.90;
     const barrelPoints = [
-      new THREE.Vector2(0.65, -5.25),
-      new THREE.Vector2(barrelOuterR, -4.45),
-      new THREE.Vector2(barrelOuterR, 4.88),
-      new THREE.Vector2(2.22, 4.88),
-      new THREE.Vector2(2.22, 4.98),
-      new THREE.Vector2(barrelInnerR, 4.98),
-      new THREE.Vector2(barrelInnerR, -4.40),
-      new THREE.Vector2(0.65, -5.19),
-      new THREE.Vector2(0.65, -5.25)
+      new THREE.Vector2(0.65, -4.55),
+      new THREE.Vector2(barrelOuterR, -3.95),
+      new THREE.Vector2(barrelOuterR, 4.75),
+      new THREE.Vector2(2.04, 4.75),
+      new THREE.Vector2(2.04, 4.88),
+      new THREE.Vector2(barrelInnerR, 4.88),
+      new THREE.Vector2(barrelInnerR, -3.90),
+      new THREE.Vector2(0.65, -4.48),
+      new THREE.Vector2(0.65, -4.55)
     ];
     const coreBarrelGeo = new THREE.LatheGeometry(barrelPoints, 64);
     const coreBarrelMesh = new THREE.Mesh(coreBarrelGeo, this.MATS.austeniticStainless);
     coreGroup.add(coreBarrelMesh);
 
-    // Массивная гранная обечайка выгородки активной зоны (высота 3.75 м)
-    const coreCenterY = -2.10;
-    const activeFuelHeight = 3.73; // Спецификация: 3.73 м
+    // Массивная гранная обечайка выгородки активной зоны (строго внутри шахты ВКУ)
+    const coreCenterY = -1.95;
+    const activeFuelHeight = 3.55;
     const baffleShape = new THREE.Shape();
-    const baffleOuterR = 1.975;
+    const baffleOuterR = 1.86;
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       const x = Math.cos(a) * baffleOuterR;
@@ -1326,7 +1374,7 @@ const threeCtrl = {
     baffleShape.closePath();
 
     const baffleHole = new THREE.Path();
-    const baffleInnerR = 1.74;
+    const baffleInnerR = 1.68;
     for (let i = 0; i < 24; i++) {
       const a = (i / 24) * Math.PI * 2;
       const rMod = i % 2 === 0 ? baffleInnerR : baffleInnerR * 0.96;
@@ -1347,16 +1395,16 @@ const threeCtrl = {
     baffleMesh.position.y = coreCenterY + activeFuelHeight / 2;
     coreGroup.add(baffleMesh);
 
-    // 163 шестигранные ТВС-2М (высота 3.73 м, размер под ключ 0.234 м -> радиус описанной окружности 0.1351 м)
-    const tvsFlatToFlat = 0.234;
-    const tvsCornerRadius = tvsFlatToFlat / Math.sqrt(3); // 0.1351 м
-    const tvsCoords = this.generate163HexCoords(0.236);
+    // 163 шестигранные ТВС-2М (строго внутри выгородки и шахты корпуса реактора)
+    const tvsFlatToFlat = 0.215;
+    const tvsCornerRadius = tvsFlatToFlat / Math.sqrt(3);
+    const tvsCoords = this.generate163HexCoords(0.220);
     this.tvsCoords = tvsCoords;
 
-    const tvsHexGeo = new THREE.CylinderGeometry(tvsCornerRadius * 0.97, tvsCornerRadius * 0.97, activeFuelHeight, 6);
+    const tvsHexGeo = new THREE.CylinderGeometry(tvsCornerRadius * 0.96, tvsCornerRadius * 0.96, activeFuelHeight, 6);
     const tvsInstanced = new THREE.InstancedMesh(tvsHexGeo, this.MATS.fuelAssemblyZircaloy, 163);
 
-    const tvsHeadGeo = new THREE.CylinderGeometry(0.095, 0.125, 0.34, 6);
+    const tvsHeadGeo = new THREE.CylinderGeometry(0.088, 0.115, 0.30, 6);
     const tvsHeadsInstanced = new THREE.InstancedMesh(tvsHeadGeo, this.MATS.austeniticSolid, 163);
 
     const tempColor = new THREE.Color();
@@ -1366,11 +1414,11 @@ const threeCtrl = {
       dummy.updateMatrix();
       tvsInstanced.setMatrixAt(idx, dummy.matrix);
 
-      const normR = Math.min(1, Math.sqrt(pt.distSq) / 1.65);
-      tempColor.setHSL(0.055 + normR * 0.035, 0.92, 0.52 - normR * 0.14);
+      const normR = Math.min(1, Math.sqrt(pt.distSq) / 1.60);
+      tempColor.setHSL(0.52 - normR * 0.04, 0.85, 0.55 - normR * 0.12);
       tvsInstanced.setColorAt(idx, tempColor);
 
-      dummy.position.set(pt.x, coreCenterY + activeFuelHeight / 2 + 0.18, pt.z);
+      dummy.position.set(pt.x, coreCenterY + activeFuelHeight / 2 + 0.16, pt.z);
       dummy.updateMatrix();
       tvsHeadsInstanced.setMatrixAt(idx, dummy.matrix);
     });
@@ -1381,12 +1429,12 @@ const threeCtrl = {
     // Блок защитных труб (БЗТ) над активной зоной с направляющими каналами
     const bztGroup = new THREE.Group();
     bztGroup.name = 'Блок_защитных_труб_БЗТ';
-    const bztBottomY = coreCenterY + activeFuelHeight / 2 + 0.36; // -0.055 м
-    const bztTopY = 4.82;
+    const bztBottomY = coreCenterY + activeFuelHeight / 2 + 0.32;
+    const bztTopY = 4.65;
     const bztHeight = bztTopY - bztBottomY;
 
     const bztOuterShell = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.88, 1.88, bztHeight, 48, 1, true),
+      new THREE.CylinderGeometry(1.78, 1.78, bztHeight, 48, 1, true),
       this.MATS.austeniticStainless
     );
     bztOuterShell.position.y = (bztBottomY + bztTopY) * 0.5;
@@ -1395,7 +1443,7 @@ const threeCtrl = {
     // Опорные перфорированные плиты БЗТ
     [bztBottomY + 0.12, (bztBottomY + bztTopY) * 0.5, bztTopY - 0.15].forEach((plateY) => {
       const plate = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.92, 1.92, 0.16, 48),
+        new THREE.CylinderGeometry(1.82, 1.82, 0.15, 48),
         this.MATS.austeniticSolid
       );
       plate.position.y = plateY;
@@ -1403,7 +1451,7 @@ const threeCtrl = {
     });
 
     // Направляющие трубы БЗТ через THREE.InstancedMesh (121 канал)
-    const guideTubeGeo = new THREE.CylinderGeometry(0.068, 0.068, bztHeight - 0.2, 10);
+    const guideTubeGeo = new THREE.CylinderGeometry(0.064, 0.064, bztHeight - 0.2, 10);
     const guideTubesInstanced = new THREE.InstancedMesh(guideTubeGeo, this.MATS.austeniticSolid, 121);
     for (let i = 0; i < 121; i++) {
       const pt = tvsCoords[i];
@@ -1418,18 +1466,18 @@ const threeCtrl = {
     // Подвижные поглощающие штанги и кластеры ОР СУЗ
     this.controlRodsGroup = new THREE.Group();
     this.controlRodsGroup.name = 'Кластеры_ОР_СУЗ';
-    const rodGeo = new THREE.CylinderGeometry(0.044, 0.044, 3.65, 8);
+    const rodGeo = new THREE.CylinderGeometry(0.042, 0.042, 3.45, 8);
     const rodMat = new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
       metalness: 0.92,
       roughness: 0.18,
-      emissive: new THREE.Color(0x00f0ff),
-      emissiveIntensity: 0.42
+      emissive: new THREE.Color(0x00e5ff),
+      emissiveIntensity: 0.35
     });
     const rodInstanced = new THREE.InstancedMesh(rodGeo, rodMat, 121);
     for (let i = 0; i < 121; i++) {
       const pt = tvsCoords[i];
-      dummy.position.set(pt.x, 1.65, pt.z);
+      dummy.position.set(pt.x, 1.45, pt.z);
       dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
       rodInstanced.setMatrixAt(i, dummy.matrix);
@@ -1437,12 +1485,17 @@ const threeCtrl = {
     this.controlRodsGroup.add(rodInstanced);
     coreGroup.add(this.controlRodsGroup);
 
-    // Внутренний объем активной зоны: мягкое оптическое Черенковское свечение (#00f0ff, MeshPhysicalMaterial)
-    const cherenkovVolumeGeo = new THREE.CylinderGeometry(1.72, 1.72, activeFuelHeight + 0.12, 48);
+    // Внутренний объем активной зоны: Черенковский аквамарин (#00e5ff)
+    // По умолчанию скрыт, включается ТОЛЬКО в режиме «Разрез корпуса (X-Ray)»
+    const cherenkovVolumeGeo = new THREE.CylinderGeometry(1.66, 1.66, activeFuelHeight + 0.08, 48);
     this.cherenkovVolumeMesh = new THREE.Mesh(cherenkovVolumeGeo, this.MATS.cherenkovPhysical);
     this.cherenkovVolumeMesh.position.y = coreCenterY;
+    this.cherenkovVolumeMesh.visible = false;
     this.cherenkovVolumeMesh.userData.ignoreRaycast = true;
     coreGroup.add(this.cherenkovVolumeMesh);
+
+    // По умолчанию скрываем внутренности активной зоны снаружи закрытого стального корпуса
+    coreGroup.visible = false;
 
     this.registerComponent(coreGroup, 'core', new THREE.Vector3(0, 4.8, 0));
     this.tagInteractableHierarchy(coreGroup, 'core');
@@ -1678,7 +1731,11 @@ const threeCtrl = {
         pgvGroup.add(manhole);
       });
 
-      // Две роликовые седловые опоры ПГВ-1000МКП
+      // Две роликовые седловые опоры ПГВ-1000МКП + железобетонные тумбы до пола гермооболочки (Y = -11.4 м)
+      const pgvPedestalTopY = -pgvR - 1.45;
+      const pgvPedestalBottomY = -11.4 - pgvCenter.y; // Строго до отметки пола -11.4 м
+      const pgvPedestalH = pgvPedestalTopY - pgvPedestalBottomY;
+
       [-3.8, 3.8].forEach((zSup) => {
         const saddle = new THREE.Mesh(
           new THREE.BoxGeometry(3.4, 1.65, 0.72),
@@ -1686,7 +1743,23 @@ const threeCtrl = {
         );
         saddle.position.set(0, -pgvR - 0.65, zSup);
         pgvGroup.add(saddle);
+
+        // Железобетонная опорная тумба под седловой опорой парогенератора до самого пола
+        const concretePier = new THREE.Mesh(
+          new THREE.BoxGeometry(3.8, pgvPedestalH, 1.45),
+          this.MATS.concreteSolid
+        );
+        concretePier.position.set(0, (pgvPedestalTopY + pgvPedestalBottomY) * 0.5, zSup);
+        pgvGroup.add(concretePier);
       });
+
+      // Общая железобетонная фундаментная плита-ростверк под двумя тумбами ПГВ на полу
+      const pgvBasePlinth = new THREE.Mesh(
+        new THREE.BoxGeometry(4.4, 0.75, 10.2),
+        this.MATS.concreteSolid
+      );
+      pgvBasePlinth.position.set(0, pgvPedestalBottomY + 0.375, 0);
+      pgvGroup.add(pgvBasePlinth);
 
       // Вертикальные коллекторы теплоносителя первого контура (горячий и холодный)
       const colOffsetZ = 1.65;
@@ -1829,6 +1902,25 @@ const threeCtrl = {
       }
       gcnaGroup.add(impellerGroup);
       this.pumpImpellers.push({ group: impellerGroup, loopIndex: loopIdx });
+
+      // Массивная железобетонная опорная тумба-постамент ГЦНА-1391 до пола гермооболочки (Y = -11.4 м)
+      const gcnaFloorLocalY = -11.4 - gcnaPos.y;
+      const gcnaRingTopY = -1.15;
+      const gcnaSupportH = gcnaRingTopY - gcnaFloorLocalY;
+
+      const gcnaSupportCollar = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.55, 1.75, 0.65, 32),
+        this.MATS.forgedSteelSolid
+      );
+      gcnaSupportCollar.position.y = gcnaRingTopY;
+      gcnaGroup.add(gcnaSupportCollar);
+
+      const gcnaConcretePedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.65, 2.15, gcnaSupportH, 32),
+        this.MATS.concreteSolid
+      );
+      gcnaConcretePedestal.position.y = (gcnaRingTopY + gcnaFloorLocalY) * 0.5;
+      gcnaGroup.add(gcnaConcretePedestal);
 
       this.registerComponent(gcnaGroup, 'gcna', radialExplode.clone().multiplyScalar(1.15));
       this.tagInteractableHierarchy(gcnaGroup, 'gcna');
@@ -1985,6 +2077,17 @@ const threeCtrl = {
     kdSkirt.position.y = -kdCylHalf - 1.25;
     kdVesselGroup.add(kdSkirt);
 
+    // Железобетонная опорная колонна-постамент под компенсатором давления до пола (Y = -11.4 м)
+    const kdFloorLocalY = -11.4 - kdPos.y;
+    const kdPedestalTopY = -kdCylHalf - 2.05;
+    const kdPedestalH = kdPedestalTopY - kdFloorLocalY;
+    const kdConcretePier = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.58, 1.95, kdPedestalH, 32),
+      this.MATS.concreteSolid
+    );
+    kdConcretePier.position.y = (kdPedestalTopY + kdFloorLocalY) * 0.5;
+    kdVesselGroup.add(kdConcretePier);
+
     // Внутренние трубчатые электронагреватели (ТЭНы) и уровни барботажа (видны в X-Ray)
     for (let h = 0; h < 7; h++) {
       const ha = (h / 7) * Math.PI * 2;
@@ -2016,6 +2119,17 @@ const threeCtrl = {
     reliefTankMesh.rotation.z = Math.PI / 2;
     reliefTankMesh.position.copy(reliefTankPos);
     pressurizerGroup.add(reliefTankMesh);
+
+    // Железобетонные опоры под баком-барботером до пола (Y = -11.4 м)
+    const reliefSupportH = (reliefTankPos.y - 0.85) - (-11.4);
+    [-1.4, 1.4].forEach((xOff) => {
+      const reliefPier = new THREE.Mesh(
+        new THREE.BoxGeometry(0.75, reliefSupportH, 1.6),
+        this.MATS.concreteSolid
+      );
+      reliefPier.position.set(reliefTankPos.x + xOff, -11.4 + reliefSupportH * 0.5, reliefTankPos.z);
+      pressurizerGroup.add(reliefPier);
+    });
 
     const ipuDischargeCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(kdPos.x, kdPos.y + kdCylHalf + kdHeadH + 0.9, kdPos.z),
@@ -2107,6 +2221,18 @@ const threeCtrl = {
       );
       skirt.position.y = -tCylHalf - 1.15;
       tankUnit.add(skirt);
+
+      // Монолитная железобетонная тумба под каждым баком САОЗ до отметки пола (Y = -11.4 м)
+      const saozFloorLocalY = -11.4 - cfg.pos.y;
+      const saozPierTopY = -tCylHalf - 1.95;
+      const saozPierH = saozPierTopY - saozFloorLocalY;
+      const saozConcretePier = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.42, 1.75, saozPierH, 28),
+        this.MATS.concreteSolid
+      );
+      saozConcretePier.position.y = (saozPierTopY + saozFloorLocalY) * 0.5;
+      tankUnit.add(saozConcretePier);
+
       saozGroup.add(tankUnit);
 
       // Линия пассивного залива САОЗ от гидроемкости к патрубку корпуса реактора (Y = 2.40 м)
@@ -2126,56 +2252,55 @@ const threeCtrl = {
     this.tagInteractableHierarchy(saozGroup, 'saoz');
 
     // ========================================================================
-    // 4.6 КОНИЧЕСКАЯ ФЕРМА-ЛОВУШКА РАСПЛАВА (CORE CATCHER / УЛР) ПОД ДНИЩЕМ
+    // 4.6 УСТРОЙСТВО ЛОКАЛИЗАЦИИ РАСПЛАВА (CORE CATCHER / УЛР) НА ДНЕ ШАХТЫ
+    // Строго на дне бетонной шахты (Y = -11.4 м) под глухим днищем реактора,
+    // без выступающих наружу вертикальных оранжевых ребер («забора»)
     // ========================================================================
     const coriumGroup = new THREE.Group();
     coriumGroup.name = 'Устройство_локализации_расплава_УЛР';
     rootAssembly.add(coriumGroup);
 
-    const ulrTopY = -6.55;
-    // Направляющая коническая воронка под днищем реактора
-    const guideFunnel = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.75, 1.45, 1.65, 48, 1, true),
-      this.MATS.coriumSteel
-    );
-    guideFunnel.position.y = ulrTopY - 0.65;
-    coriumGroup.add(guideFunnel);
+    const shaftFloorY = -11.4;
 
-    // Конический водоохлаждаемый корпус тигля УЛР
-    const catcherCrucible = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.45, 1.75, 3.15, 48),
-      this.MATS.coriumSteel
-    );
-    catcherCrucible.position.y = ulrTopY - 2.85;
-    coriumGroup.add(catcherCrucible);
-
-    // Блок кассет жертвенного материала внутри ловушки расплава
-    const sacrificialMass = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.05, 1.55, 2.15, 32),
-      this.MATS.coriumSacrificial
-    );
-    sacrificialMass.position.y = ulrTopY - 2.65;
-    coriumGroup.add(sacrificialMass);
-
-    // Коническая опорная ферма-ловушка (16 радиальных консольных балок)
-    for (let t = 0; t < 16; t++) {
-      const ta = (t / 16) * Math.PI * 2;
-      const trussBeam = new THREE.Mesh(
-        new THREE.BoxGeometry(0.18, 3.25, 0.78),
-        this.MATS.forgedSteelSolid
-      );
-      trussBeam.position.set(Math.cos(ta) * 2.52, ulrTopY - 2.65, Math.sin(ta) * 2.52);
-      trussBeam.rotation.y = -ta;
-      trussBeam.rotation.x = 0.16;
-      coriumGroup.add(trussBeam);
-    }
-
+    // Фундаментная опорная плита тигля УЛР на дне бетонной шахты (радиус < 2.85 м внутри шахты)
     const foundationPlate = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.85, 3.95, 0.48, 56),
+      new THREE.CylinderGeometry(2.65, 2.75, 0.55, 48),
       this.MATS.forgedSteelSolid
     );
-    foundationPlate.position.y = -11.05;
+    foundationPlate.position.y = shaftFloorY + 0.275;
     coriumGroup.add(foundationPlate);
+
+    // Конический водоохлаждаемый стальной тигель-корпус УЛР, опирающийся прямо на плиту дна шахты
+    const catcherCrucible = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.35, 1.72, 2.95, 48),
+      this.MATS.coriumSteel
+    );
+    catcherCrucible.position.y = shaftFloorY + 0.55 + 1.475; // от -10.85 до -7.90 м
+    coriumGroup.add(catcherCrucible);
+
+    // Кольцевой теплообменный фланец тигля УЛР
+    const crucibleFlange = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.52, 2.45, 0.36, 48),
+      this.MATS.forgedSteelSolid
+    );
+    crucibleFlange.position.y = shaftFloorY + 3.55; // -7.85 м
+    coriumGroup.add(crucibleFlange);
+
+    // Внутренняя кассета наполнителя внутри тигля (скрыта внутри стального корпуса тигля)
+    const sacrificialMass = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.95, 1.48, 2.10, 32),
+      this.MATS.coriumSacrificial
+    );
+    sacrificialMass.position.y = shaftFloorY + 1.95;
+    coriumGroup.add(sacrificialMass);
+
+    // Направляющая коническая воронка под эллиптическим днищем реактора (от -7.85 до -6.45 м)
+    const guideFunnel = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.55, 1.42, 1.40, 48),
+      this.MATS.coriumSteel
+    );
+    guideFunnel.position.y = shaftFloorY + 4.25; // -7.15 м (строго под днищем RPV -6.185 м)
+    coriumGroup.add(guideFunnel);
 
     this.registerComponent(coriumGroup, 'corium_catcher', new THREE.Vector3(0, -3.2, 0));
     this.tagInteractableHierarchy(coriumGroup, 'corium_catcher');
@@ -2647,19 +2772,28 @@ const threeCtrl = {
       );
     });
 
-    // 3. Динамическая эмиссия Черенковского свечения (#00f0ff), завязанная на window.sim.reactorPower
+    // 3. Управление видимостью активной зоны и Черенковского свечения (#00e5ff):
+    // Активная зона находится строго внутри корпуса; свечение видимо ТОЛЬКО при включении режима «Разрез корпуса (X-Ray)»
     const pwr = this._getNormalizedReactorPower();
     const harmonic = 0.92 + Math.sin(this.elapsed * 3.0) * 0.08;
-    if (this.MATS.cherenkovPhysical) {
-      const baseOpacity = (0.12 + 0.36 * pwr) * harmonic;
-      this.MATS.cherenkovPhysical.opacity = this.state.xray ? Math.min(0.68, baseOpacity + 0.16) : baseOpacity;
-      this.MATS.cherenkovPhysical.emissiveIntensity = (0.35 + 1.65 * pwr) * harmonic;
+    const isInternalRevealed = this.state.xray || this.state.xrayFactor > 0.02 || this.state.explodeFactor > 0.02;
+
+    if (this.coreGroupRef) {
+      this.coreGroupRef.visible = isInternalRevealed;
+    }
+
+    if (this.cherenkovVolumeMesh && this.MATS.cherenkovPhysical) {
+      const xrayVis = this.state.xray || this.state.xrayFactor > 0.02;
+      this.cherenkovVolumeMesh.visible = xrayVis;
+      const targetGlowOpacity = xrayVis ? (0.18 + 0.42 * pwr) * harmonic * this.state.xrayFactor : 0.0;
+      this.MATS.cherenkovPhysical.opacity = targetGlowOpacity;
+      this.MATS.cherenkovPhysical.emissiveIntensity = xrayVis ? (0.45 + 1.65 * pwr) * harmonic : 0.0;
     }
     if (this.cherenkovPointLight) {
-      this.cherenkovPointLight.intensity = (0.4 + 3.8 * pwr) * harmonic;
+      this.cherenkovPointLight.intensity = this.state.xray ? (0.5 + 3.6 * pwr) * harmonic * this.state.xrayFactor : 0.0;
     }
     if (this.coreWarmLight) {
-      this.coreWarmLight.intensity = 0.25 + 1.85 * pwr;
+      this.coreWarmLight.intensity = this.state.xray ? (0.25 + 1.45 * pwr) * this.state.xrayFactor : 0.0;
     }
 
     // Положение кластеров ОР СУЗ

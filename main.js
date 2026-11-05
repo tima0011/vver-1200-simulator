@@ -1,7 +1,17 @@
 // ============================================================================
-// ReactorLab // Цифровой двойник ВВЭР-1200 (Проект В-392М)
+// ReactorLab // Цифровой двойник ВВЭР-1200 (Проект В-491, БелАЭС)
 // main.js — Главный диспетчер UI, обработчики событий, звук, телеметрия и mainLoop
 // ============================================================================
+
+// Инженерная температурная шкала теплоносителя (Slate Light SCADA)
+var THERMAL_COLOR_SCALE = window.THERMAL_COLOR_SCALE || {
+  COLD_COOLING: '#0EA5E9',     // 10°C – 45°C: Ледяной лазурный (водозабор, градирни, подпитка)
+  RETURN_CONDENSATE: '#06B6D4',// 45°C – 100°C: Глубокий циан (конденсат, возврат охлажденной воды)
+  HOT_STEAM: '#F59E0B',        // 100°C – 280°C: Янтарный (2-й контур, паропроводы от ПГ к турбине)
+  REACTOR_CORE: '#EF4444',     // 280°C – 330°C: Сигнальный коралловый (1-й контур под давлением, корпус, ГЦТ)
+  CRITICAL_OVERHEAT: '#DC2626' // > 350°C: Глубокий кармин (аварийные уставки и перегрев ТВЭЛ)
+};
+window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
 
 // Геометрия 163 ТВС активной зоны ВВЭР-1200 вынесена в core_cartogram.js
 
@@ -21,10 +31,13 @@
       }
     }
 
-    document.getElementById('btnClearLog').addEventListener('click', () => {
-      eventLogEl.innerHTML = '';
-      addLog('Оперативный журнал БЩУ очищен оператором.', 'info');
-    });
+    const btnClearLog = document.getElementById('btnClearLog');
+    if (btnClearLog) {
+      btnClearLog.addEventListener('click', () => {
+        if (eventLogEl) eventLogEl.innerHTML = '';
+        addLog('Оперативный журнал БЩУ очищен оператором.', 'info');
+      });
+    }
 
     // --- 4. ПРОЦЕДУРНЫЙ ЗВУКОВОЙ ДВИЖОК (WEB AUDIO API) ---
     const sound = {
@@ -145,7 +158,8 @@
 
 
     // Дополняем каждую из 163 кассет данными кампании и глубины выгорания для паспорта ТВС
-    coreAssemblies.forEach(a => {
+    const activeAssemblies = (typeof coreAssemblies !== 'undefined') ? coreAssemblies : (window.coreAssemblies || []);
+    activeAssemblies.forEach(a => {
       if (!a.campaignYear) a.campaignYear = a.enrichment < 4.1 ? 3 : (a.enrichment < 4.6 ? 2 : 1);
       a.burnupMWd = +((a.campaignYear * 14.2 - a.normR * 4.5 + Math.sin(a.id) * 1.2).toFixed(1));
     });
@@ -359,20 +373,27 @@
     window.activeHotspots = activeHotspots;
 
     function getBaseSceneSize() {
-      if (sim.viewMode === 'systems' && sim.systemsSubMode === 'panorama') {
+      if (sim.viewMode === 'systems') {
         return { w: 1360, h: 720 };
       }
       return { w: 1160, h: 720 };
     }
 
     function resizeSimCanvas() {
-      const r = canvasContainer.getBoundingClientRect();
-      if (r.width < 2 || r.height < 2) return;
+      const rect = canvasContainer.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2) return;
       const dpr = window.devicePixelRatio || 1;
-      simCanvas.width = Math.floor(r.width * dpr);
-      simCanvas.height = Math.floor(r.height * dpr);
+      simCanvas.width = Math.round(rect.width * dpr);
+      simCanvas.height = Math.round(rect.height * dpr);
+      simCanvas.style.width = rect.width + 'px';
+      simCanvas.style.height = rect.height + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
+    const setupCanvas = resizeSimCanvas;
+    const resizeCanvas = resizeSimCanvas;
+    window.setupCanvas = setupCanvas;
+    window.resizeCanvas = resizeCanvas;
+    window.resizeSimCanvas = resizeSimCanvas;
     window.addEventListener('resize', resizeSimCanvas);
     resizeSimCanvas();
 
@@ -540,7 +561,7 @@
               📚 Первоисточники, Нормативная База и Видеоматериалы БЩУ
             </div>
             <div>
-              Фундаментальные учебники МИФИ, технологический регламент серийного энергоблока Нововоронежской АЭС-2 (В-392М), стандарты безопасности МАГАТЭ и обучающие видеокурсы работы операторов на полномасштабном тренажере.
+              Фундаментальные учебники МИФИ, технологический регламент серийного энергоблока Белорусской АЭС (В-491), стандарты безопасности МАГАТЭ и обучающие видеокурсы работы операторов на полномасштабном тренажере.
             </div>
           </div>
 
@@ -551,7 +572,7 @@
           <div class="theory-card" style="border-left:3px solid #dc2626; background:#ffffff;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="theory-badge" style="color:#dc2626;">ВИДЕОКУРС // ПОЛНОМАСШТАБНЫЙ ТРЕНАЖЕР БЩУ</span>
-              <span style="font-size:9.5px; background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:3px; font-weight:600;">ПМТ В-392М</span>
+              <span style="font-size:9.5px; background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:3px; font-weight:600;">ПМТ В-491</span>
             </div>
             <div style="font-weight:700; color:#0f172a; font-size:12px; margin-top:2px;">
               Видеоразбор работы оперативного персонала блочного щита управления (ВИУР, ВИУТ, НСБ)
@@ -579,21 +600,31 @@
 
         if (window.REACTOR_THEORY && window.REACTOR_THEORY.primarySources) {
           window.REACTOR_THEORY.primarySources.filter(s => s.type !== 'video_archive').forEach((src, idx) => {
+            const author = src.authors || src.author || '';
+            const details = src.details || (src.publisher ? (src.publisher + (src.year ? ', ' + src.year : '')) : (src.year ? String(src.year) : ''));
+            const scope = src.note || src.scope || '';
+            let badgeText = 'ПЕРВОИСТОЧНИК В-491';
+            if (src.badge) badgeText = src.badge;
+            else if (src.id.includes('mephi') || src.id === 'dementiev') badgeText = 'НИЯУ МИФИ';
+            else if (src.id === 'oob_belaes_v491') badgeText = 'ОБОСНОВАНИЕ БЕЗОПАСНОСТИ РУ В-491';
+            else if (src.id === 'np_082_07') badgeText = 'ПРАВИЛА РОСТЕХНАДЗОРА (НП-082-07)';
+            else if (src.id === 'sevsu_turbine_2023') badgeText = 'СЕВАСТОПОЛЬСКИЙ ГОСУНИВЕРСИТЕТ';
+            else if (src.id === 'asmolov_vver1200_2017') badgeText = 'ИЗВЕСТИЯ ВУЗОВ // ЯДЕРНАЯ ЭНЕРГЕТИКА';
+
             html += `
               <div class="theory-card" style="border-left:3px solid #1d4ed8;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span class="theory-badge">${src.id === 'dementiev' ? 'БИБЛИОТЕКА МИФИ' : (src.id === 'nvaes_reglament' ? 'РЕГЛАМЕНТ РОСЭНЕРГОАТОМА' : (src.id === 'iaea_ssg54' ? 'СТАНДАРТ МАГАТЭ' : 'ТЕХНИЧЕСКИЙ УЧЕБНИК'))}</span>
+                  <span class="theory-badge">${escapeHtml(badgeText)}</span>
                   <span style="font-size:9.5px; color:#64748b; font-family:var(--font-mono);">№0${idx + 1}</span>
                 </div>
                 <div style="font-weight:700; color:#0f172a; font-size:11.5px; margin-top:2px;">
-                  ${escapeHtml(src.author)} «${escapeHtml(src.title)}»
+                  ${author ? escapeHtml(author) + ' ' : ''}«${escapeHtml(src.title)}»
                 </div>
-                <div style="font-size:10.5px; color:#475569;">
-                  ${escapeHtml(src.details)}
-                </div>
-                <div style="font-size:10.5px; background:#f1f5f9; padding:6px 8px; border-radius:3px; color:#1e40af; border:1px solid #cbd5e1; margin-top:3px;">
-                  <b>Область применения в ReactorLab:</b> ${escapeHtml(src.scope)}
-                </div>
+                ${details ? `<div style="font-size:10.5px; color:#475569;">${escapeHtml(details)}</div>` : ''}
+                ${scope ? `<div style="font-size:10.5px; background:#f1f5f9; padding:6px 8px; border-radius:3px; color:#1e40af; border:1px solid #cbd5e1; margin-top:3px;">
+                  <b>Область применения в ReactorLab:</b> ${escapeHtml(scope)}
+                </div>` : ''}
+                ${src.url ? `<div style="margin-top:4px;"><a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer" style="font-size:10px; color:#1d4ed8; text-decoration:none;">🔗 Открыть публикацию</a></div>` : ''}
               </div>
             `;
           });
@@ -898,11 +929,14 @@
 
       let html = '';
       window.REACTOR_THEORY.primarySources.forEach((src, idx) => {
+        const author = src.authors || src.author || '';
+        const details = src.details || (src.publisher ? (src.publisher + (src.year ? ', ' + src.year : '')) : (src.year ? String(src.year) : ''));
+        const scope = src.note || src.scope || '';
         html += `
           <div class="theory-source-item">
-            <div class="theory-source-title">${idx + 1}. ${escapeHtml(src.author)} «${escapeHtml(src.title)}»</div>
-            <div style="font-size:10px; color:#475569; margin-top:2px;">${escapeHtml(src.details)}</div>
-            ${src.scope ? `<div style="font-size:9.5px; color:#1d4ed8; margin-top:2px; font-family:var(--font-mono);">Применение: ${escapeHtml(src.scope)}</div>` : ''}
+            <div class="theory-source-title">${idx + 1}. ${author ? escapeHtml(author) + ' ' : ''}«${escapeHtml(src.title)}»</div>
+            ${details ? `<div style="font-size:10px; color:#475569; margin-top:2px;">${escapeHtml(details)}</div>` : ''}
+            ${scope ? `<div style="font-size:9.5px; color:#1d4ed8; margin-top:2px; font-family:var(--font-mono);">Применение: ${escapeHtml(scope)}</div>` : ''}
           </div>
         `;
       });
@@ -934,86 +968,87 @@
     const theoryBackdropEl = document.getElementById('theoryBackdrop');
     const btnOpenTheoryEl = document.getElementById('btnOpenTheory');
     const btnCloseTheoryEl = document.getElementById('btnCloseTheory');
-    const btnAcademicToggleEl = document.getElementById('btnAcademicToggle');
 
-    function openTheoryDrawer() {
+    // Инженерный режим SCADA включен постоянно (ознакомительный режим удален)
+    var isEngineeringMode = true;
+    window.isEngineeringMode = true;
+    if (typeof sim !== 'undefined') {
+      sim.eduMode = false;
+      sim.isEngineeringMode = true;
+    }
+    const simpleTooltipEl = document.getElementById('ttSimple');
+    if (simpleTooltipEl) simpleTooltipEl.style.display = 'none';
+
+    // --- URL HASH-РОУТИНГ (#systems, #controls, #core, #model3d, #theory) ---
+    const VIEW_TO_HASH = {
+      systems: '#systems',
+      controls: '#controls',
+      core: '#core',
+      '3d': '#model3d'
+    };
+
+    const HASH_TO_VIEW = {
+      '#systems': 'systems',
+      '#controls': 'controls',
+      '#core': 'core',
+      '#model3d': '3d',
+      '#3d': '3d'
+    };
+
+    let lastActiveViewHash = '#systems';
+
+    function updateUrlHash(targetHash) {
+      if (window.location.hash !== targetHash) {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', targetHash);
+        } else {
+          window.location.hash = targetHash;
+        }
+      }
+    }
+
+    function openTheoryDrawer(updateHash = true) {
       if (theoryDrawerEl) theoryDrawerEl.classList.add('open');
       if (theoryBackdropEl) theoryBackdropEl.classList.add('open');
+      updateTheoryDrawerLiveTelemetry();
+      if (updateHash) {
+        updateUrlHash('#theory');
+      }
       sound.click(610);
     }
 
-    function closeTheoryDrawer() {
+    function closeTheoryDrawer(restoreHash = true) {
       if (theoryDrawerEl) theoryDrawerEl.classList.remove('open');
       if (theoryBackdropEl) theoryBackdropEl.classList.remove('open');
+      if (restoreHash && (window.location.hash || '').toLowerCase() === '#theory') {
+        updateUrlHash(lastActiveViewHash || '#systems');
+      }
       sound.click(610);
     }
 
     if (btnOpenTheoryEl) {
       btnOpenTheoryEl.addEventListener('click', () => {
         if (theoryDrawerEl && theoryDrawerEl.classList.contains('open')) {
-          closeTheoryDrawer();
+          closeTheoryDrawer(true);
         } else {
-          openTheoryDrawer();
+          openTheoryDrawer(true);
         }
       });
     }
 
     if (btnCloseTheoryEl) {
-      btnCloseTheoryEl.addEventListener('click', closeTheoryDrawer);
+      btnCloseTheoryEl.addEventListener('click', () => closeTheoryDrawer(true));
     }
 
     if (theoryBackdropEl) {
-      theoryBackdropEl.addEventListener('click', closeTheoryDrawer);
+      theoryBackdropEl.addEventListener('click', () => closeTheoryDrawer(true));
     }
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && theoryDrawerEl && theoryDrawerEl.classList.contains('open')) {
-        closeTheoryDrawer();
+        closeTheoryDrawer(true);
       }
     });
-
-    // Переключатель между ознакомительным и инженерным режимом
-    var isEngineeringMode = false;
-    window.isEngineeringMode = isEngineeringMode;
-
-    if (btnAcademicToggleEl) {
-      btnAcademicToggleEl.addEventListener('click', () => {
-        isEngineeringMode = !isEngineeringMode;
-        sim.isEngineeringMode = isEngineeringMode;
-        window.isEngineeringMode = isEngineeringMode;
-
-        if (isEngineeringMode) {
-          // Инженерный режим: строгий синий индикатор со значком атома, появление кнопки теории
-          btnAcademicToggleEl.classList.add('engineering-mode');
-          const label = btnAcademicToggleEl.querySelector('.mode-label');
-          if (label) label.textContent = '⚛ Режим: Инженерный';
-          if (btnOpenTheoryEl) btnOpenTheoryEl.style.display = 'inline-flex';
-
-          sim.eduMode = false;
-          document.body.classList.remove('edu-enabled');
-
-          console.log('ReactorLab: Математический модуль и инженерный базис ВВЭР-1200 готовы к работе.');
-          console.log('ReactorLab: Активен инженерный режим SCADA [В-392М]. Справочник доступен через кнопку «📐 Инженерный базис».');
-          addLog('Инженерный режим активен: развернут академический базис кинетики и IAPWS-IF97.', 'info');
-        } else {
-          // Ознакомительный режим (по умолчанию): зеленый бейдж, подсказки, кнопка теории скрыта
-          btnAcademicToggleEl.classList.remove('engineering-mode');
-          const label = btnAcademicToggleEl.querySelector('.mode-label');
-          if (label) label.textContent = '🌱 Режим: Ознакомительный';
-          if (btnOpenTheoryEl) btnOpenTheoryEl.style.display = 'none';
-
-          closeTheoryDrawer();
-
-          sim.eduMode = true;
-          document.body.classList.add('edu-enabled');
-          addLog('Включен ознакомительный режим: активированы пояснения понятным языком.', 'info');
-        }
-
-        const simpleEl = document.getElementById('ttSimple');
-        if (simpleEl) simpleEl.style.display = sim.eduMode ? 'block' : 'none';
-        sound.click(640);
-      });
-    }
 
     // Подрежимы экрана [SYSTEMS]
     function setSystemsSubMode(subMode) {
@@ -1023,65 +1058,110 @@
       cam.zoom = 1.0;
       document.getElementById('hudZoom').textContent = '100%';
       document.getElementById('btnSubPanorama').classList.toggle('active', subMode === 'panorama');
-      document.getElementById('btnSubLoops').classList.toggle('active', subMode === 'loops');
       document.getElementById('btnSubCross').classList.toggle('active', subMode === 'cross');
       const ribbon = document.getElementById('stagesRibbon');
       if (ribbon) ribbon.style.display = (subMode === 'panorama' && sim.viewMode === 'systems') ? 'grid' : 'none';
       sound.click(610);
     }
     document.getElementById('btnSubPanorama').addEventListener('click', () => setSystemsSubMode('panorama'));
-    document.getElementById('btnSubLoops').addEventListener('click', () => setSystemsSubMode('loops'));
     document.getElementById('btnSubCross').addEventListener('click', () => setSystemsSubMode('cross'));
 
-    // Главные переключатели 4 полноэкранных режимов ([SYSTEMS], [CONTROLS], [CORE], [3D TWIN])
+    // Активация одного из 4 полноэкранных режимов ([СИСТЕМЫ], [УПРАВЛЕНИЕ], [АКТИВНАЯ ЗОНА], [3D МОДЕЛЬ])
+    function activateViewMode(mode, options = {}) {
+      const normalizedMode = VIEW_TO_HASH[mode] ? mode : 'systems';
+      const shouldUpdateHash = options.updateHash !== false;
+
+      document.querySelectorAll('.view-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === normalizedMode);
+      });
+
+      sim.viewMode = normalizedMode;
+      lastActiveViewHash = VIEW_TO_HASH[normalizedMode] || '#systems';
+
+      if (shouldUpdateHash) {
+        if (theoryDrawerEl && theoryDrawerEl.classList.contains('open')) {
+          theoryDrawerEl.classList.remove('open');
+          if (theoryBackdropEl) theoryBackdropEl.classList.remove('open');
+        }
+        updateUrlHash(lastActiveViewHash);
+      }
+
+      cam.x = 0;
+      cam.y = 0;
+      cam.zoom = 1.0;
+      canvasContainer.style.cursor = (normalizedMode === 'core') ? 'default' : 'grab';
+
+      const viewportScreen = document.getElementById('viewportScreen');
+      const controlsScreen = document.getElementById('controlsScreen');
+      const isControls = normalizedMode === 'controls';
+      const is3D = normalizedMode === '3d';
+      const isSystems = normalizedMode === 'systems';
+      const isCore = normalizedMode === 'core';
+
+      controlsScreen.classList.toggle('active', isControls);
+      viewportScreen.style.display = isControls ? 'none' : 'flex';
+
+      document.getElementById('systemsSubSwitch').style.display = isSystems ? 'flex' : 'none';
+      const ribbon = document.getElementById('stagesRibbon');
+      if (ribbon) ribbon.style.display = (isSystems && sim.systemsSubMode === 'panorama') ? 'grid' : 'none';
+      document.getElementById('canvasOverlayTop').style.display = (is3D || isCore) ? 'none' : 'flex';
+      const viewCtrlEl = document.getElementById('canvasViewControls');
+      if (viewCtrlEl) viewCtrlEl.style.display = isCore ? 'none' : '';
+      const hudBottomEl = document.querySelector('.canvas-hud-bottom');
+      if (hudBottomEl) hudBottomEl.style.display = isCore ? 'none' : 'flex';
+
+      document.getElementById('threeContainer').style.display = is3D ? 'block' : 'none';
+      document.getElementById('threeToolbar').style.display = is3D ? 'flex' : 'none';
+      document.getElementById('threeHelpBadge').style.display = is3D ? 'block' : 'none';
+      document.getElementById('simCanvas').style.display = is3D ? 'none' : 'block';
+      tooltipEl.style.display = 'none';
+
+      if (is3D) {
+        threeCtrl.ensureInitialized();
+        threeCtrl.resize();
+        threeCtrl.updateHudZoom();
+      } else if (!isControls) {
+        document.getElementById('webglErrorBanner').style.display = 'none';
+        resizeSimCanvas();
+        document.getElementById('hudZoom').textContent = '100%';
+        renderCanvas(0.016);
+      } else {
+        lastChartSampleTime = 0;
+        sampleCharts(performance.now());
+      }
+    }
+
+    function applyHashRoute() {
+      const rawHash = (window.location.hash || '').trim().toLowerCase();
+      if (rawHash === '#theory') {
+        activateViewMode(sim.viewMode || 'systems', { updateHash: false });
+        openTheoryDrawer(false);
+        return;
+      }
+
+      if (theoryDrawerEl && theoryDrawerEl.classList.contains('open')) {
+        closeTheoryDrawer(false);
+      }
+
+      const targetMode = HASH_TO_VIEW[rawHash] || 'systems';
+      const canonicalHash = VIEW_TO_HASH[targetMode] || '#systems';
+      activateViewMode(targetMode, { updateHash: false });
+      if (rawHash !== canonicalHash && rawHash !== '#3d') {
+        updateUrlHash(canonicalHash);
+      }
+    }
+
+    // Главные переключатели 4 полноэкранных режимов ([СИСТЕМЫ], [УПРАВЛЕНИЕ], [АКТИВНАЯ ЗОНА], [3D МОДЕЛЬ])
     document.querySelectorAll('.view-tab').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const mode = btn.dataset.view;
-        sim.viewMode = mode;
-        cam.x = 0;
-        cam.y = 0;
-        cam.zoom = 1.0;
-        canvasContainer.style.cursor = (mode === 'core') ? 'default' : 'grab';
-
-        const viewportScreen = document.getElementById('viewportScreen');
-        const controlsScreen = document.getElementById('controlsScreen');
-        const isControls = mode === 'controls';
-        const is3D = mode === '3d';
-        const isSystems = mode === 'systems';
-
-        controlsScreen.classList.toggle('active', isControls);
-        viewportScreen.style.display = isControls ? 'none' : 'flex';
-
-        document.getElementById('systemsSubSwitch').style.display = isSystems ? 'flex' : 'none';
-        const ribbon = document.getElementById('stagesRibbon');
-        if (ribbon) ribbon.style.display = (isSystems && sim.systemsSubMode === 'panorama') ? 'grid' : 'none';
-        document.getElementById('canvasOverlayTop').style.display = is3D ? 'none' : 'flex';
-        const viewCtrlEl = document.getElementById('canvasViewControls');
-        if (viewCtrlEl) viewCtrlEl.style.display = (mode === 'core') ? 'none' : '';
-        document.getElementById('threeContainer').style.display = is3D ? 'block' : 'none';
-        document.getElementById('threeToolbar').style.display = is3D ? 'flex' : 'none';
-        document.getElementById('threeHelpBadge').style.display = is3D ? 'block' : 'none';
-        document.getElementById('simCanvas').style.display = is3D ? 'none' : 'block';
-        tooltipEl.style.display = 'none';
-
-        if (is3D) {
-          threeCtrl.ensureInitialized();
-          threeCtrl.resize();
-          threeCtrl.updateHudZoom();
-        } else if (!isControls) {
-          document.getElementById('webglErrorBanner').style.display = 'none';
-          resizeSimCanvas();
-          document.getElementById('hudZoom').textContent = '100%';
-        } else {
-          // Перерисовка мини-графиков на экране [CONTROLS]
-          lastChartSampleTime = 0;
-          sampleCharts(performance.now());
-        }
+        activateViewMode(btn.dataset.view, { updateHash: true });
         sound.click(620);
       });
     });
+
+    window.addEventListener('hashchange', applyHashRoute);
+    window.addEventListener('DOMContentLoaded', applyHashRoute);
+    applyHashRoute();
 
     function populateTooltipDOM(info, mx, my, rect) {
       tooltipEl.style.display = 'block';
@@ -1132,7 +1212,7 @@
       sim.hoveredHotspot = found;
       canvasContainer.style.cursor = found && (found.onClick || found.assemblyId) ? 'pointer' : (sim.viewMode === 'core' ? 'default' : (cam.dragging ? 'grabbing' : 'grab'));
 
-      if (found) {
+      if (found && sim.viewMode !== 'core') {
         populateTooltipDOM(found, cam.mouseX, cam.mouseY, rect);
       } else {
         tooltipEl.style.display = 'none';
@@ -1156,11 +1236,23 @@
       }
       const rect = canvasContainer.getBoundingClientRect();
       if (rect.width < 2 || rect.height < 2) return;
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.round(rect.width * dpr);
+      const targetH = Math.round(rect.height * dpr);
+      if (simCanvas.width !== targetW || simCanvas.height !== targetH) {
+        simCanvas.width = targetW;
+        simCanvas.height = targetH;
+        simCanvas.style.width = rect.width + 'px';
+        simCanvas.style.height = rect.height + 'px';
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, rect.width, rect.height);
 
-      // Строгая инженерная координатная сетка
+      // Строгая инженерная координатная сетка (Slate Light SCADA #64748B)
       ctx.save();
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.14)';
       ctx.lineWidth = 1;
       const isCore = (sim.viewMode === 'core');
       const curZoom = isCore ? 1.0 : cam.zoom;
@@ -1194,8 +1286,6 @@
       if (sim.viewMode === 'systems') {
         if (sim.systemsSubMode === 'panorama') {
           renderPanoramicSystemsView();
-        } else if (sim.systemsSubMode === 'loops') {
-          renderFourLoopsPlanView();
         } else {
           renderCrossSectionView();
         }
@@ -1211,279 +1301,69 @@
       const pctNom = (sim.thermalPowerMW / 3200.0) * 100.0;
       const freqHz = sim.turbineRpm / 60.0;
 
-      document.getElementById('kpiThermal').textContent = `${sim.thermalPowerMW.toFixed(1)} МВт (${pctNom.toFixed(1)}%)`;
-      document.getElementById('kpiElec').textContent = `${sim.electricalPowerMW.toFixed(1)} МВт`;
-      document.getElementById('kpiP1').textContent = `${sim.primaryPressureMPa.toFixed(2)} МПа`;
-      document.getElementById('kpiSubcool').textContent = `${sim.subcoolingMarginC.toFixed(1)} °C`;
-      document.getElementById('kpiBoron').textContent = `${sim.boronConc.toFixed(2)} г/кг`;
+      const kpiThermal = document.getElementById('kpiThermal');
+      if (kpiThermal) kpiThermal.textContent = `${sim.thermalPowerMW.toFixed(1)} МВт (${pctNom.toFixed(1)}%)`;
+      const kpiElec = document.getElementById('kpiElec');
+      if (kpiElec) kpiElec.textContent = `${sim.electricalPowerMW.toFixed(1)} МВт`;
+      const kpiP1 = document.getElementById('kpiP1');
+      if (kpiP1) kpiP1.textContent = `${sim.primaryPressureMPa.toFixed(2)} МПа`;
+      const kpiSubcool = document.getElementById('kpiSubcool');
+      if (kpiSubcool) kpiSubcool.textContent = `${sim.subcoolingMarginC.toFixed(1)} °C`;
+      const kpiBoron = document.getElementById('kpiBoron');
+      if (kpiBoron) kpiBoron.textContent = `${sim.boronConc.toFixed(2)} г/кг`;
       const rhoSign = sim.rhoTotal >= 0 ? '+' : '';
-      document.getElementById('kpiReactivity').textContent = `${rhoSign}${sim.rhoTotal.toFixed(1)} pcm`;
-      document.getElementById('kpiFreq').textContent = `${freqHz.toFixed(2)} Гц`;
-      document.getElementById('kpiP2').textContent = `${sim.steamHeaderPressMPa.toFixed(2)} МПа`;
+      const kpiReactivity = document.getElementById('kpiReactivity');
+      if (kpiReactivity) kpiReactivity.textContent = `${rhoSign}${sim.rhoTotal.toFixed(1)} pcm`;
+      const kpiFreq = document.getElementById('kpiFreq');
+      if (kpiFreq) kpiFreq.textContent = `${freqHz.toFixed(2)} Гц`;
+      const kpiP2 = document.getElementById('kpiP2');
+      if (kpiP2) kpiP2.textContent = `${sim.steamHeaderPressMPa.toFixed(2)} МПа`;
 
-      // Телеметрия Поста №2 (Турбина и Сеть)
-      document.getElementById('post2ElecMW').textContent = `${sim.electricalPowerMW.toFixed(1)} МВт`;
-      document.getElementById('post2FreqRpm').textContent = `${freqHz.toFixed(2)} Гц (${Math.round(sim.turbineRpm)} об/мин)`;
-      document.getElementById('post2SteamState').textContent = `${sim.steamHeaderPressMPa.toFixed(2)} МПа / ${sim.steamTempC.toFixed(1)} °C`;
-      document.getElementById('post2BruState').textContent = (sim.bruKOpen || sim.bruAOpen)
-        ? `ОТКРЫТ: ${sim.bruKOpen ? 'БРУ-К ' : ''}${sim.bruAOpen ? 'БРУ-А' : ''}`
-        : 'Клапаны закрыты';
-
-      // Бейдж режима работы реактора
+      // Бейдж режима работы реактора в шапке SCADA
       const badge = document.getElementById('modeBadge');
-      badge.className = 'mode-badge';
-      if (sim.az1Tripped) {
-        badge.textContent = 'АВАРИЙНАЯ ЗАЩИТА АЗ-1 (ОСТАНОВ)';
-        badge.classList.add('danger');
-      } else if (sim.saozActive) {
-        badge.textContent = 'РАБОТА САОЗ (ПОДАЧА ГЕ-1..3)';
-        badge.classList.add('danger');
-      } else if (sim.spotActive && !sim.loops[0].pumpOn) {
-        badge.textContent = 'ОБЕСТОЧИВАНИЕ • РЕЖИМ СПОТ (ЕЦ)';
-        badge.classList.add('warn');
-      } else if (pctNom < 5.0) {
-        badge.textContent = 'МКУ (МИНИМАЛЬНО КОНТРОЛИРУЕМЫЙ УРОВЕНЬ)';
-        badge.classList.add('warn');
-      } else if (pctNom < 92.0) {
-        badge.textContent = `ЭНЕРГЕТИЧЕСКИЙ РЕЖИМ (${pctNom.toFixed(0)}% Nном)`;
-      } else {
-        badge.textContent = 'НОМИНАЛЬНЫЙ РЕЖИМ (100% Nном)';
+      if (badge) {
+        badge.className = 'mode-badge';
+        if (sim.az1Tripped) {
+          badge.textContent = 'АВАРИЙНАЯ ЗАЩИТА АЗ-1 (ОСТАНОВ)';
+          badge.classList.add('danger');
+        } else if (sim.saozActive) {
+          badge.textContent = 'РАБОТА САОЗ (ПОДАЧА ГЕ-1..3)';
+          badge.classList.add('danger');
+        } else if (sim.spotActive && !sim.loops[0].pumpOn) {
+          badge.textContent = 'ОБЕСТОЧИВАНИЕ • РЕЖИМ СПОТ (ЕЦ)';
+          badge.classList.add('warn');
+        } else if (pctNom < 5.0) {
+          badge.textContent = 'МКУ (МИНИМАЛЬНО КОНТРОЛИРУЕМЫЙ УРОВЕНЬ)';
+          badge.classList.add('warn');
+        } else if (pctNom < 92.0) {
+          badge.textContent = `ЭНЕРГЕТИЧЕСКИЙ РЕЖИМ (${pctNom.toFixed(0)}% Nном)`;
+        } else {
+          badge.textContent = 'НОМИНАЛЬНЫЙ РЕЖИМ (100% Nном)';
+        }
       }
 
-      // Диагностика 4 петель ГЦК
-      for (let i = 0; i < 4; i++) {
-        const lp = sim.loops[i];
-        const card = document.getElementById(`loopCard${i}`);
-        const dot = document.getElementById(`loopDot${i}`);
-        card.classList.toggle('off', !lp.pumpOn);
-        dot.className = 'status-dot ' + (lp.pumpOn ? '' : 'off');
-        document.getElementById(`l${i}_rpm`).textContent = `${Math.round(lp.rpm)} об/м`;
-        document.getElementById(`l${i}_psg`).textContent = `${lp.sgPressMPa.toFixed(2)} МПа`;
-        document.getElementById(`l${i}_th`).textContent = `${lp.tHot.toFixed(1)} °C`;
-        document.getElementById(`l${i}_tc`).textContent = `${lp.tCold.toFixed(1)} °C`;
-        document.getElementById(`l${i}_lvl`).textContent = `${lp.sgLevelM.toFixed(2)} м`;
-        document.getElementById(`l${i}_flw`).textContent = `${lp.flowPct.toFixed(0)} %`;
-      }
-
-      // Нижний HUD баланса реактивности
+      // Нижний HUD баланса реактивности (на холсте СИСТЕМЫ)
       const fmtSigned = v => (v >= 0 ? '+' : '') + Math.round(v);
-      document.getElementById('hudRhoRods').textContent = fmtSigned(sim.rhoRods);
-      document.getElementById('hudRhoBoron').textContent = fmtSigned(sim.rhoBoron);
-      document.getElementById('hudRhoDoppler').textContent = fmtSigned(sim.rhoDoppler);
-      document.getElementById('hudRhoMod').textContent = fmtSigned(sim.rhoModerator);
-      document.getElementById('hudRhoXe').textContent = fmtSigned(sim.rhoXenon);
-      document.getElementById('hudTfuel').textContent = `${Math.round(sim.fuelTempC)} °C`;
-      document.getElementById('hudKqMax').textContent = sim.kqMax.toFixed(2);
-
-      // Синхронизация элементов управления
-      document.getElementById('valGroup10').textContent = `${sim.group10Pos.toFixed(1)} %`;
-      document.getElementById('sliderGroup10').value = sim.group10Pos;
-      document.getElementById('valGroups19').textContent = `${sim.groups1to9Pos.toFixed(1)} %`;
-      document.getElementById('valPressurizer').textContent = `${sim.pressurizerLevelM.toFixed(2)} м / ${sim.heatersPowerKW} кВт`;
-      document.getElementById('valSAOZ').textContent = sim.saozActive
-        ? `ПОДАЧА В РЕАКТОР (${sim.saozWaterPct.toFixed(0)}%)`
-        : 'Ожидание (P₁ < 5.9 МПа)';
-      document.getElementById('valULR').textContent = sim.ulrCoolingActive
-        ? 'ОХЛАЖДЕНИЕ ШАХТЫ ВКЛ'
-        : 'Сухая шахта (Норма)';
+      const hudRhoRods = document.getElementById('hudRhoRods');
+      if (hudRhoRods) hudRhoRods.textContent = fmtSigned(sim.rhoRods);
+      const hudRhoBoron = document.getElementById('hudRhoBoron');
+      if (hudRhoBoron) hudRhoBoron.textContent = fmtSigned(sim.rhoBoron);
+      const hudRhoDoppler = document.getElementById('hudRhoDoppler');
+      if (hudRhoDoppler) hudRhoDoppler.textContent = fmtSigned(sim.rhoDoppler);
+      const hudRhoMod = document.getElementById('hudRhoMod');
+      if (hudRhoMod) hudRhoMod.textContent = fmtSigned(sim.rhoModerator);
+      const hudRhoXe = document.getElementById('hudRhoXe');
+      if (hudRhoXe) hudRhoXe.textContent = fmtSigned(sim.rhoXenon);
+      const hudTfuel = document.getElementById('hudTfuel');
+      if (hudTfuel) hudTfuel.textContent = `${Math.round(sim.fuelTempC)} °C`;
+      const hudKqMax = document.getElementById('hudKqMax');
+      if (hudKqMax) hudKqMax.textContent = sim.kqMax.toFixed(2);
 
       // Обновление живой телеметрии в открытой шторке теории
       updateTheoryDrawerLiveTelemetry();
     }
 
-    // --- 9. ОБРАБОТЧИКИ МОДУЛЬНОГО ПУЛЬТА УПРАВЛЕНИЯ [CONTROLS] ---
-    document.getElementById('sliderGroup10').addEventListener('input', e => {
-      if (sim.az1Tripped) return;
-      sim.group10Pos = parseFloat(e.target.value);
-      if (sim.armEnabled) {
-        sim.armEnabled = false;
-        const btn = document.getElementById('btnARM');
-        btn.classList.remove('active');
-        btn.textContent = 'АРМ: РУЧНОЙ';
-        addLog('Автоматический регулятор мощности (АРМ) переведен в ручной режим оператором.', 'info');
-      }
-    });
-
-    document.querySelectorAll('[data-rodstep]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (sim.az1Tripped) {
-          addLog('Перемещение ОР СУЗ заблокировано сигналом АЗ-1! Выполните деблокировку АЗ-1.', 'warn');
-          return;
-        }
-        const step = parseFloat(btn.dataset.rodstep);
-        sim.group10Pos = Math.max(0, Math.min(100, sim.group10Pos + step));
-        sound.click(580);
-      });
-    });
-
-    document.getElementById('btnWithdraw19').addEventListener('click', () => {
-      if (sim.az1Tripped) {
-        addLog('Невозможно поднять группы №1–9 при активном сигнале АЗ-1! Сначала нажмите «Деблокировка АЗ-1».', 'warn');
-        return;
-      }
-      sim.withdrawing1to9 = true;
-      addLog('Начат плавный подъем групп ОР СУЗ №1–9 приводами ШЭМ-3 до верхнего концевика (100%).', 'info');
-      sound.click(640);
-    });
-
-    document.getElementById('btnARM').addEventListener('click', e => {
-      if (sim.az1Tripped) return;
-      sim.armEnabled = !sim.armEnabled;
-      e.currentTarget.classList.toggle('active', sim.armEnabled);
-      e.currentTarget.textContent = sim.armEnabled ? 'АРМ: ВКЛЮЧЕН' : 'АРМ: РУЧНОЙ';
-      addLog(sim.armEnabled ? `Включен Автоматический регулятор мощности (АРМ). Уставка: ${sim.armTargetMW} МВт.` : 'АРМ отключен. Управление группой №10 ОР СУЗ переведено в ручной режим.', 'info');
-      sound.click(600);
-    });
-
-    document.getElementById('sliderArmTarget').addEventListener('input', e => {
-      sim.armTargetMW = parseFloat(e.target.value);
-      document.getElementById('valArmTarget').textContent = `${sim.armTargetMW} МВт`;
-    });
-
-    const btnBoronInject = document.getElementById('btnBoronInject');
-    const btnBoronDilute = document.getElementById('btnBoronDilute');
-    const valBoronFlow = document.getElementById('valBoronFlow');
-
-    btnBoronInject.addEventListener('click', () => {
-      sim.boronMode = sim.boronMode === 1 ? 0 : 1;
-      btnBoronInject.classList.toggle('warn-active', sim.boronMode === 1);
-      btnBoronDilute.classList.remove('active');
-      valBoronFlow.textContent = sim.boronMode === 1 ? 'Ввод бора (+H₃BO₃)' : 'Нейтрально';
-      if (sim.boronMode === 1) addLog('СБР: Открыт клапан подачи концентрата борной кислоты H₃BO₃ в 1-й контур.', 'warn');
-      sound.click(510);
-    });
-
-    btnBoronDilute.addEventListener('click', () => {
-      sim.boronMode = sim.boronMode === -1 ? 0 : -1;
-      btnBoronDilute.classList.toggle('active', sim.boronMode === -1);
-      btnBoronInject.classList.remove('warn-active');
-      valBoronFlow.textContent = sim.boronMode === -1 ? 'Разбавление (Дистиллят)' : 'Нейтрально';
-      if (sim.boronMode === -1) addLog('СБР: Открыта подача чистого дистиллята на подпитку 1-го контура (разбавление бора).', 'info');
-      sound.click(590);
-    });
-
-    document.querySelectorAll('[data-pump]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.pump, 10);
-        sim.loops[idx].pumpOn = !sim.loops[idx].pumpOn;
-        btn.classList.toggle('active', sim.loops[idx].pumpOn);
-        addLog(`ГЦНА-${idx + 1} (Петля №${idx + 1}): ${sim.loops[idx].pumpOn ? 'ВКЛЮЧЕН в работу' : 'ОТКЛЮЧЕН (переход петли на выбег и естественную циркуляцию)'}.`, sim.loops[idx].pumpOn ? 'ok' : 'warn');
-        sound.click(480);
-      });
-    });
-
-    document.getElementById('btnHeatersMode').addEventListener('click', e => {
-      const modes = ['AUTO', 'ON', 'OFF'];
-      const labels = { AUTO: 'ТЭНы КД: АВТО', ON: 'ТЭНы КД: ВКЛ 2700', OFF: 'ТЭНы КД: ВЫКЛ' };
-      const nextIdx = (modes.indexOf(sim.heatersMode) + 1) % modes.length;
-      sim.heatersMode = modes[nextIdx];
-      e.currentTarget.textContent = labels[sim.heatersMode];
-      e.currentTarget.classList.toggle('active', sim.heatersMode !== 'OFF');
-      sound.click(550);
-    });
-
-    document.getElementById('btnSprayKD').addEventListener('click', e => {
-      sim.sprayActive = !sim.sprayActive;
-      e.currentTarget.classList.toggle('active', sim.sprayActive);
-      addLog(sim.sprayActive ? 'КД: Открыт клапан впрыска холодного теплоносителя в паровую подушку КД.' : 'КД: Клапан впрыска в КД закрыт.', 'info');
-      sound.click(560);
-    });
-
-    document.getElementById('btnIpuKD').addEventListener('click', e => {
-      sim.ipuKdOpen = !sim.ipuKdOpen;
-      e.currentTarget.dataset.manual = sim.ipuKdOpen ? '1' : '';
-      e.currentTarget.classList.toggle('danger-active', sim.ipuKdOpen);
-      addLog(sim.ipuKdOpen ? 'КД: Принудительно открыт импульсный предохранительный клапан ИПУ КД (сброс пара в барботажный бак)!' : 'КД: Клапан ИПУ КД закрыт.', sim.ipuKdOpen ? 'warn' : 'info');
-      sound.click(500);
-    });
-
-    document.getElementById('btnLeakLoop1').addEventListener('click', e => {
-      sim.primaryLeakActive = !sim.primaryLeakActive;
-      e.currentTarget.classList.toggle('danger-active', sim.primaryLeakActive);
-      addLog(sim.primaryLeakActive ? 'ВНИМАНИЕ! Зафиксирована разгерметизация (течь) 1-го контура в Петле №1! Снижение давления P₁.' : 'Течь 1-го контура локализована и устранена.', sim.primaryLeakActive ? 'danger' : 'ok');
-      sound.click(420);
-    });
-
-    document.getElementById('sliderFeedwater').addEventListener('input', e => {
-      sim.feedwaterFlowPct = parseFloat(e.target.value);
-      document.getElementById('valFeedwater').textContent = `${sim.feedwaterFlowPct} %`;
-    });
-
-    document.getElementById('sliderTurbineValve').addEventListener('input', e => {
-      sim.turbineValvePct = parseFloat(e.target.value);
-      document.getElementById('valTurbineValve').textContent = `${sim.turbineValvePct} %`;
-    });
-
-    document.querySelectorAll('[data-turbpreset]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = parseFloat(btn.dataset.turbpreset);
-        sim.turbineValvePct = val;
-        document.getElementById('sliderTurbineValve').value = val;
-        document.getElementById('valTurbineValve').textContent = `${val} %`;
-        addLog(`Турбина К-1200-6,8/50: Клапан впуска пара (РК) установлен на ${val}%.`, 'info');
-        sound.click(560);
-      });
-    });
-
-    document.getElementById('btnBruK').addEventListener('click', e => {
-      sim.bruKOpen = !sim.bruKOpen;
-      e.currentTarget.classList.toggle('active', sim.bruKOpen);
-      addLog(sim.bruKOpen ? '2-й контур: Открыт клапан БРУ-К (сброс пара из ГПК в конденсатор турбины).' : '2-й контур: Клапан БРУ-К закрыт.', 'info');
-      sound.click(530);
-    });
-
-    document.getElementById('btnBruA').addEventListener('click', e => {
-      sim.bruAOpen = !sim.bruAOpen;
-      e.currentTarget.classList.toggle('warn-active', sim.bruAOpen);
-      addLog(sim.bruAOpen ? '2-й контур: Открыты клапаны БРУ-А (сброс пара в атмосферу)!' : '2-й контур: Клапаны БРУ-А закрыты.', sim.bruAOpen ? 'warn' : 'info');
-      sound.click(530);
-    });
-
-    document.getElementById('btnTriggerSAOZ').addEventListener('click', e => {
-      sim.saozActive = !sim.saozActive;
-      e.currentTarget.classList.toggle('active', sim.saozActive);
-      addLog(sim.saozActive ? 'Ручной пуск гидроемкостей САОЗ ГЕ-1, ГЕ-2, ГЕ-3! Подача раствора борной кислоты (16 г/кг) в реактор.' : 'Клапаны гидроемкостей САОЗ закрыты.', sim.saozActive ? 'warn' : 'info');
-      sound.click(490);
-    });
-
-    document.getElementById('btnToggleSPOT').addEventListener('click', e => {
-      sim.spotActive = !sim.spotActive;
-      e.currentTarget.classList.toggle('active', sim.spotActive);
-      e.currentTarget.textContent = sim.spotActive ? 'Шиберы СПОТ: ОТКР' : 'Шиберы СПОТ: ЗАКР';
-      addLog(sim.spotActive ? 'Открыты воздушные шиберы СПОТ (Система пассивного отвода тепла через теплообменники защитной оболочки).' : 'Шиберы СПОТ переведены в положение ожидания.', 'ok');
-      sound.click(540);
-    });
-
-    document.getElementById('btnFloodULR').addEventListener('click', e => {
-      sim.ulrCoolingActive = !sim.ulrCoolingActive;
-      e.currentTarget.classList.toggle('active', sim.ulrCoolingActive);
-      addLog(sim.ulrCoolingActive ? 'Открыта подача охлаждающей воды из баков ГА-1 в шахту Устройства локализации расплава (УЛР).' : 'Подача воды в шахту УЛР прекращена.', 'info');
-      sound.click(520);
-    });
-
-    document.getElementById('btnAzCover').addEventListener('click', e => {
-      sim.az1CoverOpen = !sim.az1CoverOpen;
-      e.currentTarget.classList.toggle('open', sim.az1CoverOpen);
-      e.currentTarget.textContent = sim.az1CoverOpen ? 'Закрыть крышку' : 'Откинуть крышку';
-      document.getElementById('az1Shield').classList.toggle('lifted', sim.az1CoverOpen);
-      sound.click(440);
-    });
-
-    document.getElementById('btnTriggerAZ1').addEventListener('click', () => {
-      if (!sim.az1CoverOpen) return;
-      triggerAZ1('Ручное нажатие кнопки АЗ-1 оператором БЩУ');
-    });
-
-    document.getElementById('btnResetAZ1').addEventListener('click', () => {
-      if (!sim.az1Tripped) {
-        addLog('Сигнал АЗ-1 отсутствует. Деблокировка не требуется.', 'info');
-        return;
-      }
-      sim.az1Tripped = false;
-      addLog('Сигнал АЗ-1 деблокирован оператором. Приводы ШЭМ-3 готовы к подъему групп ОР СУЗ.', 'ok');
-      sound.click(680);
-    });
-
+    // --- 9. УПРАВЛЕНИЕ СКОРОСТЬЮ МОДЕЛИРОВАНИЯ ---
     document.querySelectorAll('[data-speed]').forEach(btn => {
       btn.addEventListener('click', () => {
         const spd = parseInt(btn.dataset.speed, 10);
@@ -1511,20 +1391,6 @@
       sim.spotActive = false;
       sim.ulrCoolingActive = false;
 
-      // Сброс визуального состояния кнопок
-      btnBoronInject.classList.remove('warn-active');
-      btnBoronDilute.classList.remove('active');
-      valBoronFlow.textContent = 'Нейтрально';
-      document.getElementById('btnSprayKD').classList.remove('active');
-      document.getElementById('btnIpuKD').classList.remove('danger-active');
-      document.getElementById('btnLeakLoop1').classList.remove('danger-active');
-      document.getElementById('btnBruK').classList.remove('active');
-      document.getElementById('btnBruA').classList.remove('warn-active');
-      document.getElementById('btnTriggerSAOZ').classList.remove('active');
-      document.getElementById('btnToggleSPOT').classList.remove('active');
-      document.getElementById('btnToggleSPOT').textContent = 'Шиберы СПОТ: ЗАКР';
-      document.getElementById('btnFloodULR').classList.remove('active');
-
       if (scenarioKey === 'nominal') {
         sim.thermalPowerMW = 3200.0;
         sim.neutronFlux = 1.0;
@@ -1546,9 +1412,8 @@
         sim.feedwaterFlowPct = 100;
         sim.turbineValvePct = 100;
         sim.electricalPowerMW = 1200.0;
-        sim.loops.forEach((l, i) => {
+        sim.loops.forEach(l => {
           l.pumpOn = true; l.rpm = 1000; l.flowPct = 100; l.tHot = 328.9; l.tCold = 298.2; l.sgLevelM = 2.10; l.sgPressMPa = 7.00;
-          document.getElementById(`btnPump${i}`).classList.add('active');
         });
         addLog('СЦЕНАРИЙ 1: Загружен стационарный номинальный режим энергоблока ВВЭР-1200 (100% Nном — 3200 МВт тепл. / 1200 МВт электр.).', 'ok');
       } else if (scenarioKey === 'startup') {
@@ -1572,12 +1437,9 @@
         sim.feedwaterFlowPct = 50;
         sim.turbineValvePct = 50;
         sim.electricalPowerMW = 35.0;
-        sim.boronMode = -1; // Включен ввод дистиллята для компенсации подъема мощности
-        btnBoronDilute.classList.add('active');
-        valBoronFlow.textContent = 'Разбавление (Дистиллят)';
-        sim.loops.forEach((l, i) => {
+        sim.boronMode = -1; // Ввод чистого дистиллята для подъема мощности
+        sim.loops.forEach(l => {
           l.pumpOn = true; l.rpm = 1000; l.flowPct = 100; l.tHot = 288.0; l.tCold = 286.0; l.sgLevelM = 2.05; l.sgPressMPa = 6.75;
-          document.getElementById(`btnPump${i}`).classList.add('active');
         });
         addLog('СЦЕНАРИЙ 2: Выход на МКУ и подъем мощности до 1600 МВт (50% Nном). Включен ввод чистого дистиллята и АРМ.', 'info');
       } else if (scenarioKey === 'xenon') {
@@ -1602,11 +1464,8 @@
         sim.turbineValvePct = 32;
         sim.electricalPowerMW = 360.0;
         sim.boronMode = -1;
-        btnBoronDilute.classList.add('active');
-        valBoronFlow.textContent = 'Разбавление (Дистиллят)';
-        sim.loops.forEach((l, i) => {
+        sim.loops.forEach(l => {
           l.pumpOn = true; l.rpm = 1000; l.flowPct = 100; l.tHot = 301.5; l.tCold = 291.0; l.sgLevelM = 2.10; l.sgPressMPa = 6.90;
-          document.getElementById(`btnPump${i}`).classList.add('active');
         });
         addLog('СЦЕНАРИЙ 3: Ксеноновый переходный процесс (разгрузка со 100% до 30% Nном). Удерживайте критичность разбавлением борной кислоты!', 'warn');
       } else if (scenarioKey === 'blackout') {
@@ -1630,11 +1489,8 @@
         sim.turbineValvePct = 0;
         sim.electricalPowerMW = 0.0;
         sim.spotActive = true;
-        document.getElementById('btnToggleSPOT').classList.add('active');
-        document.getElementById('btnToggleSPOT').textContent = 'Шиберы СПОТ: ОТКР';
-        sim.loops.forEach((l, i) => {
+        sim.loops.forEach(l => {
           l.pumpOn = false; l.rpm = 180; l.flowPct = 8.5; l.tHot = 319.5; l.tCold = 292.0; l.sgLevelM = 1.98; l.sgPressMPa = 6.85;
-          document.getElementById(`btnPump${i}`).classList.remove('active');
         });
         addLog('СЦЕНАРИЙ 4: Полное обесточивание энергоблока! Отключены ГЦНА-1..4 и ПЭН, сработала АЗ-1. Установлена естественная циркуляция в 4 петлях и отвод тепла через СПОТ.', 'warn');
       } else if (scenarioKey === 'loca') {
@@ -1661,34 +1517,20 @@
         sim.saozActive = true;
         sim.spotActive = true;
         sim.ulrCoolingActive = true;
-        document.getElementById('btnLeakLoop1').classList.add('danger-active');
-        document.getElementById('btnTriggerSAOZ').classList.add('active');
-        document.getElementById('btnToggleSPOT').classList.add('active');
-        document.getElementById('btnToggleSPOT').textContent = 'Шиберы СПОТ: ОТКР';
-        document.getElementById('btnFloodULR').classList.add('active');
-        sim.loops.forEach((l, i) => {
+        sim.loops.forEach(l => {
           l.pumpOn = false; l.rpm = 0; l.flowPct = 7.5; l.tHot = 276.0; l.tCold = 258.0; l.sgLevelM = 2.02; l.sgPressMPa = 5.60;
-          document.getElementById(`btnPump${i}`).classList.remove('active');
         });
-        addLog('СЦЕНАРИЙ 5: Тест пассивных систем безопасности В-392М (течь 1-го контура). Открыты обратные клапаны гидроемкостей САОЗ ГЕ-1..3, СПОТ и охлаждение шахты УЛР!', 'danger');
+        addLog('СЦЕНАРИЙ 5: Тест пассивных систем безопасности В-491 (течь 1-го контура). Открыты обратные клапаны гидроемкостей САОЗ ГЕ-1..3, СПОТ и охлаждение шахты УЛР!', 'danger');
       }
-
-      // Синхронизируем ползунки с новыми значениями сценария
-      document.getElementById('sliderArmTarget').value = sim.armTargetMW;
-      document.getElementById('valArmTarget').textContent = `${sim.armTargetMW} МВт`;
-      document.getElementById('sliderFeedwater').value = sim.feedwaterFlowPct;
-      document.getElementById('valFeedwater').textContent = `${sim.feedwaterFlowPct} %`;
-      document.getElementById('sliderTurbineValve').value = sim.turbineValvePct;
-      document.getElementById('valTurbineValve').textContent = `${sim.turbineValvePct} %`;
-      const btnArm = document.getElementById('btnARM');
-      btnArm.classList.toggle('active', sim.armEnabled);
-      btnArm.textContent = sim.armEnabled ? 'АРМ: ВКЛЮЧЕН' : 'АРМ: ОТКЛ';
     }
 
-    document.getElementById('scenarioSelect').addEventListener('change', e => {
-      applyScenario(e.target.value);
-      sound.click(640);
-    });
+    const scenarioSelect = document.getElementById('scenarioSelect');
+    if (scenarioSelect) {
+      scenarioSelect.addEventListener('change', e => {
+        applyScenario(e.target.value);
+        sound.click(640);
+      });
+    }
 
     // --- 11. ГЛАВНЫЙ ЦИКЛ СИМУЛЯЦИИ (60 FPS) ---
     let lastFrameTime = performance.now();
@@ -1707,8 +1549,9 @@
     }
 
     window.onload = function () {
+      applyHashRoute();
       resizeSimCanvas();
-      addLog('Система верхнего блочного уровня БЩУ ВВЭР-1200 (проект В-392М) успешно инициализирована.', 'ok');
+      addLog('Система верхнего блочного уровня БЩУ ВВЭР-1200 (проект В-491, БелАЭС) успешно инициализирована.', 'ok');
       addLog('Энергоблок работает в стационарном номинальном режиме: Nтепл = 3200 МВт, Nэлектр = 1200 МВт, P₁ = 16,2 МПа, Гр.10 ОР СУЗ = 80%.', 'info');
       requestAnimationFrame(mainLoop);
     };
@@ -1725,6 +1568,8 @@ window.tooltipEl = typeof tooltipEl !== 'undefined' ? tooltipEl : null;
 window.activeHotspots = typeof activeHotspots !== 'undefined' ? activeHotspots : null;
 window.addLog = typeof addLog !== 'undefined' ? addLog : null;
 window.setSystemsSubMode = typeof setSystemsSubMode !== 'undefined' ? setSystemsSubMode : null;
+window.activateViewMode = typeof activateViewMode !== 'undefined' ? activateViewMode : null;
+window.applyHashRoute = typeof applyHashRoute !== 'undefined' ? applyHashRoute : null;
 window.renderCanvas = typeof renderCanvas !== 'undefined' ? renderCanvas : null;
 window.updateDOMTelemetry = typeof updateDOMTelemetry !== 'undefined' ? updateDOMTelemetry : null;
 window.applyScenario = typeof applyScenario !== 'undefined' ? applyScenario : null;

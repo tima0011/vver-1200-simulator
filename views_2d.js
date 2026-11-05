@@ -1,7 +1,41 @@
 // ============================================================================
-// ReactorLab // Цифровой двойник ВВЭР-1200 (Проект В-392М)
+// ReactorLab // Цифровой двойник ВВЭР-1200 (Проект В-491, БелАЭС)
 // views_2d.js — Мнемосхемы 2D-систем (панорама, разрез, 4 петли ГЦК)
 // ============================================================================
+
+// Инженерная температурная шкала теплоносителя (Slate Light SCADA)
+var THERMAL_COLOR_SCALE = window.THERMAL_COLOR_SCALE || {
+  COLD_COOLING: '#0EA5E9',     // 10°C – 45°C: Ледяной лазурный (водозабор, градирни, подпитка)
+  RETURN_CONDENSATE: '#06B6D4',// 45°C – 100°C: Глубокий циан (конденсат, возврат охлажденной воды)
+  HOT_STEAM: '#F59E0B',        // 100°C – 280°C: Янтарный (2-й контур, паропроводы от ПГ к турбине)
+  REACTOR_CORE: '#EF4444',     // 280°C – 330°C: Сигнальный коралловый (1-й контур под давлением, корпус, ГЦТ)
+  CRITICAL_OVERHEAT: '#DC2626' // > 350°C: Глубокий кармин (аварийные уставки и перегрев ТВЭЛ)
+};
+window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
+
+function getThermalColor(tempC) {
+  if (tempC > 350) return THERMAL_COLOR_SCALE.CRITICAL_OVERHEAT;
+  if (tempC >= 280) return THERMAL_COLOR_SCALE.REACTOR_CORE;
+  if (tempC >= 100) return THERMAL_COLOR_SCALE.HOT_STEAM;
+  if (tempC >= 45) return THERMAL_COLOR_SCALE.RETURN_CONDENSATE;
+  return THERMAL_COLOR_SCALE.COLD_COOLING;
+}
+window.getThermalColor = getThermalColor;
+
+function drawFlowArrow(x, y, angle, color, size = 5.5) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(size, 0);
+  ctx.lineTo(-size * 0.85, -size * 0.65);
+  ctx.lineTo(-size * 0.85, size * 0.65);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.restore();
+}
+window.drawFlowArrow = drawFlowArrow;
 
 // Глобальная синхронизация с контекстом холста и хотспотами
 var activeHotspots = window.activeHotspots || [];
@@ -54,8 +88,13 @@ function roundRect(ctx, x, y, w, h, r) {
       ctx.restore();
     }
 
+    // ============================================================================
+    // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ SCADA В ТЕМНО-ГРАФИТОВОЙ ТЕМЕ
+    // ============================================================================
+
     // Вспомогательная функция отрисовки кликабельного узла арматуры / клапана на мнемосхеме [СИСТЕМЫ]
-    // Мнемоническое отображение положения: задвижка открыта — заливка зеленым (#15803d) с линией прохода; закрыта — темно-серый корпус с перекрестием.
+    // Мнемоническое отображение положения: открыта — зеленый (#22c55e) с линией свободного прохода;
+    // закрыта — темный графит с перекрестием (#ef4444).
     function drawClickableArmature(x, y, w, h, label, stateText, statusType, tooltipCfg, onClickFn) {
       const isHovered = sim.hoveredHotspot && sim.hoveredHotspot.x === x && sim.hoveredHotspot.y === y;
 
@@ -69,9 +108,9 @@ function roundRect(ctx, x, y, w, h, r) {
 
       ctx.save();
       roundRect(ctx, x, y, w, h, 3);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#F8FAFC';
       ctx.fill();
-      ctx.strokeStyle = isHovered ? '#0284c7' : (isOpen ? '#15803d' : '#64748b');
+      ctx.strokeStyle = isHovered ? '#0284C7' : (isOpen ? '#16A34A' : (statusType === 'danger' ? '#DC2626' : '#1E293B'));
       ctx.lineWidth = isHovered ? 2 : 1.2;
       ctx.stroke();
 
@@ -80,9 +119,9 @@ function roundRect(ctx, x, y, w, h, r) {
       const vy = y + h / 2;
 
       if (isOpen) {
-        // Открыта: заливка зеленым (#15803d) с линией прохода
-        ctx.fillStyle = '#15803d';
-        ctx.strokeStyle = '#166534';
+        // Открыта: заливка зеленым (#22c55e) с линией свободного прохода
+        ctx.fillStyle = '#22c55e';
+        ctx.strokeStyle = '#15803d';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(vx - 7, vy - 6);
@@ -108,9 +147,9 @@ function roundRect(ctx, x, y, w, h, r) {
         ctx.lineTo(vx + 8, vy);
         ctx.stroke();
       } else {
-        // Закрыта: темно-серый корпус (#334155) с перекрестием
-        ctx.fillStyle = '#334155';
-        ctx.strokeStyle = '#1e293b';
+        // Закрыта: корпус (#E2E8F0) с перекрестием
+        ctx.fillStyle = '#E2E8F0';
+        ctx.strokeStyle = '#334155';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(vx - 7, vy - 6);
@@ -129,7 +168,7 @@ function roundRect(ctx, x, y, w, h, r) {
         ctx.stroke();
 
         // Перекрестие (X)
-        ctx.strokeStyle = '#dc2626';
+        ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(vx - 5, vy - 5);
@@ -139,11 +178,11 @@ function roundRect(ctx, x, y, w, h, r) {
         ctx.stroke();
       }
 
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#0F172A';
       ctx.font = 'bold 9.5px "Segoe UI", sans-serif';
       ctx.fillText(label, x + 28, y + 13);
 
-      const stateColor = isOpen ? '#15803d' : (statusType === 'danger' ? '#dc2626' : '#64748b');
+      const stateColor = isOpen ? '#16A34A' : (statusType === 'danger' ? '#DC2626' : '#64748B');
       ctx.fillStyle = stateColor;
       ctx.font = 'bold 9px "JetBrains Mono", monospace';
       ctx.fillText(stateText, x + 28, y + 25);
@@ -161,15 +200,15 @@ function roundRect(ctx, x, y, w, h, r) {
       });
     }
 
-    // Вспомогательная функция отрисовки SCADA-модуля оборудования
+    // Вспомогательная функция отрисовки SCADA-модуля оборудования в темной теме
     function drawScadaModule(cfg) {
-      const { x, y, w, h, title, subtitle, rows, isHovered, statusColor = '#22c55e' } = cfg;
+      const { x, y, w, h, title, subtitle, rows, isHovered, statusColor = '#16A34A' } = cfg;
       ctx.save();
       roundRect(ctx, x, y, w, h, 4);
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = '#F8FAFC';
       ctx.fill();
-      ctx.strokeStyle = isHovered ? '#0284c7' : '#475569';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isHovered ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = isHovered ? 2 : 1.2;
       ctx.stroke();
 
       const headerH = 25;
@@ -183,24 +222,24 @@ function roundRect(ctx, x, y, w, h, r) {
       ctx.lineTo(x, y + 4);
       ctx.quadraticCurveTo(x, y, x + 4, y);
       ctx.closePath();
-      ctx.fillStyle = '#334155';
+      ctx.fillStyle = '#E2E8F0';
       ctx.fill();
 
       // Статусный LED индикатор
       ctx.beginPath();
-      ctx.arc(x + w - 12, y + 12.5, 4, 0, Math.PI * 2);
+      ctx.arc(x + w - 12, y + 12.5, 4.5, 0, Math.PI * 2);
       ctx.fillStyle = statusColor;
       ctx.fill();
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#1E293B';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#0F172A';
       ctx.font = 'bold 10px "Segoe UI", sans-serif';
       ctx.fillText(title, x + 7, y + 12);
 
       if (subtitle) {
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#0284C7';
         ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
         ctx.fillText(subtitle, x + 7, y + 21.5);
       }
@@ -212,13 +251,13 @@ function roundRect(ctx, x, y, w, h, r) {
 
         rows.forEach((r, idx) => {
           const ry = tableTop + idx * rowH;
-          ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f1f5f9';
+          ctx.fillStyle = idx % 2 === 0 ? '#FFFFFF' : '#F1F5F9';
           ctx.fillRect(x + 3, ry, w - 6, rowH - 1);
-          ctx.strokeStyle = '#e2e8f0';
+          ctx.strokeStyle = '#E2E8F0';
           ctx.lineWidth = 0.8;
           ctx.strokeRect(x + 3, ry, w - 6, rowH - 1);
 
-          ctx.fillStyle = '#475569';
+          ctx.fillStyle = '#334155';
           ctx.font = 'bold 8.5px "Segoe UI", sans-serif';
           ctx.fillText(r.label, x + 6, ry + rowH - 5.5);
 
@@ -230,11 +269,11 @@ function roundRect(ctx, x, y, w, h, r) {
           const valW = ctx.measureText(valStr).width;
 
           const rightEdge = x + w - 6;
-          ctx.fillStyle = '#64748b';
+          ctx.fillStyle = '#64748B';
           ctx.font = '8px "Segoe UI", sans-serif';
           ctx.fillText(unitStr, rightEdge - unitW, ry + rowH - 5.5);
 
-          ctx.fillStyle = r.color || '#0f172a';
+          ctx.fillStyle = r.color || '#0F172A';
           ctx.font = 'bold 9px "JetBrains Mono", monospace';
           ctx.fillText(valStr, rightEdge - unitW - valW, ry + rowH - 5.5);
         });
@@ -247,7 +286,7 @@ function roundRect(ctx, x, y, w, h, r) {
       ctx.save();
       ctx.font = 'bold 9px "Segoe UI", sans-serif';
       const tw = ctx.measureText(text).width;
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#F8FAFC';
       roundRect(ctx, x - 4, y - 11, tw + 8, 15, 3);
       ctx.fill();
       ctx.strokeStyle = color;
@@ -259,1628 +298,2603 @@ function roundRect(ctx, x, y, w, h, r) {
     }
 
     // ============================================================================
-    // ПАНОРАМНАЯ МНЕМОСХЕМА [СИСТЕМЫ] В СТИЛЕ ТРЕНАЖЕРА МАГАТЭ (СЛЕВА НАПРАВО)
-    // Реактор -> КД -> Парогенераторы (ПГВ) -> ГПК -> Турбина -> Конденсатор -> ПЭН
+    // ПАНОРАМНАЯ SCADA-МНЕМОСХЕМА [СИСТЕМЫ] — РУ В-491 (БЕЛОРУССКАЯ АЭС)
+    // 1-й Контур: Реактор В-491 (3200 МВт) + 4 петли ГЦК Ду-850 + КД 79 м³ + САОЗ
+    // 2-й Контур: ГПК 7.0 МПа + Турбина К-1200 + ТЗВ-1200 + Конденсатор + Деаэратор + ПЭН 225 °C
+    // ============================================================================
+    // ПРИНЦИПИАЛЬНАЯ ТЕХНОЛОГИЧЕСКАЯ СХЕМА ЭНЕРГОБЛОКА ВВЭР-1200 (Рис. 2.2.1)
+    // Векторный P&ID-стиль (ISO/ГОСТ): тонкие линии 1.5–2px, изгибы под 90°,
+    // символы арматуры (⋈), насосов (окружность со стрелкой), сосуды с уровнем.
     // ============================================================================
     function renderPanoramicSystemsView() {
-      // 0. Зонирование контуров (Реакторное отделение и Машинный зал)
+      activeHotspots = [];
+      window.activeHotspots = activeHotspots;
+
+      // 0. БЕСШОВНЫЙ СВЕТЛЫЙ ХОЛСТ (#FFFFFF) БЕЗ ЧЕРНОЙ РАМКИ
       ctx.save();
-      roundRect(ctx, 25, 60, 620, 640, 6);
-      ctx.fillStyle = 'rgba(241, 245, 249, 0.45)';
-      ctx.fill();
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([6, 4]);
+
+      // Верхняя разделительная черта заголовка P&ID
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(15, 24);
+      ctx.lineTo(1345, 24);
       ctx.stroke();
 
-      ctx.fillStyle = '#475569';
-      ctx.font = 'bold 11px "Segoe UI", sans-serif';
-      ctx.fillText('ГЕРМООБОЛОЧКА (1-Й КОНТУР • РЕАКТОРНОЕ ОТДЕЛЕНИЕ)', 38, 78);
-
-      roundRect(ctx, 655, 60, 680, 640, 6);
-      ctx.fillStyle = 'rgba(241, 245, 249, 0.45)';
-      ctx.fill();
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-      ctx.fillStyle = '#475569';
-      ctx.font = 'bold 11px "Segoe UI", sans-serif';
-      ctx.fillText('МАШИННЫЙ ЗАЛ (2-Й КОНТУР • ТУРБОУСТАНОВКА И КОНДЕНСАТОР)', 668, 78);
-      ctx.setLineDash([]);
+      // Текстовые заголовки зон P&ID (высококонтрастный #0F172A и акцент #0284C7)
+      ctx.font = 'bold 9.5px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#0F172A';
+      ctx.fillText('РИС. 2.2.1 — ПРИНЦИПИАЛЬНАЯ ТЕХНОЛОГИЧЕСКАЯ СХЕМА ЭНЕРГОБЛОКА ВВЭР-1200 (В-491)', 20, 16);
+      ctx.fillStyle = '#0284C7';
+      ctx.fillText('10UJA: ЗДАНИЕ РЕАКТОРА И ГЕРМООБОЛОЧКА (1-Й КОНТУР • 16.20 МПа)', 20, 36);
+      ctx.fillText('10UMA: МАШИННЫЙ ЗАЛ И 2-Й КОНТУР (ТУРБИНА К-1200 • ГПК 7.00 МПа • ДЕАЭРАТОР 0.871 МПа)', 710, 36);
       ctx.restore();
 
-      const activePumpsCount = sim.loops ? sim.loops.filter(l => l.pumpOn).length : 4;
-      const avgSgLevel = sim.loops ? sim.loops.reduce((s, l) => s + l.sgLevelM, 0) / 4 : 2.10;
-      const avgRpm = sim.loops ? sim.loops.reduce((s, l) => s + l.rpm, 0) / 4 : 1000;
-      const primaryFlowKgS = sim.loops ? sim.loops.reduce((s, l) => s + (l.pumpOn ? 4400 : 500), 0) : 17600;
+      // Текущие динамические параметры модели
+      const loops = sim.loops || [
+        { pumpOn: true, rpm: 1000, flowPct: 100, tHot: 328.9, tCold: 298.2, sgLevelM: 2.10, sgPressMPa: 7.00 },
+        { pumpOn: true, rpm: 1000, flowPct: 100, tHot: 328.9, tCold: 298.2, sgLevelM: 2.10, sgPressMPa: 7.00 },
+        { pumpOn: true, rpm: 1000, flowPct: 100, tHot: 328.9, tCold: 298.2, sgLevelM: 2.10, sgPressMPa: 7.00 },
+        { pumpOn: true, rpm: 1000, flowPct: 100, tHot: 328.9, tCold: 298.2, sgLevelM: 2.10, sgPressMPa: 7.00 }
+      ];
+      const lp1 = loops[0];
+      const lp2 = loops[1];
       const steamKgS = 1780 * (sim.feedwaterFlowPct / 100);
 
-      // ==========================================================================
-      // ТЕХНОЛОГИЧЕСКИЕ ТРУБОПРОВОДЫ (ОРТОГОНАЛЬНАЯ РАЗВОДКА ПОД 90°, ТОЛЩИНА 5px)
-      // ==========================================================================
-      ctx.save();
-      ctx.lineCap = 'square';
-      ctx.lineJoin = 'miter';
+      // ========================================================================
+      // СТАНДАРТНЫЕ P&ID-СИМВОЛЫ (КЛАПАНЫ, НАСОСЫ, ТРУБОПРОВОДЫ, МЕТКИ)
+      // ========================================================================
 
-      // 1) Горячая нитка Ду850 (Твых): Реактор (230, 310) -> ПГВ (460, 310)
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(230, 310);
-      ctx.lineTo(460, 310);
-      ctx.stroke();
+      // 1. Векторный клапан P&ID: "песочные часы" / бабочка (⋈) со штоком и приводом
+      function drawPidValve(cfg) {
+        const { x, y, orient = 'h', size = 8, label = '', kks = '', isOpen = true, type = 'motor', statusType = 'norm', onClick = null, tooltip = null } = cfg;
+        const isHov = sim.hoveredHotspot && sim.hoveredHotspot.x === x - 12 && sim.hoveredHotspot.y === y - 12;
 
-      // Дыхательный трубопровод к КД: от горячей нитки (345, 310) вверх в дно КД (345, 273)
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(345, 310);
-      ctx.lineTo(345, 273);
-      ctx.stroke();
+        ctx.save();
+        const strokeCol = isHov ? '#0284C7' : (isOpen ? '#16A34A' : (statusType === 'danger' ? '#DC2626' : '#475569'));
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = isHov ? 2.0 : 1.5;
 
-      // 2) Линия впрыска в КД (из холодной нитки): (420, 495) -> вверх к КД (420, 180) -> в КД (420, 180)
-      ctx.strokeStyle = '#0284c7';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(420, 495);
-      ctx.lineTo(420, 180);
-      ctx.lineTo(418, 180);
-      ctx.stroke();
-
-      // 3) Сброс ИПУ КД в барботер: от верха КД (345, 118) -> вверх (345, 92) -> влево (245, 92)
-      ctx.strokeStyle = sim.ipuKdOpen ? '#dc2626' : '#475569';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(345, 118);
-      ctx.lineTo(345, 92);
-      ctx.lineTo(160, 92);
-      ctx.stroke();
-
-      // 4) Холодная нитка Ду850 (Твх): ПГВ (545, 410) -> ГЦНА (545, 440), выход ГЦНА (460, 495) -> Реактор (230, 495)
-      ctx.strokeStyle = '#1d4ed8';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(545, 410);
-      ctx.lineTo(545, 440);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(460, 495);
-      ctx.lineTo(230, 495);
-      ctx.stroke();
-
-      // 5) Паропровод свежего пара ГПК (P2, Tнас): ПГВ (545, 195) -> (545, 160) -> ГПК (675, 160)
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(545, 195);
-      ctx.lineTo(545, 160);
-      ctx.lineTo(675, 160);
-      ctx.stroke();
-
-      // От ГПК к Турбине: ГПК (825, 160) -> Турбина (920, 160) -> вниз в турбину (920, 180)
-      ctx.beginPath();
-      ctx.moveTo(825, 160);
-      ctx.lineTo(920, 160);
-      ctx.lineTo(920, 180);
-      ctx.stroke();
-
-      // Линия сброса пара БРУ-К из ГПК (745, 240) -> вниз (745, 275) -> вправо в конденсатор (1115, 275)
-      if (sim.bruKOpen) {
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 4;
+        // Бабочка клапана (два соприкасающихся треугольника)
         ctx.beginPath();
-        ctx.moveTo(745, 240);
-        ctx.lineTo(745, 275);
-        ctx.lineTo(1115, 275);
+        if (orient === 'h') {
+          ctx.moveTo(x - size, y - size * 0.65);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x - size, y + size * 0.65);
+          ctx.closePath();
+          ctx.moveTo(x + size, y - size * 0.65);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x + size, y + size * 0.65);
+          ctx.closePath();
+        } else {
+          ctx.moveTo(x - size * 0.65, y - size);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x + size * 0.65, y - size);
+          ctx.closePath();
+          ctx.moveTo(x - size * 0.65, y + size);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x + size * 0.65, y + size);
+          ctx.closePath();
+        }
+        ctx.fillStyle = isOpen ? 'rgba(22, 163, 74, 0.18)' : '#E2E8F0';
+        ctx.fill();
+        ctx.stroke();
+
+        // Линия открытого прохода / перекрестие закрытия
+        if (isOpen) {
+          ctx.beginPath();
+          if (orient === 'h') {
+            ctx.moveTo(x - size, y); ctx.lineTo(x + size, y);
+          } else {
+            ctx.moveTo(x, y - size); ctx.lineTo(x, y + size);
+          }
+          ctx.strokeStyle = '#22c55e';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(x - 3, y - 3); ctx.lineTo(x + 3, y + 3);
+          ctx.moveTo(x - 3, y + 3); ctx.lineTo(x + 3, y - 3);
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+        }
+
+        // Шток привода клапана
+        const stemLen = 9;
+        ctx.beginPath();
+        if (orient === 'h') {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y - stemLen);
+        } else {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + stemLen, y);
+        }
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Головка привода
+        const hx = orient === 'h' ? x : x + stemLen;
+        const hy = orient === 'h' ? y - stemLen : y;
+
+        if (type === 'motor') {
+          ctx.beginPath();
+          ctx.arc(hx, hy - 4, 5.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#F8FAFC';
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = strokeCol;
+          ctx.font = 'bold 7.5px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('M', hx, hy - 4);
+        } else if (type === 'reg') {
+          ctx.beginPath();
+          ctx.arc(hx, hy - 3, 5.5, Math.PI, 0, false);
+          ctx.closePath();
+          ctx.fillStyle = '#F8FAFC';
+          ctx.fill();
+          ctx.stroke();
+        } else if (type === 'safety') {
+          ctx.beginPath();
+          ctx.moveTo(hx - 4, hy - 7);
+          ctx.lineTo(hx + 4, hy - 7);
+          ctx.moveTo(hx, hy);
+          ctx.lineTo(hx, hy - 7);
+          ctx.stroke();
+        } else if (type === 'check') {
+          ctx.beginPath();
+          ctx.moveTo(x - size, y + size * 0.65);
+          ctx.lineTo(x + size, y - size * 0.65);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(hx - 5, hy - 1);
+          ctx.lineTo(hx + 5, hy - 1);
+          ctx.stroke();
+        }
+
+        // Подпись клапана
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        if (label) {
+          ctx.font = 'bold 8px "Segoe UI", sans-serif';
+          ctx.fillStyle = isHov ? '#0284C7' : '#0F172A';
+          ctx.fillText(label, x + (orient === 'h' ? size + 3 : 8), y - 2);
+        }
+        if (kks) {
+          ctx.font = 'bold 7.5px monospace';
+          ctx.fillStyle = isOpen ? '#16A34A' : '#475569';
+          ctx.fillText(kks, x + (orient === 'h' ? size + 3 : 8), y + 7);
+        }
+        ctx.restore();
+
+        if (tooltip) {
+          const telemFn = typeof tooltip.telemetry === 'function' ? tooltip.telemetry : () => String(tooltip.telemetry || '');
+          activeHotspots.push({
+            x: x - 12, y: y - 15, w: 24 + (label ? 45 : 0), h: 28,
+            title: tooltip.title || label,
+            sub: tooltip.sub || kks,
+            desc: tooltip.desc || '',
+            simple: tooltip.simple || '',
+            telemetry: telemFn,
+            onClick: onClick
+          });
+        }
+      }
+
+      // 2. Векторный насос P&ID: окружность с внутренним указателем потока и ротором
+      function drawPidPump(cfg) {
+        const { x, y, r = 13, flowAngle = 0, label = '', kks = '', isRunning = true, rpm = 1000, onClick = null, tooltip = null } = cfg;
+        const isHov = sim.hoveredHotspot && Math.hypot(sim.hoveredHotspot.x - x, sim.hoveredHotspot.y - y) <= r + 4;
+        const pCol = isHov ? '#0284C7' : (isRunning ? '#16A34A' : '#64748B');
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = isHov ? '#0284C7' : '#1E293B';
+        ctx.lineWidth = isHov ? 2.2 : 1.8;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(flowAngle);
+        ctx.beginPath();
+        ctx.moveTo(r - 1, 0);
+        ctx.lineTo(-r * 0.45, -r * 0.55);
+        ctx.lineTo(-r * 0.45, r * 0.55);
+        ctx.closePath();
+        ctx.fillStyle = isRunning ? 'rgba(34, 197, 94, 0.45)' : 'rgba(100, 116, 139, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = pCol;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        if (isRunning && rpm > 50) {
+          const spinAng = sim.time * (rpm / 200);
+          ctx.beginPath();
+          for (let a = 0; a < 3; a++) {
+            const ang = spinAng + (a * Math.PI * 2 / 3);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(ang) * (r * 0.65), Math.sin(ang) * (r * 0.65));
+          }
+          ctx.strokeStyle = '#16A34A';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        if (label) {
+          ctx.font = 'bold 8.5px "Segoe UI", sans-serif';
+          ctx.fillStyle = isHov ? '#0284C7' : '#0F172A';
+          ctx.fillText(label, x + r + 4, y - 2);
+        }
+        if (kks) {
+          ctx.font = 'bold 7.5px monospace';
+          ctx.fillStyle = isRunning ? '#16A34A' : '#475569';
+          ctx.fillText(isRunning ? `${rpm.toFixed(0)} об/м` : 'ОТКЛ', x + r + 4, y + 8);
+        }
+        ctx.restore();
+
+        if (tooltip) {
+          const telemFn = typeof tooltip.telemetry === 'function' ? tooltip.telemetry : () => String(tooltip.telemetry || '');
+          activeHotspots.push({
+            x: x - r - 2, y: y - r - 2, w: r * 2 + (label ? 60 : 4), h: r * 2 + 4,
+            r: r + 4,
+            title: tooltip.title || label,
+            sub: tooltip.sub || kks,
+            desc: tooltip.desc || '',
+            simple: tooltip.simple || '',
+            telemetry: telemFn,
+            onClick: onClick
+          });
+        }
+      }
+
+      // 3. Вспомогательный отрисовщик шильдика номера элемента по схеме Рис. 2.2.1
+      function drawItemTag(num, x, y, title = '') {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, 7.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.font = 'bold 8px monospace';
+        ctx.fillStyle = '#0F172A';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(num), x, y);
+
+        if (title) {
+          ctx.textAlign = 'left';
+          ctx.font = 'bold 8px "Segoe UI", sans-serif';
+          ctx.fillStyle = '#0F172A';
+          ctx.fillText(title, x + 10, y);
+        }
+        ctx.restore();
+      }
+
+      // ========================================================================
+      // 1. ЛЕВАЯ ЧАСТЬ: ЗДАНИЕ РЕАКТОРА И ДВОЙНОЙ КУПОЛ ГЕРМООБОЛОЧКИ (10UJA)
+      // ========================================================================
+      const domeCx = 375, domeCy = 265;
+      const rOuter = 245, rInner = 220;
+      const wallBaseY = 515;
+
+      ctx.save();
+      // Фундаментная плита здания реактора
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(115, wallBaseY, 530, 16);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(115, wallBaseY, 530, 16);
+      // Штриховка бетона
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1;
+      for (let bx = 125; bx < 640; bx += 18) {
+        ctx.beginPath();
+        ctx.moveTo(bx, wallBaseY);
+        ctx.lineTo(bx + 12, wallBaseY + 16);
         ctx.stroke();
       }
 
-      // 6) Выхлоп пара из Турбины в Конденсатор: Турбина (1070, 270) -> Конденсатор (1115, 270)
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 5;
+      // Наружная защитная оболочка (7)
       ctx.beginPath();
-      ctx.moveTo(1070, 270);
-      ctx.lineTo(1115, 270);
-      ctx.stroke();
-
-      // 7) Питательная вода от ПЭН (225 °C): Конденсатор (1215, 360) -> ПЭН (1215, 440)
-      ctx.strokeStyle = '#0284c7';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(1215, 360);
-      ctx.lineTo(1215, 440);
-      ctx.stroke();
-
-      // Нагнетание ПЭН: (1215, 585) -> вниз (1215, 635) -> влево (545, 635) -> вверх в ПГВ (545, 410)
-      ctx.beginPath();
-      ctx.moveTo(1215, 585);
-      ctx.lineTo(1215, 635);
-      ctx.lineTo(545, 635);
-      ctx.lineTo(545, 410);
-      ctx.stroke();
-
-      ctx.restore();
-
-      // ==========================================================================
-      // ТЕКСТОВЫЕ МЕТКИ НАД МАГИСТРАЛЯМИ
-      // ==========================================================================
-      drawPipeLabel('«Горячая нитка Ду850 (Твых)»', 242, 303, '#dc2626');
-      drawPipeLabel('«Холодная нитка Ду850 (Твх)»', 242, 488, '#1d4ed8');
-      drawPipeLabel('«Линия впрыска КД»', 345, 450, '#0284c7');
-      drawPipeLabel('«Сброс ИПУ КД в барботер»', 125, 87, sim.ipuKdOpen ? '#dc2626' : '#475569');
-      drawPipeLabel('«Свежий пар ГПК (P2, Tнас)»', 475, 153, '#475569');
-      drawPipeLabel('«Питательная вода от ПЭН (225 °C)»', 760, 628, '#0284c7');
-
-      // ==========================================================================
-      // ПОТОКИ ЧАСТИЦ (АНИМАЦИЯ ТЕХНОЛОГИЧЕСКИХ СРЕД)
-      // ==========================================================================
-      const flowPrimary = (activePumpsCount / 4);
-      drawParticlesOnPath([[230, 310], [460, 310]], 6, flowPrimary * 3.2, '#dc2626', 3.0);
-      drawParticlesOnPath([[545, 410], [545, 440]], 3, flowPrimary * 3.2, '#1d4ed8', 3.0);
-      drawParticlesOnPath([[460, 495], [230, 495]], 6, flowPrimary * 3.2, '#1d4ed8', 3.0);
-
-      const flowSteam = (sim.feedwaterFlowPct / 100) * (sim.turbineValvePct / 100);
-      drawParticlesOnPath([[545, 195], [545, 160], [675, 160]], 5, flowSteam * 3.6, '#94a3b8', 2.8);
-      drawParticlesOnPath([[825, 160], [920, 160], [920, 180]], 4, flowSteam * 3.6, '#94a3b8', 2.8);
-      drawParticlesOnPath([[1070, 270], [1115, 270]], 3, flowSteam * 2.5, '#cbd5e1', 2.5);
-
-      const flowFeed = sim.feedwaterFlowPct / 100;
-      drawParticlesOnPath([[1215, 360], [1215, 440]], 3, flowFeed * 3.0, '#0284c7', 2.8);
-      drawParticlesOnPath([[1215, 585], [1215, 635], [545, 635], [545, 410]], 10, flowFeed * 3.0, '#0284c7', 2.8);
-
-      if (sim.sprayActive) {
-        drawParticlesOnPath([[420, 495], [420, 180], [418, 180]], 4, 1.8, '#0284c7', 2.2);
-      }
-
-      // ==========================================================================
-      // МОДУЛЬ 1: РЕАКТОР ВВЭР-1200
-      // ==========================================================================
-      const rxX = 50, rxY = 195, rxW = 180, rxH = 250;
-      const isRxHov = sim.hoveredHotspot && sim.hoveredHotspot.x === rxX && sim.hoveredHotspot.y === rxY;
-      const rxStatus = sim.az1Active ? '#dc2626' : (sim.thermalPowerMW > 3300 ? '#f59e0b' : '#22c55e');
-
-      drawScadaModule({
-        x: rxX, y: rxY, w: rxW, h: rxH,
-        title: 'ВВЭР-1200 // РЕАКТОР',
-        subtitle: 'РУ В-392М • 163 ТВС',
-        statusColor: rxStatus,
-        isHovered: isRxHov,
-        rows: [
-          { label: 'Nтепл (мощность)', val: sim.thermalPowerMW.toFixed(0), unit: 'МВт', color: '#dc2626' },
-          { label: 'Уровень мощности', val: (sim.thermalPowerMW / 32).toFixed(1), unit: '%', color: '#dc2626' },
-          { label: 'P₁ (давление 1к)', val: sim.primaryPressureMPa.toFixed(2), unit: 'МПа' },
-          { label: 'Твых (гор. нитка)', val: sim.coreOutletTempC.toFixed(1), unit: '°C', color: '#dc2626' },
-          { label: 'Твх (хол. нитка)', val: sim.coreInletTempC.toFixed(1), unit: '°C', color: '#1d4ed8' },
-          { label: 'Расход G₁', val: primaryFlowKgS.toFixed(0), unit: 'кг/с' },
-          { label: 'ОР СУЗ (Гр.10)', val: sim.group10Pos.toFixed(1), unit: '%', color: '#15803d' },
-          { label: 'Бор H3BO3', val: sim.boronConc.toFixed(2), unit: 'г/кг' }
-        ]
-      });
-
-      activeHotspots.push({
-        x: rxX, y: rxY, w: rxW, h: rxH,
-        title: 'Реактор ВВЭР-1200 (В-392М)',
-        sub: 'Ядерная паропроизводящая установка (ЯППУ)',
-        desc: 'Водо-водяной энергетический реактор тепловой мощностью 3200 МВт. Активная зона из 163 ТВС с низкообогащенным диоксидом урана UO₂.',
-        simple: plainExplanations.reactor,
-        telemetry: () => `Nтепл: ${sim.thermalPowerMW.toFixed(0)} МВт | P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа | Tвых: ${sim.coreOutletTempC.toFixed(1)} °C | Бор: ${sim.boronConc.toFixed(2)} г/кг`
-      });
-
-      // Гидроемкости САОЗ (ГЕ-1..4) слева от реактора
-      ctx.save();
-      roundRect(ctx, 16, 215, 26, 110, 5);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#475569';
+      ctx.arc(domeCx, domeCy, rOuter, Math.PI, 0, false);
+      ctx.lineTo(domeCx + rOuter, wallBaseY);
+      ctx.moveTo(domeCx - rOuter, domeCy);
+      ctx.lineTo(domeCx - rOuter, wallBaseY);
+      ctx.strokeStyle = '#334155';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      const saozH = Math.max(4, 98 * (sim.saozWaterPct / 100));
-      ctx.fillStyle = '#0284c7';
-      ctx.fillRect(18, 321 - saozH, 22, saozH);
+      // Внутренняя преднапряженная оболочка (6)
+      ctx.beginPath();
+      ctx.arc(domeCx, domeCy, rInner, Math.PI, 0, false);
+      ctx.lineTo(domeCx + rInner, wallBaseY);
+      ctx.moveTo(domeCx - rInner, domeCy);
+      ctx.lineTo(domeCx - rInner, wallBaseY);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([8, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-      ctx.fillStyle = '#334155';
-      ctx.font = 'bold 8px "JetBrains Mono", monospace';
+      // Метки оболочек (6) и (7)
+      drawItemTag(7, domeCx - rOuter - 2, domeCy - 100);
+      drawItemTag(6, domeCx - rInner + 14, domeCy - 90);
+
+      // Вентиляционная труба ВТ (25) слева от контайнмента
+      const stackX = 45;
+      ctx.beginPath();
+      ctx.moveTo(stackX - 16, wallBaseY);
+      ctx.lineTo(stackX - 6, 170);
+      ctx.lineTo(stackX + 6, 170);
+      ctx.lineTo(stackX + 16, wallBaseY);
+      ctx.closePath();
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      drawItemTag(25, stackX, 155, 'Венттруба ВТ-1');
+
+      // Фильтр (24) и вентустановка кольцевого зазора (23)
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(stackX + 22, 440, 24, 18);
+      ctx.strokeStyle = '#1E293B';
+      ctx.strokeRect(stackX + 22, 440, 24, 18);
+      drawItemTag(24, stackX + 34, 430);
+      drawPidPump({
+        x: stackX + 65, y: 449, r: 9, flowAngle: Math.PI,
+        label: '', kks: '23', isRunning: true, rpm: 1500
+      });
+      drawItemTag(23, stackX + 65, 435);
+
+      // Магистраль разряжения из кольцевого зазора в фильтр и трубу
+      ctx.beginPath();
+      ctx.moveTo(domeCx - rOuter + 12, 449);
+      ctx.lineTo(stackX + 74, 449);
+      ctx.moveTo(stackX + 56, 449);
+      ctx.lineTo(stackX + 46, 449);
+      ctx.moveTo(stackX + 22, 449);
+      ctx.lineTo(stackX, 449);
+      ctx.lineTo(stackX, 220);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // СПОТ ГО: Теплообменники-конденсаторы под куполом (28) и баки СПОТ (29)
+      // Слева:
+      ctx.strokeRect(190, 105, 30, 22);
+      drawItemTag(28, 205, 95);
+      ctx.strokeRect(140, 75, 26, 32);
+      drawItemTag(29, 153, 65, 'Бак СПОТ');
+      // Справа:
+      ctx.strokeRect(530, 105, 30, 22);
+      drawItemTag(28, 545, 95);
+      ctx.strokeRect(580, 75, 26, 32);
+      drawItemTag(29, 593, 65);
+
+      // Спринклерный коллектор (17) под сводом купола
+      ctx.beginPath();
+      ctx.arc(domeCx, domeCy, 192, Math.PI * 1.08, Math.PI * 1.92, false);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      // Форсунки распыла
+      for (let a = Math.PI * 1.12; a <= Math.PI * 1.88; a += 0.11) {
+        const nx = domeCx + Math.cos(a) * 192;
+        const ny = domeCy + Math.sin(a) * 192;
+        ctx.beginPath();
+        ctx.moveTo(nx, ny);
+        ctx.lineTo(nx, ny + 6);
+        ctx.stroke();
+      }
+      drawItemTag(17, domeCx, domeCy - 200, 'Спринклерный коллектор');
+
+      // Пассивные рекомбинаторы водорода (18)
+      [ [250, 95], [315, 75], [435, 75], [500, 95] ].forEach(([rx, ry], idx) => {
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fillRect(rx - 6, ry - 4, 12, 8);
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(rx - 6, ry - 4, 12, 8);
+        if (idx === 1) drawItemTag(18, rx, ry - 12);
+      });
+      ctx.restore();
+
+      // ========================================================================
+      // 2. ЦЕНТРАЛЬНЫЙ УЗЕЛ: РЕАКТОР В-491 (1) И ЛОВУШКА РАСПЛАВА (20)
+      // ========================================================================
+      const rxX = 333, rxW = 84, rxY = 245, rxH = 200;
+      const rxMidX = rxX + rxW / 2;
+      const isRxHov = sim.hoveredHotspot && sim.hoveredHotspot.x === rxX && sim.hoveredHotspot.y === rxY;
+
       ctx.save();
-      ctx.translate(22, 230);
-      ctx.rotate(Math.PI / 2);
-      ctx.fillText('САОЗ ГЕ', 0, 0);
-      ctx.restore();
+      // Верхний блок приводов ШЭМ-3 (ОР СУЗ)
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.2;
+      for (let cx = rxX + 14; cx <= rxX + rxW - 14; cx += 11) {
+        ctx.beginPath();
+        ctx.moveTo(cx, rxY - 45);
+        ctx.lineTo(cx, rxY);
+        ctx.stroke();
+      }
+      ctx.fillStyle = sim.az1Tripped ? '#ef4444' : '#22c55e';
+      ctx.fillRect(rxX + 10, rxY - 48, rxW - 20, 3);
+
+      // Сферическая верхняя крышка корпуса реактора
+      ctx.beginPath();
+      ctx.arc(rxMidX, rxY + 20, rxW / 2, Math.PI, 0, false);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isRxHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Разъем главного фланца
+      ctx.fillStyle = '#CBD5E1';
+      ctx.fillRect(rxX - 5, rxY + 18, rxW + 10, 8);
+      ctx.strokeRect(rxX - 5, rxY + 18, rxW + 10, 8);
+
+      // Цилиндрический корпус реактора ВВЭР-1200
+      ctx.beginPath();
+      ctx.rect(rxX, rxY + 26, rxW, rxH - 52);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isRxHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Опускной кольцевой зазор (Downcomer)
+      ctx.fillStyle = 'rgba(2, 132, 199, 0.25)';
+      ctx.fillRect(rxX + 2, rxY + 28, 7, rxH - 58);
+      ctx.fillRect(rxX + rxW - 9, rxY + 28, 7, rxH - 58);
+
+      // Внутрикорпусная шахта с перфорированным эллиптическим днищем
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 2]);
+      ctx.strokeRect(rxX + 11, rxY + 30, rxW - 22, rxH - 62);
+      ctx.setLineDash([]);
+
+      // Активная зона (163 ТВС-2М)
+      const coreX = rxX + 16, coreY = rxY + 75, coreW = rxW - 32, coreH = rxH - 120;
+      const fluxAlpha = Math.min(0.9, 0.2 + sim.neutronFlux * 0.7);
+      const coreGrad = ctx.createLinearGradient(coreX, coreY + coreH, coreX, coreY);
+      coreGrad.addColorStop(0, `rgba(2, 132, 199, ${fluxAlpha * 0.75})`);
+      coreGrad.addColorStop(0.5, `rgba(245, 158, 11, ${fluxAlpha * 0.75})`);
+      coreGrad.addColorStop(1, `rgba(239, 68, 68, ${fluxAlpha * 0.95})`);
+
+      ctx.fillStyle = coreGrad;
+      ctx.fillRect(coreX, coreY, coreW, coreH);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(coreX, coreY, coreW, coreH);
+
+      // Кластеры ОР СУЗ (погружение группы №10)
+      const rodFrac = 1.0 - (sim.group10Pos / 100);
+      const rodTipY = coreY + 4 + rodFrac * (coreH - 8);
+      ctx.strokeStyle = sim.az1Tripped ? '#ef4444' : '#22c55e';
+      ctx.lineWidth = 1.8;
+      for (let rx = coreX + 6; rx <= coreX + coreW - 6; rx += 8) {
+        ctx.beginPath();
+        ctx.moveTo(rx, rxY + 25);
+        ctx.lineTo(rx, rodTipY);
+        ctx.stroke();
+      }
+
+      // Текстовая телеметрия зоны
+      ctx.font = 'bold 8.5px monospace';
+      ctx.fillStyle = '#0F172A';
+      ctx.textAlign = 'center';
+      ctx.fillText('163 ТВС-2М', rxMidX, coreY + coreH / 2 - 4);
+      ctx.fillStyle = '#0F172A';
+      ctx.fillText(`${sim.thermalPowerMW.toFixed(0)} МВт`, rxMidX, coreY + coreH / 2 + 8);
+      ctx.textAlign = 'left';
+
+      // Нижнее эллиптическое днище корпуса реактора
+      ctx.beginPath();
+      ctx.arc(rxMidX, rxY + rxH - 26, rxW / 2, 0, Math.PI, false);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isRxHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      drawItemTag(1, rxMidX, rxY + 45, 'Реактор В-491');
+
+      // Устройство локализации расплава — Кориум-ловушка (20)
+      const ulrX = rxMidX - 30, ulrY = rxY + rxH + 6, ulrW = 60, ulrH = 38;
+      const isUlrHov = sim.hoveredHotspot && sim.hoveredHotspot.x === ulrX && sim.hoveredHotspot.y === ulrY;
+
+      ctx.beginPath();
+      ctx.moveTo(ulrX, ulrY);
+      ctx.lineTo(ulrX + 8, ulrY + ulrH);
+      ctx.lineTo(ulrX + ulrW - 8, ulrY + ulrH);
+      ctx.lineTo(ulrX + ulrW, ulrY);
+      ctx.closePath();
+      ctx.fillStyle = sim.ulrCoolingActive ? 'rgba(14, 165, 233, 0.25)' : '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isUlrHov ? '#0284C7' : (sim.ulrCoolingActive ? '#16A34A' : '#1E293B');
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Змеевики охлаждающей воды в корпусе ловушки
+      ctx.strokeStyle = sim.ulrCoolingActive ? '#38bdf8' : '#475569';
+      ctx.lineWidth = 1.2;
+      for (let zy = ulrY + 8; zy < ulrY + ulrH - 4; zy += 6) {
+        ctx.beginPath();
+        ctx.moveTo(ulrX + 6, zy);
+        ctx.lineTo(ulrX + ulrW - 6, zy);
+        ctx.stroke();
+      }
+      drawItemTag(20, rxMidX, ulrY + ulrH / 2, 'Ловушка УЛР');
       ctx.restore();
 
-      // УЛР (Ловушка расплава) под реактором
-      const ulrX = 50, ulrY = 455, ulrW = 180, ulrH = 52;
-      const isUlrHov = sim.hoveredHotspot && sim.hoveredHotspot.x === ulrX && sim.hoveredHotspot.y === ulrY;
-      drawScadaModule({
-        x: ulrX, y: ulrY, w: ulrW, h: ulrH,
-        title: 'УЛР // ЛОВУШКА РАСПЛАВА',
-        subtitle: 'БЕТОННАЯ ШАХТА',
-        statusColor: '#22c55e',
-        isHovered: isUlrHov,
-        rows: [
-          { label: 'Состояние шахты', val: 'Сухая (Норма)', unit: '', color: '#15803d' },
-          { label: 'Охлаждение водой', val: sim.ulrCoolingActive ? 'ПОДАЧА ВКЛ' : 'Ожидание', unit: '', color: sim.ulrCoolingActive ? '#15803d' : '#64748b' }
-        ]
+      activeHotspots.push({
+        x: rxX, y: rxY, w: rxW, h: rxH,
+        title: 'Реактор ядерный водо-водяной ВВЭР-1200 (Проект В-491)',
+        sub: '16.20 МПа • 3200 МВт тепл. • 163 ТВС-2М • Корпус RPV',
+        desc: 'Корпус реактора из высокопрочной легированной стали (15Х2МФА-А) внутренним диаметром 4.25 м со сферической крышкой и блоком приводов ШЭМ-3.',
+        simple: window.plainExplanations ? window.plainExplanations.reactor : 'Главный ядерный котел АЭС, нагревающий воду до 329 °C.',
+        telemetry: () => `Nтепл: ${sim.thermalPowerMW.toFixed(1)} МВт (${((sim.thermalPowerMW / 3200) * 100).toFixed(1)}%) | Твх: ${sim.coreInletTempC.toFixed(1)} °C | Твых: ${sim.coreOutletTempC.toFixed(1)} °C | Гр10: ${sim.group10Pos.toFixed(1)}%`
       });
 
       activeHotspots.push({
         x: ulrX, y: ulrY, w: ulrW, h: ulrH,
-        title: 'Устройство локализации расплава (УЛР)',
-        sub: 'Тяжелая авария • Удержание кориума',
-        desc: 'Коническая ловушка под корпусом реактора, заполненная жертвенным материалом (оксиды железа и алюминия) для связывания и охлаждения расплава.',
-        simple: plainExplanations.ulr,
+        title: 'Устройство локализации расплава активной зоны (УЛР / Кориум-ловушка, KKS JMU)',
+        sub: 'Пассивная система безопасности Поколения III+ под реактором',
+        desc: 'Конический стальной сосуд массой ~150 т с жертвенным материалом (оксиды железа и алюминия) и наружным водяным охлаждением шахты реактора.',
+        simple: window.plainExplanations ? window.plainExplanations.ulr : 'Огнеупорная ловушка под реактором на случай тяжелой аварии с расплавлением зоны.',
         telemetry: () => `Статус УЛР: ${sim.ulrCoolingActive ? 'ОХЛАЖДЕНИЕ ВКЛЮЧЕНО' : 'СУХОЕ ОЖИДАНИЕ'}`
       });
 
-      // Арматура реактора: СПОТ, САОЗ, Охлаждение УЛР
-      drawClickableArmature(
-        35, 110, 185, 34,
-        'ШИБЕРЫ СПОТ (КУПОЛ)',
-        sim.spotActive ? 'ОТКРЫТЫ (ТЕПЛООТВОД)' : 'ЗАКРЫТЫ (ОЖИДАНИЕ)',
-        sim.spotActive ? 'norm' : 'idle',
-        {
-          title: 'Система пассивного отвода тепла (СПОТ)',
-          sub: '4 канала пассивного охлаждения через теплообменники',
-          desc: 'СПОТ отводит тепло от защитной оболочки в атмосферу естественной циркуляцией воздуха без электропитания.',
-          simple: plainExplanations.spot,
-          telemetry: () => `Шиберы СПОТ: ${sim.spotActive ? 'ОТКРЫТЫ' : 'ЗАКРЫТЫ'}`
-        },
-        () => {
-          sim.spotActive = !sim.spotActive;
-          addLog(sim.spotActive ? 'Шиберы СПОТ открыты (пассивный отвод тепла)' : 'Шиберы СПОТ закрыты', sim.spotActive ? 'action' : 'norm');
-          sound.click(sim.spotActive ? 680 : 380);
-        }
-      );
+      // ========================================================================
+      // 3. ПОДВЕШЕННЫЕ ГИДРОЕМКОСТИ САОЗ ПЕРВОЙ СТУПЕНИ (5)
+      // ========================================================================
+      const saozW = 26, saozH = 75, saozY = 110;
+      const saozL_X = rxMidX - 35, saozR_X = rxMidX + 9;
 
-      drawClickableArmature(
-        35, 150, 185, 34,
-        'КЛАПАН ГЕ САОЗ (16 г/кг)',
-        sim.saozActive ? `ПОДАЧА В ЗОНУ (${sim.saozWaterPct.toFixed(0)}%)` : 'ЗАКРЫТ (P₁ > 5.9 МПа)',
-        sim.saozActive ? 'warn' : 'idle',
-        {
-          title: 'Обратные клапаны гидроемкостей САОЗ ГЕ-1..4',
-          sub: 'Пассивная часть системы аварийного охлаждения',
-          desc: 'При падении давления в 1-м контуре ниже 5.9 МПа гидроемкости под давлением азота впрыскивают борный раствор прямо в реактор.',
-          simple: plainExplanations.saoz,
-          telemetry: () => `Статус САОЗ: ${sim.saozActive ? 'ПОДАЧА АКТИВНА' : 'В ОЖИДАНИИ'} | Запас: ${sim.saozWaterPct.toFixed(1)}%`
-        },
-        () => {
+      [ [saozL_X, 'ГЕ-1'], [saozR_X, 'ГЕ-2'] ].forEach(([sx, tag], idx) => {
+        const isHov = sim.hoveredHotspot && sim.hoveredHotspot.x === sx && sim.hoveredHotspot.y === saozY;
+        ctx.save();
+        roundRect(ctx, sx, saozY, saozW, saozH, 10);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = isHov ? '#0284C7' : (sim.saozActive ? '#16A34A' : '#1E293B');
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        const waterH = (saozH - 14) * (sim.saozWaterPct / 100);
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.35)';
+        ctx.fillRect(sx + 2, saozY + saozH - 6 - waterH, saozW - 4, waterH);
+
+        ctx.font = 'bold 7.5px monospace';
+        ctx.fillStyle = '#0F172A';
+        ctx.textAlign = 'center';
+        ctx.fillText(tag, sx + saozW / 2, saozY + 16);
+        ctx.fillText(`${sim.saozWaterPct.toFixed(0)}%`, sx + saozW / 2, saozY + 28);
+        ctx.textAlign = 'left';
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.moveTo(sx + saozW / 2, saozY + saozH);
+        ctx.lineTo(sx + saozW / 2, rxY + 30);
+        ctx.lineTo(idx === 0 ? rxX + 4 : rxX + rxW - 4, rxY + 30);
+        ctx.strokeStyle = sim.saozActive ? '#ec4899' : '#64748b';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        drawPidValve({
+          x: sx + saozW / 2, y: saozY + saozH + 18, orient: 'v', size: 6,
+          label: '', kks: '', isOpen: sim.saozActive, type: 'check'
+        });
+      });
+      drawItemTag(5, rxMidX, saozY - 10, 'Гидроемкости САОЗ (4x60 м³)');
+
+      activeHotspots.push({
+        x: saozL_X, y: saozY, w: saozW * 2 + 18, h: saozH,
+        title: 'Гидроемкости первой ступени САОЗ (ГЕ САОЗ-1, KKS JNB10..40)',
+        sub: '4 емкости по 60 м³ • Азотная подушка 6.0 МПа • Раствор бора 16 г/кг',
+        desc: 'Пассивная гидродинамическая подача борированной воды при падении давления 1-го контура ниже 6.0 МПа (в опускной зазор и верхний пленум реактора).',
+        simple: window.plainExplanations ? window.plainExplanations.saoz : 'Аварийные баллоны с борированной водой, которые заливают реактор без электричества.',
+        telemetry: () => `Статус САОЗ: ${sim.saozActive ? 'ПОДАЧА ВКЛЮЧЕНА' : 'В ОЖИДАНИИ'} | Запас воды: ${sim.saozWaterPct.toFixed(1)}% | Давление азота: 5.95 МПа`,
+        onClick: () => {
           sim.saozActive = !sim.saozActive;
-          addLog(sim.saozActive ? 'Клапаны гидроемкостей САОЗ открыты оператором' : 'Клапаны САОЗ закрыты', sim.saozActive ? 'warn' : 'norm');
-          sound.click(sim.saozActive ? 520 : 340);
+          if (typeof addLog === 'function') addLog(sim.saozActive ? 'Гидроемкости САОЗ открыты!' : 'Клапаны САОЗ закрыты', sim.saozActive ? 'warn' : 'norm');
+          if (window.sound && sound.click) sound.click(sim.saozActive ? 520 : 340);
         }
-      );
+      });
 
-      drawClickableArmature(
-        50, 514, 180, 34,
-        'ОХЛАЖДЕНИЕ ШАХТЫ УЛР',
-        sim.ulrCoolingActive ? 'ПОДАЧА ВОДЫ АКТИВНА' : 'КЛАПАН ЗАКРЫТ',
-        sim.ulrCoolingActive ? 'norm' : 'idle',
-        {
-          title: 'Охлаждение Устройства локализации расплава (УЛР)',
-          sub: 'Подача охлаждающей воды в шахту ловушки',
-          desc: 'Обеспечивает затопление внешнего корпуса ловушки и кристаллизацию кориума.',
-          simple: plainExplanations.ulr,
-          telemetry: () => `Статус УЛР: ${sim.ulrCoolingActive ? 'ОХЛАЖДЕНИЕ ВКЛЮЧЕНО' : 'СУХОЕ ОЖИДАНИЕ'}`
+      // ========================================================================
+      // 4. КОНТУР ТЕПЛОНОСИТЕЛЯ (1-Й КОНТУР): ПГ (2), ГЦН (3), КД (4), БАРБОТЕР (19)
+      // ========================================================================
+
+      // Левый парогенератор ПГ-1 (2)
+      const sg1X = 195, sg1Y = 285, sg1W = 95, sg1H = 50;
+      const isSg1Hov = sim.hoveredHotspot && sim.hoveredHotspot.x === sg1X && sim.hoveredHotspot.y === sg1Y;
+      roundRect(ctx, sg1X, sg1Y, sg1W, sg1H, 12);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isSg1Hov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      const sg1LevelPx = Math.min(sg1H - 8, Math.max(6, (lp1.sgLevelM / 3.0) * (sg1H - 12)));
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+      ctx.fillRect(sg1X + 4, sg1Y + sg1H - 4 - sg1LevelPx, sg1W - 8, sg1LevelPx);
+
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.REACTOR_CORE;
+      ctx.lineWidth = 1.0;
+      ctx.setLineDash([3, 2]);
+      ctx.strokeRect(sg1X + 8, sg1Y + sg1H - 20, sg1W - 16, 12);
+      ctx.setLineDash([]);
+      drawItemTag(2, sg1X + 18, sg1Y + 16, 'ПГВ-1');
+
+      // Правый парогенератор ПГ-2 (2)
+      const sg2X = 450, sg2Y = 285, sg2W = 95, sg2H = 50;
+      const isSg2Hov = sim.hoveredHotspot && sim.hoveredHotspot.x === sg2X && sim.hoveredHotspot.y === sg2Y;
+      roundRect(ctx, sg2X, sg2Y, sg2W, sg2H, 12);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isSg2Hov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      const sg2LevelPx = Math.min(sg2H - 8, Math.max(6, (lp2.sgLevelM / 3.0) * (sg2H - 12)));
+      ctx.fillStyle = 'rgba(2, 132, 199, 0.35)';
+      ctx.fillRect(sg2X + 4, sg2Y + sg2H - 4 - sg2LevelPx, sg2W - 8, sg2LevelPx);
+
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.0;
+      ctx.setLineDash([3, 2]);
+      ctx.strokeRect(sg2X + 8, sg2Y + sg2H - 20, sg2W - 16, 12);
+      ctx.setLineDash([]);
+      drawItemTag(2, sg2X + 75, sg2Y + 16, 'ПГВ-2');
+
+      // Трубопроводы 1-го контура Ду-850 (280°C–330°C: #EF4444, >350°C: #DC2626, толщина 2.6px + стрелки)
+      const loop1HotCol = sim.fuelTempC > 350 && sim.az1Tripped ? THERMAL_COLOR_SCALE.CRITICAL_OVERHEAT : THERMAL_COLOR_SCALE.REACTOR_CORE;
+      const loop1ColdCol = THERMAL_COLOR_SCALE.REACTOR_CORE;
+      // Левая петля №1:
+      ctx.beginPath();
+      ctx.moveTo(333, 305);
+      ctx.lineTo(290, 305);
+      ctx.strokeStyle = loop1HotCol;
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+      drawFlowArrow(308, 305, Math.PI, loop1HotCol, 5);
+
+      ctx.beginPath();
+      ctx.moveTo(195, 320);
+      ctx.lineTo(185, 320);
+      ctx.lineTo(185, 355);
+      ctx.lineTo(210, 355);
+      ctx.moveTo(210, 381);
+      ctx.lineTo(210, 395);
+      ctx.lineTo(333, 395);
+      ctx.lineTo(333, 335);
+      ctx.strokeStyle = loop1ColdCol;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      drawFlowArrow(275, 395, 0, loop1ColdCol, 5);
+
+      // Насос ГЦН-1 (3)
+      drawPidPump({
+        x: 210, y: 368, r: 13, flowAngle: Math.PI / 2,
+        label: 'ГЦН-1', kks: 'JEC10', isRunning: lp1.pumpOn, rpm: lp1.rpm,
+        onClick: () => {
+          lp1.pumpOn = !lp1.pumpOn;
+          if (typeof addLog === 'function') addLog(`ГЦНА-1 переведен: ${lp1.pumpOn ? 'ВКЛ' : 'ОТКЛ'}`, lp1.pumpOn ? 'ok' : 'warn');
         },
-        () => {
-          sim.ulrCoolingActive = !sim.ulrCoolingActive;
-          addLog(sim.ulrCoolingActive ? 'Подача охлаждающей воды в УЛР открыта' : 'Охлаждение УЛР отключено', sim.ulrCoolingActive ? 'action' : 'norm');
-          sound.click(sim.ulrCoolingActive ? 580 : 320);
+        tooltip: {
+          title: 'Главный циркуляционный насос ГЦНА-1391 Петли №1 (KKS JEC10)',
+          sub: 'Подача 22 000 м³/ч • Электродвигатель 8000 кВт • Давление 16.20 МПа',
+          desc: 'Вертикальный центробежный насос с гидрокамерным уплотнением вала. Обеспечивает прокачку теплоносителя через активную зону.',
+          simple: window.plainExplanations ? window.plainExplanations.gcna : 'Мощный насос, который непрерывно гонит горячую воду через реактор.',
+          telemetry: () => `ГЦНА-1: ${lp1.pumpOn ? 'В РАБОТЕ' : 'ОТКЛЮЧЕН'} | ${lp1.rpm.toFixed(0)} об/мин | Расход: ${(lp1.pumpOn ? 4400 : 500)} кг/с`
         }
-      );
+      });
+      drawItemTag(3, 210, 396);
 
-      // ==========================================================================
-      // МОДУЛЬ 2: КОМПЕНСАТОР ДАВЛЕНИЯ (КД) (РАСПОЛОЖЕН НАД ГОРЯЧЕЙ НИТКОЙ)
-      // ==========================================================================
-      const kdX = 270, kdY = 118, kdW = 150, kdH = 155;
+      // Правая петля №2:
+      ctx.beginPath();
+      ctx.moveTo(417, 305);
+      ctx.lineTo(450, 305);
+      ctx.strokeStyle = loop1HotCol;
+      ctx.lineWidth = 2.8;
+      ctx.stroke();
+      drawFlowArrow(436, 305, 0, loop1HotCol, 5);
+
+      ctx.beginPath();
+      ctx.moveTo(545, 320);
+      ctx.lineTo(555, 320);
+      ctx.lineTo(555, 355);
+      ctx.lineTo(530, 355);
+      ctx.moveTo(530, 381);
+      ctx.lineTo(530, 395);
+      ctx.lineTo(417, 395);
+      ctx.lineTo(417, 335);
+      ctx.strokeStyle = loop1ColdCol;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      drawFlowArrow(470, 395, Math.PI, loop1ColdCol, 5);
+
+      // Насос ГЦН-2 (3)
+      drawPidPump({
+        x: 530, y: 368, r: 13, flowAngle: Math.PI / 2,
+        label: 'ГЦН-2', kks: 'JEC20', isRunning: lp2.pumpOn, rpm: lp2.rpm,
+        onClick: () => {
+          lp2.pumpOn = !lp2.pumpOn;
+          if (typeof addLog === 'function') addLog(`ГЦНА-2 переведен: ${lp2.pumpOn ? 'ВКЛ' : 'ОТКЛ'}`, lp2.pumpOn ? 'ok' : 'warn');
+        },
+        tooltip: {
+          title: 'Главный циркуляционный насос ГЦНА-1391 Петли №2 (KKS JEC20)',
+          sub: 'Подача 22 000 м³/ч • 8000 кВт • Давление 16.20 МПа',
+          desc: 'Обеспечивает циркуляцию теплоносителя петли №2.',
+          simple: window.plainExplanations ? window.plainExplanations.gcna : 'Второй насос главного циркуляционного контура.',
+          telemetry: () => `ГЦНА-2: ${lp2.pumpOn ? 'В РАБОТЕ' : 'ОТКЛЮЧЕН'} | ${lp2.rpm.toFixed(0)} об/мин`
+        }
+      });
+      drawItemTag(3, 530, 396);
+
+      // Компенсатор давления КД (4)
+      const kdX = 262, kdY = 180, kdW = 36, kdH = 85;
       const isKdHov = sim.hoveredHotspot && sim.hoveredHotspot.x === kdX && sim.hoveredHotspot.y === kdY;
-      const kdStatus = sim.primaryPressureMPa < 15.5 || sim.primaryPressureMPa > 16.6 ? '#f59e0b' : '#22c55e';
+      roundRect(ctx, kdX, kdY, kdW, kdH, 12);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isKdHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
 
-      drawScadaModule({
-        x: kdX, y: kdY, w: kdW, h: kdH,
-        title: 'КД // КОМПЕНСАТОР',
-        subtitle: 'ОБЪЕМ 79 м³ • P=16.0 МПа',
-        statusColor: kdStatus,
-        isHovered: isKdHov,
-        rows: [
-          { label: 'Pкд (давление)', val: sim.primaryPressureMPa.toFixed(2), unit: 'МПа' },
-          { label: 'Lкд (уровень)', val: sim.pressurizerLevelM.toFixed(2), unit: 'м' },
-          { label: 'Qтэн (нагрев)', val: sim.heatersPowerKW.toFixed(0), unit: 'кВт' },
-          { label: 'Режим ТЭНов', val: sim.heatersMode, unit: '' },
-          { label: 'Впрыск из х/н', val: sim.sprayActive ? 'ВКЛЮЧЕН' : 'ЗАКРЫТ', unit: '', color: sim.sprayActive ? '#15803d' : '#64748b' },
-          { label: 'ИПУ КД (сброс)', val: sim.ipuKdOpen ? 'ОТКРЫТ!' : 'НОРМА', unit: '', color: sim.ipuKdOpen ? '#dc2626' : '#15803d' }
-        ]
-      });
+      const kdWaterFrac = Math.min(1.0, Math.max(0.05, sim.pressurizerLevelM / 12.0));
+      const kdWaterH = (kdH - 16) * kdWaterFrac;
+      ctx.fillStyle = 'rgba(2, 132, 199, 0.45)';
+      ctx.fillRect(kdX + 3, kdY + kdH - 8 - kdWaterH, kdW - 6, kdWaterH);
 
-      activeHotspots.push({
-        x: kdX, y: kdY, w: kdW, h: kdH,
-        title: 'Компенсатор давления (КД)',
-        sub: 'Поддержание давления P₁ = 16.0 МПа',
-        desc: 'Вертикальный сосуд объемом 79 м³. Водяной объем с электронагревателями (ТЭН 2520 кВт) и паровая подушка с узлом впрыска теплоносителя.',
-        simple: plainExplanations.kd,
-        telemetry: () => `P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа | Уровень: ${sim.pressurizerLevelM.toFixed(2)} м | ТЭНы: ${sim.heatersPowerKW} кВт (${sim.heatersMode})`
-      });
+      ctx.strokeStyle = sim.heatersPowerKW > 100 ? '#f59e0b' : '#64748b';
+      ctx.lineWidth = 1.2;
+      for (let tx = kdX + 7; tx <= kdX + kdW - 7; tx += 6) {
+        ctx.beginPath();
+        ctx.moveTo(tx, kdY + kdH - 4);
+        ctx.lineTo(tx, kdY + kdH - 14);
+        ctx.stroke();
+      }
+      drawItemTag(4, kdX + kdW / 2, kdY + 18, 'КД');
 
-      // Арматура КД: ИПУ (сверху КД), Впрыск и ТЭНы (снизу под горячей ниткой)
-      drawClickableArmature(
-        270, 55, 150, 32,
-        'КЛАПАН ИПУ КД (СБРОС)',
-        sim.ipuKdOpen ? 'ОТКРЫТ (СБРОС P₁!)' : 'ЗАКРЫТ (НОРМА)',
-        sim.ipuKdOpen ? 'danger' : 'idle',
-        {
-          title: 'Импульсное предохранительное устройство (ИПУ КД)',
-          sub: 'Защита 1-го контура от сверхдавления (сброс в барботер)',
-          desc: 'Сбрасывает пар в барботер при аварийном росте P₁ свыше 17.5 МПа.',
-          simple: plainExplanations.kd,
-          telemetry: () => `ИПУ КД: ${sim.ipuKdOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ'} | P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа`
-        },
-        () => {
-          sim.ipuKdOpen = !sim.ipuKdOpen;
-          addLog(sim.ipuKdOpen ? 'ИПУ КД принудительно открыт оператором!' : 'ИПУ КД закрыт', sim.ipuKdOpen ? 'alarm' : 'norm');
-          sound.click(sim.ipuKdOpen ? 750 : 350);
-        }
-      );
+      // Дыхательный трубопровод Ду-350 от горячей нитки (305, 305) к низу КД (280, 265)
+      ctx.beginPath();
+      ctx.moveTo(305, 305);
+      ctx.lineTo(305, 275);
+      ctx.lineTo(kdX + kdW / 2, 275);
+      ctx.lineTo(kdX + kdW / 2, kdY + kdH);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
 
-      drawClickableArmature(
-        270, 335, 150, 34,
-        'ВПРЫСК В КД (ОХЛАЖД.)',
-        sim.sprayActive ? 'ВПРЫСК ВКЛЮЧЕН' : 'КЛАПАН ЗАКРЫТ',
-        sim.sprayActive ? 'norm' : 'idle',
-        {
-          title: 'Клапан впрыска в Компенсатор давления',
-          sub: 'Подача воды из холодной нитки в паровую фазу КД',
-          desc: 'Конденсирует паровую подушку и быстро снижает избыточное давление.',
-          simple: plainExplanations.kd,
-          telemetry: () => `Впрыск в КД: ${sim.sprayActive ? 'АКТИВЕН (Снижение P₁)' : 'ЗАКРЫТ'}`
-        },
-        () => {
+      // Линия впрыска (спрей) из холодной нитки петли 1 (210, 395) вверх в паровую зону КД
+      ctx.beginPath();
+      ctx.moveTo(235, 395);
+      ctx.lineTo(235, kdY + 12);
+      ctx.lineTo(kdX, kdY + 12);
+      ctx.strokeStyle = sim.sprayActive ? '#38bdf8' : '#2563eb';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      drawPidValve({
+        x: 235, y: kdY + 35, orient: 'v', size: 6,
+        label: 'Впрыск', kks: 'JEP20', isOpen: sim.sprayActive, type: 'reg',
+        onClick: () => {
           sim.sprayActive = !sim.sprayActive;
-          addLog(sim.sprayActive ? 'Впрыск в КД включен' : 'Впрыск в КД отключен', 'action');
-          sound.click(sim.sprayActive ? 620 : 360);
-        }
-      );
-
-      drawClickableArmature(
-        270, 378, 150, 34,
-        'РЕЖИМ ТЭНов КД',
-        `${sim.heatersMode} (${sim.heatersPowerKW} кВт)`,
-        sim.heatersMode !== 'OFF' ? 'warn' : 'idle',
-        {
-          title: 'Блок электронагревателей КД (ТЭНы)',
-          sub: '2520 кВт трубчатых нагревателей в донной части',
-          desc: 'Переключение режимов: АВТО / РУЧНОЙ (100%) / ОТКЛ.',
-          simple: plainExplanations.kd,
-          telemetry: () => `Режим ТЭНов: ${sim.heatersMode} | Мощность: ${sim.heatersPowerKW} кВт`
+          if (typeof addLog === 'function') addLog(sim.sprayActive ? 'Впрыск в КД включен' : 'Впрыск в КД отключен', 'action');
         },
-        () => {
+        tooltip: {
+          title: 'Клапан впрыска в паровую подушку КД (KKS JEP20)',
+          sub: 'Подача из холодной нитки для конденсации пара и снижения P1',
+          desc: 'Быстро конденсирует пар в куполе КД при росте давления выше 16.3 МПа.',
+          simple: window.plainExplanations ? window.plainExplanations.kd : 'Охлаждающий душ сверху в баке компенсатора давления.',
+          telemetry: () => `Впрыск в КД: ${sim.sprayActive ? 'АКТИВЕН' : 'ЗАКРЫТ'}`
+        }
+      });
+
+      // Барботер КД (19) — прием сброса от ИПУ КД
+      const bbX = 215, bbY = 415, bbW = 60, bbH = 34;
+      const isBbHov = sim.hoveredHotspot && sim.hoveredHotspot.x === bbX && sim.hoveredHotspot.y === bbY;
+      roundRect(ctx, bbX, bbY, bbW, bbH, 8);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isBbHov ? '#0284C7' : (sim.ipuKdOpen ? '#DC2626' : '#1E293B');
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(2, 132, 199, 0.35)';
+      ctx.fillRect(bbX + 3, bbY + 12, bbW - 6, bbH - 15);
+      drawItemTag(19, bbX + bbW / 2, bbY + 14, 'Барботер');
+
+      // Линия сброса ИПУ КД в барботер
+      ctx.beginPath();
+      ctx.moveTo(kdX, kdY + 22);
+      ctx.lineTo(kdX - 14, kdY + 22);
+      ctx.lineTo(kdX - 14, bbY + 18);
+      ctx.lineTo(bbX + bbW, bbY + 18);
+      ctx.strokeStyle = sim.ipuKdOpen ? '#ef4444' : '#64748b';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      drawPidValve({
+        x: kdX - 14, y: kdY + 38, orient: 'v', size: 6,
+        label: 'ИПУ КД', kks: 'JEP11', isOpen: sim.ipuKdOpen, type: 'safety', statusType: sim.ipuKdOpen ? 'danger' : 'norm',
+        onClick: () => {
+          sim.ipuKdOpen = !sim.ipuKdOpen;
+          if (typeof addLog === 'function') addLog(sim.ipuKdOpen ? 'ИПУ КД открыт (аварийный сброс)!' : 'ИПУ КД закрыт', sim.ipuKdOpen ? 'alarm' : 'norm');
+        },
+        tooltip: {
+          title: 'Импульсно-предохранительное устройство КД (ИПУ КД, KKS JEP11)',
+          sub: 'Защита 1-го контура от опасного превышения давления > 17.5 МПа',
+          desc: 'Сбрасывает избыточный пар из компенсатора давления под слой воды в бак-барботер.',
+          simple: window.plainExplanations ? window.plainExplanations.kd : 'Аварийный предохранительный клапан-свисток на крышке КД.',
+          telemetry: () => `ИПУ КД: ${sim.ipuKdOpen ? 'ОТКРЫТ (СБРОС В БАРБОТЕР)' : 'ЗАКРЫТ (НОРМА)'}`
+        }
+      });
+
+      // Бак-приямок (8) в нижней части гермооболочки
+      const sumpX = 465, sumpY = 445, sumpW = 90, sumpH = 55;
+      const isSumpHov = sim.hoveredHotspot && sim.hoveredHotspot.x === sumpX && sim.hoveredHotspot.y === sumpY;
+      roundRect(ctx, sumpX, sumpY, sumpW, sumpH, 6);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isSumpHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(2, 132, 199, 0.4)';
+      ctx.fillRect(sumpX + 3, sumpY + 16, sumpW - 6, sumpH - 19);
+
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.strokeRect(sumpX + 6, sumpY + sumpH - 16, sumpW - 12, 10);
+      ctx.setLineDash([]);
+      drawItemTag(8, sumpX + sumpW / 2, sumpY + 14, 'Бак-приямок');
+
+      activeHotspots.push({
+        x: kdX, y: kdY, w: kdW, h: kdH,
+        title: 'Компенсатор давления (КД, KKS JEP10)',
+        sub: 'Объем 79 м³ • 16.20 МПа • 4 группы ТЭН 2520 кВт',
+        desc: 'Поддерживает стабильное давление теплоносителя 16.20 МПа за счет создания равновесной паровой подушки.',
+        simple: window.plainExplanations ? window.plainExplanations.kd : 'Большой бак с кипятильником, который держит давление в реакторе.',
+        telemetry: () => `P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа | Уровень: ${sim.pressurizerLevelM.toFixed(2)} м | ТЭНы: ${sim.heatersPowerKW} кВт (${sim.heatersMode})`,
+        onClick: () => {
           sim.heatersMode = sim.heatersMode === 'AUTO' ? 'MANUAL' : (sim.heatersMode === 'MANUAL' ? 'OFF' : 'AUTO');
-          addLog(`Режим ТЭН КД изменен: ${sim.heatersMode}`, 'action');
-          sound.click(500);
+          if (typeof addLog === 'function') addLog(`Режим ТЭН КД: ${sim.heatersMode}`, 'action');
         }
-      );
-
-      // ==========================================================================
-      // МОДУЛЬ 3: ПАРОГЕНЕРАТОРЫ ПГВ-1000МКП (4 ПЕТЛИ)
-      // ==========================================================================
-      const sgX = 460, sgY = 195, sgW = 170, sgH = 215;
-      const isSgHov = sim.hoveredHotspot && sim.hoveredHotspot.x === sgX && sim.hoveredHotspot.y === sgY;
-      const sgStatus = avgSgLevel < 1.9 || avgSgLevel > 2.6 ? '#f59e0b' : '#22c55e';
-
-      drawScadaModule({
-        x: sgX, y: sgY, w: sgW, h: sgH,
-        title: 'ПГВ-1000МКП // 4 ПГ',
-        subtitle: '2-Й КОНТУР • ГОРИЗОНТ.',
-        statusColor: sgStatus,
-        isHovered: isSgHov,
-        rows: [
-          { label: 'P₂ (давление пара)', val: sim.steamHeaderPressMPa.toFixed(2), unit: 'МПа' },
-          { label: 'Tнас (темп. пара)', val: sim.steamTempC.toFixed(1), unit: '°C' },
-          { label: 'Lпг (уровень воды)', val: avgSgLevel.toFixed(2), unit: 'м' },
-          { label: 'Dпар (расход пара)', val: steamKgS.toFixed(0), unit: 'кг/с' },
-          { label: 'xпар (качество)', val: '99.8', unit: '%' },
-          { label: 'Твх 1-го контура', val: sim.coreOutletTempC.toFixed(1), unit: '°C', color: '#dc2626' },
-          { label: 'Твых 1-го контура', val: sim.coreInletTempC.toFixed(1), unit: '°C', color: '#1d4ed8' }
-        ]
       });
 
       activeHotspots.push({
-        x: sgX, y: sgY, w: sgW, h: sgH,
-        title: 'Парогенераторы ПГВ-1000МКП (4 петли)',
-        sub: 'Граница 1-го и 2-го контуров станции',
-        desc: 'Горизонтальные парогенераторы с погруженным трубным пучком из 11 000 нержавеющих U-образных трубок. Производят сухой насыщенный пар 7.0 МПа.',
-        simple: plainExplanations.pgv,
-        telemetry: () => `P₂ пара: ${sim.steamHeaderPressMPa.toFixed(2)} МПа | Уровень: ${avgSgLevel.toFixed(2)} м | Tгор: ${sim.coreOutletTempC.toFixed(1)} °C → Tхол: ${sim.coreInletTempC.toFixed(1)} °C`
-      });
-
-      // ==========================================================================
-      // МОДУЛЬ 4: ГЦНА-1391 (4 ЦИРКУЛЯЦИОННЫХ НАСОСА)
-      // ==========================================================================
-      const mcpX = 460, mcpY = 440, mcpW = 170, mcpH = 145;
-      const isMcpHov = sim.hoveredHotspot && sim.hoveredHotspot.x === mcpX && sim.hoveredHotspot.y === mcpY;
-      const mcpStatus = activePumpsCount === 4 ? '#22c55e' : (activePumpsCount > 0 ? '#f59e0b' : '#dc2626');
-
-      drawScadaModule({
-        x: mcpX, y: mcpY, w: mcpW, h: mcpH,
-        title: 'ГЦНА-1391 // НАСОСЫ',
-        subtitle: '4 АГРЕГАТА ГЦК',
-        statusColor: mcpStatus,
-        isHovered: isMcpHov,
-        rows: [
-          { label: 'В работе', val: `${activePumpsCount}/4`, unit: 'шт', color: activePumpsCount === 4 ? '#15803d' : '#d97706' },
-          { label: 'Обороты n', val: avgRpm.toFixed(0), unit: 'об/мин' },
-          { label: 'Расход G₁', val: primaryFlowKgS.toFixed(0), unit: 'кг/с' },
-          { label: 'ΔP нагнетания', val: (0.58 * (activePumpsCount / 4)).toFixed(2), unit: 'МПа' }
-        ]
+        x: sg1X, y: sg1Y, w: sg1W, h: sg1H,
+        title: 'Парогенератор ПГВ-1000МКП Петли №1 (KKS JEB10)',
+        sub: 'Горизонтальный теплообменник 1-го и 2-го контуров (РУ В-491)',
+        desc: '11 000 нержавеющих U-образных трубок 16х1.5 мм. Генерирует 445 кг/с сухого пара при 7.0 МПа.',
+        simple: window.plainExplanations ? window.plainExplanations.pgv : 'Теплообменник, где жар реактора варит чистый пар для турбины.',
+        telemetry: () => `ПГВ-1: Уровень ${lp1.sgLevelM.toFixed(2)} м | P₂: ${sim.steamHeaderPressMPa.toFixed(2)} МПа | Тгор: ${lp1.tHot.toFixed(1)} °C | Тхол: ${lp1.tCold.toFixed(1)} °C`
       });
 
       activeHotspots.push({
-        x: mcpX, y: mcpY, w: mcpW, h: mcpH,
-        title: 'Главные циркуляционные насосы ГЦНА-1391',
-        sub: 'Прокачка теплоносителя через активную зону',
-        desc: '4 насосных агрегата с электродвигателями по 8 МВт и водяным уплотнением вала. Номинальная подача 22 000 м³/ч на агрегат.',
-        simple: plainExplanations.gcna,
-        telemetry: () => `Работает насосов: ${activePumpsCount} из 4 | Ср. обороты: ${Math.round(avgRpm)} об/мин`
-      });
-
-      // Управление ГЦНА
-      drawClickableArmature(
-        460, 595, 170, 34,
-        'ПРИВОДЫ ГЦНА-1..4',
-        activePumpsCount === 4 ? 'ВСЕ 4 В РАБОТЕ (100%)' : `ВКЛЮЧЕНО: ${activePumpsCount}/4 (ЕЦ)`,
-        activePumpsCount === 4 ? 'norm' : 'warn',
-        {
-          title: 'Управление Главными циркуляционными насосами (ГЦНА-1..4)',
-          sub: 'Принудительная и естественная циркуляция 1-го контура',
-          desc: 'Кликните, чтобы последовательно отключить/включить насосы ГЦНА и пронаблюдать переход на естественную циркуляцию.',
-          simple: plainExplanations.gcna,
-          telemetry: () => `Активные ГЦНА: ${activePumpsCount}/4`
-        },
-        () => {
-          const allOn = sim.loops.every(l => l.pumpOn);
-          sim.loops.forEach((l, i) => {
-            l.pumpOn = !allOn;
-            const btn = document.getElementById(`btnPump${i}`);
-            if (btn) btn.classList.toggle('active', l.pumpOn);
-          });
-          addLog(allOn ? 'С мнемосхемы [СИСТЕМЫ] отключены ГЦНА-1..4 (переход на выбег и ЕЦ).' : 'С мнемосхемы [СИСТЕМЫ] включены все четыре ГЦНА-1..4.', allOn ? 'warn' : 'ok');
-          sound.click(allOn ? 420 : 540);
-        }
-      );
-
-      // ==========================================================================
-      // МОДУЛЬ 5: ГПК // ГЛАВНЫЙ ПАРОВОЙ КОЛЛЕКТОР
-      // ==========================================================================
-      const gpkX = 675, gpkY = 145, gpkW = 150, gpkH = 95;
-      const isGpkHov = sim.hoveredHotspot && sim.hoveredHotspot.x === gpkX && sim.hoveredHotspot.y === gpkY;
-
-      drawScadaModule({
-        x: gpkX, y: gpkY, w: gpkW, h: gpkH,
-        title: 'ГПК // ПАРОВОЙ КОЛЛЕКТОР',
-        subtitle: `P₂=${sim.steamHeaderPressMPa.toFixed(2)} МПа`,
-        statusColor: '#22c55e',
-        isHovered: isGpkHov,
-        rows: [
-          { label: 'Pпар (в коллекторе)', val: sim.steamHeaderPressMPa.toFixed(2), unit: 'МПа' },
-          { label: 'Клапан БРУ-К', val: sim.bruKOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ', unit: '', color: sim.bruKOpen ? '#15803d' : '#64748b' },
-          { label: 'Клапан БРУ-А', val: sim.bruAOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ', unit: '', color: sim.bruAOpen ? '#d97706' : '#64748b' }
-        ]
+        x: sg2X, y: sg2Y, w: sg2W, h: sg2H,
+        title: 'Парогенератор ПГВ-1000МКП Петли №2 (KKS JEB20)',
+        sub: 'Горизонтальный теплообменник 1-го и 2-го контуров (РУ В-491)',
+        desc: 'Генерирует пар давлением 7.0 МПа для машинного зала.',
+        simple: window.plainExplanations ? window.plainExplanations.pgv : 'Второй парогенератор энергоблока.',
+        telemetry: () => `ПГВ-2: Уровень ${lp2.sgLevelM.toFixed(2)} м | P₂: ${sim.steamHeaderPressMPa.toFixed(2)} МПа`
       });
 
       activeHotspots.push({
-        x: gpkX, y: gpkY, w: gpkW, h: gpkH,
-        title: 'Главный паровой коллектор (ГПК)',
-        sub: 'Сбор свежего пара от 4 парогенераторов',
-        desc: 'Объединяет пар от 4 ПГВ и направляет его к стопорно-регулирующим клапанам турбины, а также на сбросные станции БРУ-К и БРУ-А.',
-        simple: plainExplanations.gpk,
-        telemetry: () => `Давление в ГПК: ${sim.steamHeaderPressMPa.toFixed(2)} МПа | Температура пара: ${sim.steamTempC.toFixed(1)} °C`
+        x: sumpX, y: sumpY, w: sumpW, h: sumpH,
+        title: 'Бак-приямок гермооболочки (KKS JNK10..40)',
+        sub: 'Запас борированной воды низкой концентрации (16 г/кг)',
+        desc: 'Сбор теплоносителя при авариях с течью и источник питания насосов САОЗ НД/ВД по замкнутому контуру рециркуляции.',
+        simple: 'Огромный бассейн на полу под куполом, откуда насосы качают воду обратно в реактор при аварии.',
+        telemetry: () => `Запас воды: 100% | Концентрация бора: 16.0 г/кг`
       });
 
-      // Арматура БРУ-К и БРУ-А
-      drawClickableArmature(
-        660, 255, 168, 34,
-        'КЛАПАН БРУ-К (В КОНД.)',
-        sim.bruKOpen ? 'ОТКРЫТ (СБРОС ПАРА)' : 'ЗАКРЫТ (НОРМА)',
-        sim.bruKOpen ? 'norm' : 'idle',
-        {
-          title: 'Быстродействующая редукционная установка БРУ-К',
-          sub: 'Сброс пара в конденсатор турбины мимо проточной части',
-          desc: 'Сбрасывает избыточный пар в конденсатор при сбросе электрической нагрузки блока.',
-          simple: plainExplanations.bruk,
-          telemetry: () => `Статус БРУ-К: ${sim.bruKOpen ? 'ОТКРЫТ (Сброс в конденсатор)' : 'ЗАКРЫТ'}`
-        },
-        () => {
-          sim.bruKOpen = !sim.bruKOpen;
-          addLog(sim.bruKOpen ? 'Клапан БРУ-К открыт (сброс пара в конденсатор)' : 'Клапан БРУ-К закрыт', sim.bruKOpen ? 'action' : 'norm');
-          sound.click(sim.bruKOpen ? 640 : 370);
-        }
-      );
+      // ========================================================================
+      // 5. ВНИЗУ: БАКИ И НАСОСЫ АВАРИЙНОГО ВПРЫСКА БОРА (11, 12, 13, 15, 21, 26, 34)
+      // ========================================================================
+      drawPidPump({
+        x: 485, y: 560, r: 12, flowAngle: -Math.PI / 2,
+        label: '', kks: 'САОЗ НД', isRunning: sim.saozActive, rpm: sim.saozActive ? 1500 : 0
+      });
+      drawItemTag(11, 485, 582, 'САОЗ НД');
 
-      drawClickableArmature(
-        660, 298, 168, 34,
-        'КЛАПАН БРУ-А (АТМОСФ.)',
-        sim.bruAOpen ? 'ОТКРЫТ (ВЫХЛОП!)' : 'ЗАКРЫТ (НОРМА)',
-        sim.bruAOpen ? 'warn' : 'idle',
-        {
-          title: 'Быстродействующая редукционная установка БРУ-А',
-          sub: 'Аварийный сброс пара в атмосферу при потере конденсатора',
-          desc: 'Предохраняет парогенераторы от сверхдавления при отсутствии вакуума в конденсаторе.',
-          simple: plainExplanations.brua,
-          telemetry: () => `Статус БРУ-А: ${sim.bruAOpen ? 'ОТКРЫТ (Сброс в атмосферу)' : 'ЗАКРЫТ'}`
-        },
-        () => {
+      drawPidPump({
+        x: 540, y: 560, r: 12, flowAngle: -Math.PI / 2,
+        label: '', kks: 'САОЗ ВД', isRunning: sim.saozActive, rpm: sim.saozActive ? 3000 : 0
+      });
+      drawItemTag(12, 540, 582, 'САОЗ ВД');
+
+      // Всас насосов 11, 12 из приямка (8)
+      ctx.beginPath();
+      ctx.moveTo(sumpX + sumpW / 2, sumpY + sumpH);
+      ctx.lineTo(sumpX + sumpW / 2, 540);
+      ctx.lineTo(485, 540);
+      ctx.lineTo(485, 548);
+      ctx.moveTo(sumpX + sumpW / 2, 540);
+      ctx.lineTo(540, 540);
+      ctx.lineTo(540, 548);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Нагнетание насосов 11, 12 в реактор В-491
+      ctx.beginPath();
+      ctx.moveTo(485, 572);
+      ctx.lineTo(485, 605);
+      ctx.lineTo(375, 605);
+      ctx.lineTo(375, rxY + rxH);
+      ctx.moveTo(540, 572);
+      ctx.lineTo(540, 605);
+      ctx.strokeStyle = sim.saozActive ? '#ec4899' : '#64748b';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Бак запаса бора высокой концентрации (13) + насос ввода бора (14)
+      const bTankX = 270, bTankY = 545, bTankW = 34, bTankH = 50;
+      roundRect(ctx, bTankX, bTankY, bTankW, bTankH, 6);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(236, 72, 153, 0.4)';
+      ctx.fillRect(bTankX + 2, bTankY + 14, bTankW - 4, bTankH - 16);
+      drawItemTag(13, bTankX + bTankW / 2, bTankY + 10);
+
+      drawPidPump({
+        x: bTankX + bTankW / 2, y: 620, r: 10, flowAngle: -Math.PI / 2,
+        label: '', kks: 'СБР', isRunning: sim.boronMode > 0, rpm: sim.boronMode > 0 ? 1000 : 0
+      });
+      drawItemTag(14, bTankX + bTankW / 2, 638, 'СБР');
+
+      // Бак подачи химреагентов (15) + насос ввода (16)
+      const cTankX = 330, cTankY = 545, cTankW = 30, cTankH = 50;
+      roundRect(ctx, cTankX, cTankY, cTankW, cTankH, 6);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(100, 116, 139, 0.35)';
+      ctx.fillRect(cTankX + 2, cTankY + 14, cTankW - 4, cTankH - 16);
+      drawItemTag(15, cTankX + cTankW / 2, cTankY + 10);
+
+      drawPidPump({
+        x: cTankX + cTankW / 2, y: 620, r: 10, flowAngle: -Math.PI / 2,
+        label: '', kks: '16', isRunning: false, rpm: 0
+      });
+      drawItemTag(16, cTankX + cTankW / 2, 638);
+
+      // Бак аварийного запаса щелочи (21)
+      const alkTankX = 580, alkTankY = 545, alkTankW = 34, alkTankH = 50;
+      roundRect(ctx, alkTankX, alkTankY, alkTankW, alkTankH, 6);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.3)';
+      ctx.fillRect(alkTankX + 2, alkTankY + 14, alkTankW - 4, alkTankH - 16);
+      drawItemTag(21, alkTankX + alkTankW / 2, alkTankY + 10);
+
+      // Бак запаса обессоленной воды (26) + аварийный питательный насос (27)
+      const dTankX = 140, dTankY = 545, dTankW = 45, dTankH = 50;
+      roundRect(ctx, dTankX, dTankY, dTankW, dTankH, 6);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.fillRect(dTankX + 2, dTankY + 12, dTankW - 4, dTankH - 14);
+      drawItemTag(26, dTankX + dTankW / 2, dTankY + 10, 'Бак ОВ');
+
+      drawPidPump({
+        x: dTankX + dTankW / 2, y: 620, r: 11, flowAngle: 0,
+        label: '', kks: 'АПЭН', isRunning: false, rpm: 0
+      });
+      drawItemTag(27, dTankX + dTankW / 2, 638, 'АПЭН');
+
+      // Брызгальный бассейн (34)
+      const spX = 220, spY = 650, spW = 160, spH = 34;
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(spX, spY, spW, spH);
+      ctx.strokeStyle = '#1E293B';
+      ctx.strokeRect(spX, spY, spW, spH);
+      ctx.fillStyle = 'rgba(2, 132, 199, 0.4)';
+      ctx.fillRect(spX + 2, spY + 10, spW - 4, spH - 12);
+
+      // Фонтаны брызгального бассейна
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1;
+      for (let fx = spX + 16; fx <= spX + spW - 16; fx += 24) {
+        ctx.beginPath();
+        ctx.moveTo(fx, spY + 10);
+        ctx.quadraticCurveTo(fx - 4, spY - 6, fx - 8, spY + 8);
+        ctx.moveTo(fx, spY + 10);
+        ctx.quadraticCurveTo(fx + 4, spY - 6, fx + 8, spY + 8);
+        ctx.stroke();
+      }
+      drawItemTag(34, spX + spW / 2, spY + 20, 'Брызгальный бассейн');
+
+      // ========================================================================
+      // 6. ПРАВАЯ ЧАСТЬ: МАШИННЫЙ ЗАЛ, ГПАБ (22), ТУРБИНА (45), ТЗВ-1200 (47)
+      // (Сдвиг вправо от наружной стены гермооболочки X=620 минимум на 50px)
+      // ========================================================================
+
+      // Главные паропроводы острого пара (100°C–280°C: #F59E0B, толщина 2.6px + стрелки)
+      const steamY1 = 220, steamY2 = 236;
+      ctx.beginPath();
+      ctx.moveTo(245, 285);
+      ctx.lineTo(245, steamY1);
+      ctx.lineTo(685, steamY1);
+      ctx.moveTo(495, 285);
+      ctx.lineTo(495, steamY2);
+      ctx.lineTo(685, steamY2);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.HOT_STEAM;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      drawFlowArrow(560, steamY1, 0, THERMAL_COLOR_SCALE.HOT_STEAM, 5);
+      drawFlowArrow(560, steamY2, 0, THERMAL_COLOR_SCALE.HOT_STEAM, 5);
+
+      // Гермопроходки через двойную оболочку (сильфонные узлы)
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(594, steamY1 - 5, 28, 10);
+      ctx.fillRect(594, steamY2 - 5, 28, 10);
+
+      // Главный паровой арматурный блок (22) (ГПАБ / БОА)
+      const gpabX = 690;
+      drawPidValve({
+        x: gpabX, y: steamY1, orient: 'h', size: 7,
+        label: 'БЗОК-1', kks: '22', isOpen: true, type: 'motor',
+        tooltip: {
+          title: 'Быстродействующий запорный отсечной клапан (БЗОК, KKS LBA10)',
+          sub: 'Отсечение главных паропроводов за время менее 5 секунд',
+          desc: 'Герметизирует 2-й контур при течи паропровода или разрыве парогенератора.',
+          simple: 'Главный аварийный кран на трубе свежего пара на выходе из купола.',
+          telemetry: () => `БЗОК: ОТКРЫТ (НОРМА) | Давление пара: ${sim.steamHeaderPressMPa.toFixed(2)} МПа`
+        }
+      });
+
+      drawPidValve({
+        x: gpabX, y: steamY2, orient: 'h', size: 7,
+        label: 'БЗОК-2', kks: '22', isOpen: true, type: 'motor'
+      });
+      drawItemTag(22, gpabX + 10, steamY1 - 18, 'ГПАБ (БОА)');
+
+      // Станция БРУ-А (сброс в атмосферу)
+      drawPidValve({
+        x: gpabX + 28, y: steamY1 - 32, orient: 'v', size: 6,
+        label: 'БРУ-А', kks: 'LBN', isOpen: sim.bruAOpen, type: 'safety', statusType: sim.bruAOpen ? 'danger' : 'norm',
+        onClick: () => {
           sim.bruAOpen = !sim.bruAOpen;
-          addLog(sim.bruAOpen ? 'Клапан БРУ-А открыт (выхлоп в атмосферу!)' : 'Клапан БРУ-А закрыт', sim.bruAOpen ? 'warn' : 'norm');
-          sound.click(sim.bruAOpen ? 700 : 360);
-        }
-      );
-
-      // ==========================================================================
-      // МОДУЛЬ 6: ТУРБИНА К-1200-6,8/50 + ГЕНЕРАТОР ТЗВ-1200-2
-      // ==========================================================================
-      const turbX = 855, turbY = 180, turbW = 215, turbH = 230;
-      const isTurbHov = sim.hoveredHotspot && sim.hoveredHotspot.x === turbX && sim.hoveredHotspot.y === turbY;
-      const turbStatus = sim.electricalPowerMW > 1100 ? '#22c55e' : (sim.electricalPowerMW > 100 ? '#f59e0b' : '#dc2626');
-
-      drawScadaModule({
-        x: turbX, y: turbY, w: turbW, h: turbH,
-        title: 'ТУРБИНА К-1200-6,8/50',
-        subtitle: 'ГЕНЕРАТОР ТЗВ-1200-2 • 3000 ОБ/МИН',
-        statusColor: turbStatus,
-        isHovered: isTurbHov,
-        rows: [
-          { label: 'Nэл (мощность)', val: sim.electricalPowerMW.toFixed(1), unit: 'МВт', color: '#15803d' },
-          { label: 'Частота сети f', val: (sim.turbineRpm / 60).toFixed(2), unit: 'Гц' },
-          { label: 'Обороты вала n', val: sim.turbineRpm.toFixed(0), unit: 'об/мин' },
-          { label: 'Клапан РК (пар)', val: sim.turbineValvePct.toFixed(0), unit: '%', color: '#15803d' },
-          { label: 'P₀ перед РК', val: (sim.steamHeaderPressMPa * 0.96).toFixed(2), unit: 'МПа' },
-          { label: 'КПД брутто', val: '35.8', unit: '%' },
-          { label: 'Коэффициент cos φ', val: '0.85', unit: 'о.е.' }
-        ]
-      });
-
-      activeHotspots.push({
-        x: turbX, y: turbY, w: turbW, h: turbH,
-        title: 'Турбогенератор К-1200-6,8/50 + ТЗВ-1200-2',
-        sub: 'Машинный зал • Генерация электроэнергии',
-        desc: 'Быстроходная паровая турбина со скоростью вращения 3000 об/мин (один ЦВД и три ЦНД) и синхронный трехфазный генератор 1200 МВт с водяным охлаждением статора.',
-        simple: plainExplanations.turbine,
-        telemetry: () => `Электрическая мощность: ${sim.electricalPowerMW.toFixed(1)} МВт | Обороты: ${Math.round(sim.turbineRpm)} об/мин`
-      });
-
-      // Регулирующий клапан турбины (РК)
-      drawClickableArmature(
-        870, 126, 185, 34,
-        'КЛАПАН ПАРА ТУРБИНЫ (РК)',
-        `ОТКРЫТ НА ${sim.turbineValvePct.toFixed(0)} %`,
-        sim.turbineValvePct > 10 ? 'norm' : 'warn',
-        {
-          title: 'Стопорно-регулирующие клапаны турбины (РК)',
-          sub: 'Регулирование расхода пара в проточную часть',
-          desc: 'Кликните для циклического изменения уставки открытия РК (100% -> 50% -> 0% Стоп).',
-          simple: plainExplanations.turbine,
-          telemetry: () => `Открытие РК: ${sim.turbineValvePct.toFixed(0)}% | Nэлектр: ${sim.electricalPowerMW.toFixed(1)} МВт`
+          if (typeof addLog === 'function') addLog(sim.bruAOpen ? 'БРУ-А открыт (выхлоп пара в атмосферу)!' : 'БРУ-А закрыт', sim.bruAOpen ? 'warn' : 'norm');
         },
-        () => {
+        tooltip: {
+          title: 'Быстродействующая редукционная установка сброса в атмосферу (БРУ-А, KKS LBN)',
+          sub: 'Аварийный сброс избыточного пара прямо в атмосферу',
+          desc: 'Срабатывает при потере вакуума в конденсаторе или отключении турбины для предотвращения открытия предохранительных клапанов ПГ.',
+          simple: 'Клапан аварийного сброса пара на улицу.',
+          telemetry: () => `БРУ-А: ${sim.bruAOpen ? 'ОТКРЫТ (СБРОС В АТМОСФЕРУ)' : 'ЗАКРЫТ'}`
+        }
+      });
+      ctx.beginPath();
+      ctx.moveTo(gpabX + 28, steamY1);
+      ctx.lineTo(gpabX + 28, steamY1 - 42);
+      ctx.strokeStyle = sim.bruAOpen ? '#ef4444' : '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Объединенный паропровод острого пара 7.00 МПа в машинный зал
+      ctx.beginPath();
+      ctx.moveTo(gpabX + 10, steamY1);
+      ctx.lineTo(815, steamY1);
+      ctx.lineTo(815, steamY2);
+      ctx.moveTo(gpabX + 10, steamY2);
+      ctx.lineTo(815, steamY2);
+      ctx.lineTo(815, 115);
+      ctx.lineTo(845, 115);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3.0;
+      ctx.stroke();
+
+      // Стопорно-регулирующий клапан турбины (СК/РК)
+      drawPidValve({
+        x: 830, y: 115, orient: 'h', size: 7,
+        label: 'РК', kks: 'LMA10', isOpen: sim.turbineValvePct > 10, type: 'reg',
+        onClick: () => {
           const next = sim.turbineValvePct >= 90 ? 50 : (sim.turbineValvePct >= 40 ? 0 : 100);
           sim.turbineValvePct = next;
-          addLog(`Клапаны турбины (РК) переведены в положение ${next}%`, next === 0 ? 'warn' : 'action');
-          sound.click(next > 0 ? 590 : 380);
-        }
-      );
-
-      // ==========================================================================
-      // МОДУЛЬ 7: КОНДЕНСАТОР ТУРБИНЫ
-      // ==========================================================================
-      const condX = 1115, condY = 180, condW = 200, condH = 180;
-      const isCondHov = sim.hoveredHotspot && sim.hoveredHotspot.x === condX && sim.hoveredHotspot.y === condY;
-
-      drawScadaModule({
-        x: condX, y: condY, w: condW, h: condH,
-        title: 'КОНДЕНСАТОР ТУРБИНЫ',
-        subtitle: 'ОХЛАЖДЕНИЕ ЦВ • ВАКУУМ',
-        statusColor: '#22c55e',
-        isHovered: isCondHov,
-        rows: [
-          { label: 'Pконд (вакуум)', val: '4.2', unit: 'кПа' },
-          { label: 'Tконд (насыщение)', val: '29.8', unit: '°C' },
-          { label: 'Lкб (уровень воды)', val: '1.45', unit: 'м' },
-          { label: 'Gов (цирк. вода)', val: '45000', unit: 'м³/ч' },
-          { label: 'Tов вх / вых', val: '18.0 / 27.2', unit: '°C' }
-        ]
-      });
-
-      activeHotspots.push({
-        x: condX, y: condY, w: condW, h: condH,
-        title: 'Конденсатор турбины К-1200-6,8/50',
-        sub: 'Конденсация отработавшего пара и создание глубокого вакуума',
-        desc: 'Поверхностный теплообменник с титановыми трубками, через которые прокачивается охлаждающая вода от башенных градирен. Поддерживает вакуум ~4.2 кПа.',
-        simple: plainExplanations.condenser,
-        telemetry: () => `Давление в конденсаторе: 4.2 кПа | Прием БРУ-К: ${sim.bruKOpen ? 'АКТИВЕН' : 'НЕТ'}`
-      });
-
-      // ==========================================================================
-      // МОДУЛЬ 8: ПЭН // ПИТАТЕЛЬНЫЕ ЭЛЕКТРОНАСОСЫ
-      // ==========================================================================
-      const penX = 1115, penY = 440, penW = 200, penH = 145;
-      const isPenHov = sim.hoveredHotspot && sim.hoveredHotspot.x === penX && sim.hoveredHotspot.y === penY;
-      const penStatus = sim.feedwaterFlowPct > 10 ? '#22c55e' : '#dc2626';
-
-      drawScadaModule({
-        x: penX, y: penY, w: penW, h: penH,
-        title: 'ПЭН // ПИТАТЕЛЬНЫЕ НАСОСЫ',
-        subtitle: 'ТРАКТ 225 °C • Pнагн=8.8 МПа',
-        statusColor: penStatus,
-        isHovered: isPenHov,
-        rows: [
-          { label: 'Подача ПЭН', val: sim.feedwaterFlowPct.toFixed(0), unit: '%', color: sim.feedwaterFlowPct > 10 ? '#15803d' : '#d97706' },
-          { label: 'Расход Gпв', val: steamKgS.toFixed(0), unit: 'кг/с' },
-          { label: 'Tпв (питат. вода)', val: '225.0', unit: '°C' },
-          { label: 'Pнагнетания', val: (sim.steamHeaderPressMPa + 1.8).toFixed(2), unit: 'МПа' }
-        ]
-      });
-
-      activeHotspots.push({
-        x: penX, y: penY, w: penW, h: penH,
-        title: 'Питательные электронасосы (ПЭН)',
-        sub: 'Возврат конденсата и питательной воды в парогенераторы',
-        desc: 'Насосные агрегаты высокого давления с подогревателями высокого давления (ПВД), обеспечивающими подачу воды при температуре 225 °C.',
-        simple: plainExplanations.pen,
-        telemetry: () => `Подача ПЭН: ${sim.feedwaterFlowPct.toFixed(0)}% | Ср. уровень в ПГВ: ${avgSgLevel.toFixed(2)} м`
-      });
-
-      // Регулирование ПЭН
-      drawClickableArmature(
-        1115, 595, 200, 34,
-        'ПОДАЧА НАСОСОВ ПЭН',
-        `РАСХОД ВОДЫ: ${sim.feedwaterFlowPct.toFixed(0)} %`,
-        sim.feedwaterFlowPct > 10 ? 'norm' : 'warn',
-        {
-          title: 'Регулирование подачи питательных насосов (ПЭН)',
-          sub: 'Управление уровнем воды в парогенераторах ПГВ-1000МКП',
-          desc: 'Кликните для циклического изменения подачи питательной воды (100% -> 50% -> 0% СТОП).',
-          simple: plainExplanations.pen,
-          telemetry: () => `Расход питательной воды: ${sim.feedwaterFlowPct.toFixed(0)}%`
+          if (typeof addLog === 'function') addLog(`Клапаны турбины (РК): ${next}%`, next === 0 ? 'warn' : 'action');
         },
-        () => {
+        tooltip: {
+          title: 'Стопорно-регулирующие клапаны турбины (СК / РК, KKS LMA10)',
+          sub: 'Регулирование расхода свежего пара в цилиндр высокого давления',
+          desc: 'Кликните для циклического изменения: 100% -> 50% -> 0% (СТОП).',
+          simple: window.plainExplanations ? window.plainExplanations.turbine : 'Главный кран подачи пара на лопатки турбины.',
+          telemetry: () => `Открытие РК: ${sim.turbineValvePct.toFixed(0)}% | Давление перед РК: ${sim.steamHeaderPressMPa.toFixed(2)} МПа`
+        }
+      });
+
+      // Цилиндр высокого давления ЦВД (45)
+      const hpcX = 845, hpcY = 90, hpcW = 55, hpcH = 50;
+      ctx.beginPath();
+      ctx.moveTo(hpcX, hpcY + 12);
+      ctx.lineTo(hpcX + hpcW, hpcY);
+      ctx.lineTo(hpcX + hpcW, hpcY + hpcH);
+      ctx.lineTo(hpcX, hpcY + hpcH - 12);
+      ctx.closePath();
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.font = 'bold 8.5px monospace';
+      ctx.fillStyle = '#0F172A';
+      ctx.fillText('ЦВД', hpcX + 16, hpcY + hpcH / 2 + 3);
+      drawItemTag(45, hpcX + 16, hpcY - 8);
+
+      // Пароперегреватели / СПП (46)
+      const sppX = 910, sppY = 48, sppW = 52, sppH = 34;
+      roundRect(ctx, sppX, sppY, sppW, sppH, 6);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.font = 'bold 8px monospace';
+      ctx.fillStyle = '#D97706';
+      ctx.fillText('СПП-1200', sppX + 6, sppY + 16);
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 7.5px monospace';
+      ctx.fillText('(ПП)', sppX + 18, sppY + 27);
+      drawItemTag(46, sppX + sppW / 2, sppY - 8, 'Пароперегреватели');
+
+      // Линии пара от ЦВД в СПП и из СПП в ЦНД (строго под 90°)
+      ctx.beginPath();
+      ctx.moveTo(hpcX + hpcW, hpcY + 10);
+      ctx.lineTo(sppX, hpcY + 10);
+      ctx.lineTo(sppX, sppY + sppH / 2);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(sppX + sppW, sppY + sppH / 2);
+      ctx.lineTo(970, sppY + sppH / 2);
+      ctx.lineTo(970, 85);
+      ctx.lineTo(1150, 85);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // 3 цилиндра низкого давления ЦНД-1..3 (45)
+      const cndCenters = [995, 1060, 1125];
+      cndCenters.forEach((cx, idx) => {
+        const cW = 48, cH = 60, cY = 88;
+        ctx.beginPath();
+        ctx.moveTo(cx - cW / 2 + 8, cY);
+        ctx.lineTo(cx + cW / 2 - 8, cY);
+        ctx.lineTo(cx + cW / 2, cY + cH);
+        ctx.lineTo(cx - cW / 2, cY + cH);
+        ctx.closePath();
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        ctx.font = 'bold 8px monospace';
+        ctx.fillStyle = '#0F172A';
+        ctx.textAlign = 'center';
+        ctx.fillText(`ЦНД-${idx + 1}`, cx, cY + cH / 2 + 2);
+        ctx.textAlign = 'left';
+
+        // Выхлопной патрубок вниз в конденсатор (42)
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, cY + cH);
+        ctx.lineTo(cx - 14, 185);
+        ctx.moveTo(cx + 14, cY + cH);
+        ctx.lineTo(cx + 14, 185);
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.5)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      });
+
+      // Валопровод к турбогенератору ТЗВ-1200-2 (47)
+      ctx.beginPath();
+      ctx.moveTo(hpcX + hpcW, 115);
+      ctx.lineTo(1175, 115);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Корпус Турбогенератора ТЗВ-1200-2 (47)
+      const genX = 1175, genY = 82, genW = 85, genH = 68;
+      const isGenHov = sim.hoveredHotspot && sim.hoveredHotspot.x === genX && sim.hoveredHotspot.y === genY;
+      roundRect(ctx, genX, genY, genW, genH, 10);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isGenHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(genX + genW / 2, genY + genH / 2, 22, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(22, 163, 74, 0.35)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      ctx.font = 'bold 8.5px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#0F172A';
+      ctx.fillText('ТЗВ-1200-2', genX + 8, genY + 16);
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = '#16A34A';
+      ctx.fillText(`${sim.electricalPowerMW.toFixed(0)} МВт`, genX + 8, genY + 36);
+      ctx.font = 'bold 7.5px monospace';
+      ctx.fillStyle = '#334155';
+      ctx.fillText(`${(sim.turbineRpm / 60).toFixed(2)} Гц • 24 кВ`, genX + 8, genY + 50);
+      drawItemTag(47, genX + genW - 12, genY + 14);
+
+      // Выход в энергосистему (50) — блочный трансформатор и ЛЭП 500 кВ
+      const gridX = 1272, gridY = 115;
+      ctx.beginPath();
+      ctx.moveTo(genX + genW, gridY);
+      ctx.lineTo(gridX, gridY);
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Символ трансформатора (два пересекающихся круга)
+      ctx.beginPath();
+      ctx.arc(gridX + 10, gridY, 10, 0, Math.PI * 2);
+      ctx.arc(gridX + 21, gridY, 10, 0, Math.PI * 2);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Опора ЛЭП 500 кВ
+      ctx.beginPath();
+      ctx.moveTo(gridX + 40, gridY + 22);
+      ctx.lineTo(gridX + 49, gridY - 26);
+      ctx.lineTo(gridX + 58, gridY + 22);
+      ctx.moveTo(gridX + 42, gridY - 14);
+      ctx.lineTo(gridX + 56, gridY - 14);
+      ctx.moveTo(gridX + 38, gridY - 2);
+      ctx.lineTo(gridX + 60, gridY - 2);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Стрелка в сеть 500 кВ
+      ctx.beginPath();
+      ctx.moveTo(gridX + 58, gridY - 14);
+      ctx.lineTo(1352, gridY - 14);
+      ctx.lineTo(1344, gridY - 18);
+      ctx.moveTo(1352, gridY - 14);
+      ctx.lineTo(1344, gridY - 10);
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+      drawItemTag(50, 1295, gridY - 26, 'В сеть');
+
+      activeHotspots.push({
+        x: genX, y: genY, w: genW, h: genH,
+        title: 'Турбогенератор ТЗВ-1200-2 (KKS MKA)',
+        sub: '1199.8 МВт • 24 кВ • 50 Гц • 3000 об/мин • Водяное охлаждение',
+        desc: 'Синхронный трехфазный генератор с полным водяным охлаждением обмоток статора и ротора дистиллятом.',
+        simple: window.plainExplanations ? window.plainExplanations.turbine : 'Главный генератор, превращающий вращение вала турбины в электричество для городов.',
+        telemetry: () => `Nэл: ${sim.electricalPowerMW.toFixed(1)} МВт | f: ${(sim.turbineRpm / 60).toFixed(2)} Гц | Напряжение: 24 кВ | Ток статора: 31 кА`
+      });
+
+      // ========================================================================
+      // 7. КОНДЕНСАТОРЫ (42) И КОНДЕНСАТНЫЙ ТРАКТ: КЭН (38, 39), БОУ (41), ПНД (37)
+      // ========================================================================
+      // 3 корпуса конденсатора (42) под ЦНД
+      const cdW = 54, cdH = 65, cdY = 185;
+      cndCenters.forEach((cx, idx) => {
+        const cdx = cx - cdW / 2;
+        roundRect(ctx, cdx, cdY, cdW, cdH, 6);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.25)';
+        ctx.fillRect(cdx + 3, cdY + 12, cdW - 6, cdH - 26);
+
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(cdx + 3, cdY + cdH - 12, cdW - 6, 9);
+      });
+      drawItemTag(42, cndCenters[1], cdY + 25, 'Конденсаторы (4.2 кПа)');
+
+      // Сброс БРУ-К из главного паропровода в конденсатор
+      ctx.beginPath();
+      ctx.moveTo(815, 236);
+      ctx.lineTo(920, 236);
+      ctx.lineTo(920, cdY + 10);
+      ctx.lineTo(cndCenters[0] - cdW / 2, cdY + 10);
+      ctx.strokeStyle = sim.bruKOpen ? '#38bdf8' : '#64748b';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      drawPidValve({
+        x: 920, y: 220, orient: 'v', size: 6,
+        label: 'БРУ-К', kks: 'LBA20', isOpen: sim.bruKOpen, type: 'safety',
+        onClick: () => {
+          sim.bruKOpen = !sim.bruKOpen;
+          if (typeof addLog === 'function') addLog(sim.bruKOpen ? 'БРУ-К открыт (сброс пара в конденсатор)' : 'БРУ-К закрыт', sim.bruKOpen ? 'action' : 'norm');
+        },
+        tooltip: {
+          title: 'Быстродействующая редукционная установка сброса в конденсатор (БРУ-К, KKS LBA20)',
+          sub: 'Сброс избыточного пара при сбросах нагрузки энергоблока',
+          desc: 'Сбрасывает свежий пар мимо турбины прямо в пароприемные устройства конденсаторов.',
+          simple: 'Байпасный клапан сброса пара в конденсатор в обход турбины.',
+          telemetry: () => `БРУ-К: ${sim.bruKOpen ? 'ОТКРЫТ (СБРОС В КОНДЕНСАТОР)' : 'ЗАКРЫТ'}`
+        }
+      });
+
+      // Линия основного конденсата: от конденсаторов к насосам 1-й ступени (38)
+      ctx.beginPath();
+      cndCenters.forEach((cx, idx) => {
+        ctx.moveTo(cx, cdY + cdH);
+        ctx.lineTo(cx, cdY + cdH + 16);
+      });
+      ctx.lineTo(cndCenters[0], cdY + cdH + 16);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.RETURN_CONDENSATE;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      // Конденсатные насосы 1-й ступени (38) (КЭН-1)
+      drawPidPump({
+        x: 995, y: 285, r: 11, flowAngle: Math.PI / 2,
+        label: '', kks: 'КЭН-1', isRunning: sim.turbineValvePct > 5, rpm: 1500
+      });
+      drawItemTag(38, 995, 305, 'КЭН-1');
+
+      // Блочная обессоливающая установка БОУ (41)
+      const bouX = 1060, bouY = 270, bouW = 38, bouH = 40;
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(bouX, bouY, bouW, bouH);
+      ctx.strokeStyle = '#1E293B';
+      ctx.strokeRect(bouX, bouY, bouW, bouH);
+      ctx.font = 'bold 8px monospace';
+      ctx.fillStyle = '#0284C7';
+      ctx.fillText('БОУ', bouX + 8, bouY + 18);
+      ctx.fillStyle = '#0F172A';
+      ctx.font = '7px monospace';
+      ctx.fillText('ФИЛЬТРЫ', bouX + 4, bouY + 30);
+      drawItemTag(41, bouX + bouW / 2, bouY - 8);
+
+      // Конденсатные насосы 2-й ступени (39) (КЭН-2)
+      drawPidPump({
+        x: 895, y: 360, r: 11, flowAngle: Math.PI,
+        label: '', kks: 'КЭН-2', isRunning: sim.turbineValvePct > 5, rpm: 1500
+      });
+      drawItemTag(39, 895, 380, 'КЭН-2');
+
+      // Каскад подогревателей низкого давления ПНД (37)
+      const pndYStart = 410;
+      for (let i = 0; i < 4; i++) {
+        const py = pndYStart + i * 24;
+        roundRect(ctx, 850, py, 45, 18, 4);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.font = 'bold 7.5px monospace';
+        ctx.fillStyle = '#0F172A';
+        ctx.fillText(`ПНД-${4 - i}`, 858, py + 12);
+      }
+      drawItemTag(37, 835, pndYStart + 36, 'Каскад ПНД');
+
+      // Линия конденсата через БОУ и КЭН-2 в ПНД и наверх в деаэратор (35)
+      ctx.beginPath();
+      ctx.moveTo(995, 296);
+      ctx.lineTo(995, 325);
+      ctx.lineTo(bouX, 325);
+      ctx.lineTo(bouX, bouY + bouH / 2);
+      ctx.moveTo(bouX + bouW, bouY + bouH / 2);
+      ctx.lineTo(1120, bouY + bouH / 2);
+      ctx.lineTo(1120, 360);
+      ctx.lineTo(906, 360);
+      ctx.moveTo(884, 360);
+      ctx.lineTo(820, 360);
+      ctx.lineTo(820, pndYStart + 80);
+      ctx.lineTo(850, pndYStart + 80);
+      ctx.moveTo(895, pndYStart);
+      ctx.lineTo(915, pndYStart);
+      ctx.lineTo(915, 145);
+      ctx.lineTo(795, 145);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.RETURN_CONDENSATE;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      drawFlowArrow(860, 145, Math.PI, THERMAL_COLOR_SCALE.RETURN_CONDENSATE, 5);
+
+      // ========================================================================
+      // 8. ДЕАЭРАТОР (35), ПЭН (48) И ПОДОГРЕВАТЕЛИ ВЫСОКОГО ДАВЛЕНИЯ ПВД (36)
+      // ========================================================================
+      // Деаэратор (35) (вертикальная колонка + горизонтальный бак запаса питательной воды)
+      const dColX = 748, dColY = 125, dColW = 24, dColH = 30;
+      const dTankX2 = 725, dTankY2 = 155, dTankW2 = 70, dTankH2 = 36;
+      const isDeaerHov = sim.hoveredHotspot && sim.hoveredHotspot.x === dTankX2 && sim.hoveredHotspot.y === dTankY2;
+
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(dColX, dColY, dColW, dColH);
+      ctx.strokeStyle = '#1E293B';
+      ctx.strokeRect(dColX, dColY, dColW, dColH);
+      ctx.strokeStyle = '#64748B';
+      ctx.lineWidth = 1;
+      for (let dy = dColY + 6; dy < dColY + dColH - 4; dy += 6) {
+        ctx.beginPath(); ctx.moveTo(dColX + 3, dy); ctx.lineTo(dColX + dColW - 3, dy); ctx.stroke();
+      }
+
+      roundRect(ctx, dTankX2, dTankY2, dTankW2, dTankH2, 8);
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isDeaerHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.22)';
+      ctx.fillRect(dTankX2 + 3, dTankY2 + 12, dTankW2 - 6, dTankH2 - 15);
+
+      ctx.font = 'bold 8px "Segoe UI", sans-serif';
+      ctx.fillStyle = '#0F172A';
+      ctx.fillText('ДЕАЭРАТОР', dTankX2 + 6, dTankY2 + 20);
+      ctx.font = 'bold 7.5px monospace';
+      ctx.fillStyle = '#0284C7';
+      ctx.fillText('0.871 МПа', dTankX2 + 6, dTankY2 + 30);
+      drawItemTag(35, dTankX2 + dTankW2 - 10, dTankY2 + 10);
+
+      activeHotspots.push({
+        x: dTankX2, y: dTankY2, w: dTankW2, h: dTankH2,
+        title: 'Деаэратор термический 0.871 МПа (KKS LAB)',
+        sub: 'Деаэрационная колонка + бак запаса питательной воды 160 м³',
+        desc: 'Удаляет коррозионно-агрессивные газы (кислород O2 и углекислый газ CO2) из питательной воды при температуре насыщения 178.5 °C.',
+        simple: window.plainExplanations ? window.plainExplanations.pen : 'Бак-термос, где из воды вываривают кислород перед подачей в парогенераторы.',
+        telemetry: () => `Давление: 0.871 МПа | T: 178.5 °C | Объем бака: 160 м³`
+      });
+
+      // Опускная линия от деаэратора к питательным электронасосам ПЭН (48)
+      ctx.beginPath();
+      ctx.moveTo(dTankX2 + dTankW2 / 2, dTankY2 + dTankH2);
+      ctx.lineTo(dTankX2 + dTankW2 / 2, 245);
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Питательные электронасосы ПЭН (48)
+      drawPidPump({
+        x: 760, y: 258, r: 12, flowAngle: Math.PI / 2,
+        label: '', kks: 'ПЭН', isRunning: sim.feedwaterFlowPct > 10, rpm: (sim.feedwaterFlowPct / 100) * 3000,
+        onClick: () => {
           const next = sim.feedwaterFlowPct >= 90 ? 50 : (sim.feedwaterFlowPct >= 40 ? 0 : 100);
           sim.feedwaterFlowPct = next;
-          addLog(`Подача питательных насосов ПЭН установлена: ${next}%`, next === 0 ? 'alarm' : 'action');
-          sound.click(next > 0 ? 560 : 350);
+          if (typeof addLog === 'function') addLog(`Подача ПЭН: ${next}%`, next === 0 ? 'alarm' : 'action');
+        },
+        tooltip: {
+          title: 'Питательные электронасосы (ПЭН, KKS LAB)',
+          sub: 'Нагнетание 8.8 МПа • Расход до 1780 кг/с • 225 °C',
+          desc: 'Кликните для циклического изменения расхода: 100% -> 50% -> 0% (СТОП).',
+          simple: window.plainExplanations ? window.plainExplanations.pen : 'Насосы колоссального давления, которые толкают воду обратно в парогенератор.',
+          telemetry: () => `Расход ПЭН: ${sim.feedwaterFlowPct.toFixed(0)}% | Gпв: ${steamKgS.toFixed(0)} кг/с | Pнагн: ${(sim.steamHeaderPressMPa + 1.8).toFixed(2)} МПа`
         }
-      );
+      });
+      drawItemTag(48, 785, 258, 'ПЭН');
+
+      // Вспомогательный питательный насос АПЭН (49)
+      drawPidPump({
+        x: 760, y: 295, r: 10, flowAngle: Math.PI / 2,
+        label: '', kks: 'АПЭН', isRunning: false, rpm: 0
+      });
+      drawItemTag(49, 785, 295, 'АПЭН');
+
+      // Каскад подогревателей высокого давления ПВД-5..7 (36)
+      const pvdYStart = 330;
+      for (let i = 0; i < 3; i++) {
+        const py = pvdYStart + i * 28;
+        roundRect(ctx, 745, py, 32, 22, 6);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        ctx.font = 'bold 7.5px monospace';
+        ctx.fillStyle = '#0F172A';
+        ctx.fillText(`ПВД-${7 - i}`, 748, py + 14);
+      }
+      drawItemTag(36, 725, pvdYStart + 35, 'ПВД (225 °C)');
+
+      // Напорная магистраль питательной воды 225 °C обратно в парогенераторы
+      // От ПВД (760, 415) вниз до Y: 635, влево в реакторное здание, разводка в ПГ-1 и ПГ-2
+      ctx.beginPath();
+      ctx.moveTo(760, 415);
+      ctx.lineTo(760, 635);
+      ctx.lineTo(245, 635);
+      ctx.lineTo(245, sg1Y + sg1H);
+      ctx.moveTo(495, 635);
+      ctx.lineTo(495, sg2Y + sg2H);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.HOT_STEAM;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      drawFlowArrow(620, 635, Math.PI, THERMAL_COLOR_SCALE.HOT_STEAM, 5);
+      drawFlowArrow(370, 635, Math.PI, THERMAL_COLOR_SCALE.HOT_STEAM, 5);
+
+      drawPidValve({
+        x: 245, y: 615, orient: 'v', size: 6,
+        label: 'Питат. клапан', kks: 'JEB11', isOpen: sim.feedwaterFlowPct > 10, type: 'reg'
+      });
+
+      drawPidValve({
+        x: 495, y: 615, orient: 'v', size: 6,
+        label: 'Питат. клапан', kks: 'JEB21', isOpen: sim.feedwaterFlowPct > 10, type: 'reg'
+      });
+
+      // ========================================================================
+      // 9. ГРАДИРНЯ (40) И ЦИРКУЛЯЦИОННЫЕ НАСОСЫ (43)
+      // ========================================================================
+      // Гиперболоидная башенная градирня (40)
+      const ctX = 1025, ctY = 410, ctW = 85, ctH = 150;
+      const ctMidX = ctX + ctW / 2;
+      const isCtHov = sim.hoveredHotspot && sim.hoveredHotspot.x === ctX && sim.hoveredHotspot.y === ctY;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(ctX + 12, ctY);
+      ctx.quadraticCurveTo(ctMidX - 18, ctY + ctH * 0.45, ctX, ctY + ctH);
+      ctx.lineTo(ctX + ctW, ctY + ctH);
+      ctx.quadraticCurveTo(ctMidX + 18, ctY + ctH * 0.45, ctX + ctW - 12, ctY);
+      ctx.closePath();
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fill();
+      ctx.strokeStyle = isCtHov ? '#0284C7' : '#1E293B';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      for (let rx = ctX + 10; rx <= ctX + ctW - 10; rx += 8) {
+        ctx.beginPath();
+        ctx.moveTo(rx, ctY + ctH - 35);
+        ctx.lineTo(rx, ctY + ctH - 6);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(ctX + 4, ctY + ctH - 8, ctW - 8, 6);
+
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.35)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(ctMidX - 14, ctY);
+      ctx.quadraticCurveTo(ctMidX - 8, ctY - 20, ctMidX - 18, ctY - 32);
+      ctx.moveTo(ctMidX, ctY);
+      ctx.quadraticCurveTo(ctMidX + 4, ctY - 22, ctMidX, ctY - 36);
+      ctx.moveTo(ctMidX + 14, ctY);
+      ctx.quadraticCurveTo(ctMidX + 10, ctY - 18, ctMidX + 20, ctY - 30);
+      ctx.stroke();
+      drawItemTag(40, ctMidX, ctY + ctH / 2 - 10, 'Градирня');
+      ctx.restore();
+
+      // Циркуляционные насосы градирни ЦН (43)
+      drawPidPump({
+        x: 1160, y: 535, r: 13, flowAngle: -Math.PI / 2,
+        label: 'ЦН-1', kks: '43', isRunning: true, rpm: 750
+      });
+      drawPidPump({
+        x: 1160, y: 575, r: 13, flowAngle: -Math.PI / 2,
+        label: 'ЦН-2', kks: '43', isRunning: true, rpm: 750
+      });
+      drawItemTag(43, 1190, 555);
+
+      // Контур циркуляционной воды (Ду-2000, холодная вода 10–45°C: #0EA5E9, возврат: #06B6D4):
+      ctx.beginPath();
+      ctx.moveTo(ctX + ctW, ctY + ctH - 5);
+      ctx.lineTo(1135, ctY + ctH - 5);
+      ctx.lineTo(1135, 555);
+      ctx.lineTo(1160, 555);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.COLD_COOLING;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(1160, 522);
+      ctx.lineTo(1160, 220);
+      ctx.lineTo(cndCenters[2] + cdW / 2, 220);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.COLD_COOLING;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      drawFlowArrow(1160, 360, -Math.PI / 2, THERMAL_COLOR_SCALE.COLD_COOLING, 5);
+
+      ctx.beginPath();
+      ctx.moveTo(cndCenters[0] - cdW / 2, 210);
+      ctx.lineTo(960, 210);
+      ctx.lineTo(960, ctY + 45);
+      ctx.lineTo(ctX + 10, ctY + 45);
+      ctx.strokeStyle = THERMAL_COLOR_SCALE.RETURN_CONDENSATE;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      drawFlowArrow(960, 340, Math.PI / 2, THERMAL_COLOR_SCALE.RETURN_CONDENSATE, 5);
+
+      // Насосы техводы неответственных потребителей (33) и потребители машзала (44)
+      drawPidPump({
+        x: 1245, y: 535, r: 11, flowAngle: -Math.PI / 2,
+        label: '', kks: '33', isRunning: true, rpm: 1000
+      });
+      drawItemTag(33, 1245, 555, 'Насос техводы');
+
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(1225, 410, 42, 30);
+      ctx.strokeStyle = '#1E293B';
+      ctx.strokeRect(1225, 410, 42, 30);
+      ctx.font = 'bold 7.5px monospace';
+      ctx.fillStyle = '#0F172A';
+      ctx.fillText('ТЕПЛООБМ.', 1228, 425);
+      ctx.fillText('(44)', 1238, 435);
+      drawItemTag(44, 1245, 398);
+
+      activeHotspots.push({
+        x: ctX, y: ctY, w: ctW, h: ctH,
+        title: 'Башенная испарительная градирня (KKS MAA)',
+        sub: 'Высота 167 м • Охлаждение циркуляционной воды 2-го контура',
+        desc: 'Естественная тяга гиперболоидной железобетонной башни. Охлаждает до 160 000 м³/ч циркуляционной воды за счет частичного испарения.',
+        simple: window.plainExplanations ? window.plainExplanations.condenser : 'Огромная коническая башня с паром, охлаждающая воду после конденсатора.',
+        telemetry: () => `Tгор: 36.5 °C | Tхол: 24.2 °C | Расход ЦВ: 45 000 кг/с`
+      });
+
+      // ========================================================================
+      // 10. ДИНАМИЧЕСКИЕ БЕГУЩИЕ МАРКЕРЫ РАСХОДА (ПОТОКИ)
+      // ========================================================================
+      if (sim.showParticles) {
+        // 1. 1-й контур под давлением (280°C–330°C: #EF4444)
+        const flowLp1 = (lp1.rpm / 1000) * (lp1.pumpOn ? 1.0 : 0.15);
+        if (flowLp1 > 0.05) {
+          drawParticlesOnPath([[333, 305], [290, 305]], 3, flowLp1 * 3.6, loop1HotCol, 2.4);
+          drawParticlesOnPath([[195, 320], [185, 320], [185, 355], [210, 355]], 3, flowLp1 * 3.6, loop1ColdCol, 2.4);
+          drawParticlesOnPath([[210, 381], [210, 395], [333, 395], [333, 335]], 5, flowLp1 * 3.6, loop1ColdCol, 2.4);
+        }
+
+        const flowLp2 = (lp2.rpm / 1000) * (lp2.pumpOn ? 1.0 : 0.15);
+        if (flowLp2 > 0.05) {
+          drawParticlesOnPath([[417, 305], [450, 305]], 3, flowLp2 * 3.6, loop1HotCol, 2.4);
+          drawParticlesOnPath([[545, 320], [555, 320], [555, 355], [530, 355]], 3, flowLp2 * 3.6, loop1ColdCol, 2.4);
+          drawParticlesOnPath([[530, 381], [530, 395], [417, 395], [417, 335]], 5, flowLp2 * 3.6, loop1ColdCol, 2.4);
+        }
+
+        // 2. Главные паропроводы острого пара (100°C–280°C: #F59E0B)
+        const flowSteam = (sim.feedwaterFlowPct / 100) * (sim.turbineValvePct / 100);
+        if (flowSteam > 0.05) {
+          drawParticlesOnPath([[245, 285], [245, steamY1], [685, steamY1]], 5, flowSteam * 4.0, THERMAL_COLOR_SCALE.HOT_STEAM, 2.4);
+          drawParticlesOnPath([[495, 285], [495, steamY2], [685, steamY2]], 4, flowSteam * 4.0, THERMAL_COLOR_SCALE.HOT_STEAM, 2.4);
+          drawParticlesOnPath([[gpabX + 10, steamY1], [815, steamY1], [815, 115], [845, 115]], 5, flowSteam * 4.2, THERMAL_COLOR_SCALE.HOT_STEAM, 2.5);
+        }
+
+        // 3. Питательная вода 225 °C (100°C–280°C: #F59E0B)
+        const flowFeed = sim.feedwaterFlowPct / 100;
+        if (flowFeed > 0.05) {
+          drawParticlesOnPath([[dTankX2 + dTankW2 / 2, dTankY2 + dTankH2], [dTankX2 + dTankW2 / 2, 245]], 2, flowFeed * 3.2, THERMAL_COLOR_SCALE.HOT_STEAM, 2.4);
+          drawParticlesOnPath([[760, 415], [760, 635], [245, 635], [245, sg1Y + sg1H]], 8, flowFeed * 3.5, THERMAL_COLOR_SCALE.HOT_STEAM, 2.5);
+          drawParticlesOnPath([[495, 635], [495, sg2Y + sg2H]], 2, flowFeed * 3.5, THERMAL_COLOR_SCALE.HOT_STEAM, 2.4);
+        }
+
+        // 4. Возвратный контур конденсата (45°C–100°C: #06B6D4)
+        if (flowFeed > 0.05) {
+          drawParticlesOnPath([[915, pndYStart], [915, 145], [795, 145]], 4, flowFeed * 3.2, THERMAL_COLOR_SCALE.RETURN_CONDENSATE, 2.2);
+        }
+
+        // 5. Циркуляционная вода градирни (10°C–45°C: #0EA5E9 и возврат #06B6D4)
+        drawParticlesOnPath([[ctX + ctW, ctY + ctH - 5], [1135, ctY + ctH - 5], [1135, 555], [1160, 555]], 3, 2.8, THERMAL_COLOR_SCALE.COLD_COOLING, 2.4);
+        drawParticlesOnPath([[1160, 522], [1160, 220], [cndCenters[2] + cdW / 2, 220]], 5, 3.2, THERMAL_COLOR_SCALE.COLD_COOLING, 2.4);
+        drawParticlesOnPath([[cndCenters[0] - cdW / 2, 210], [960, 210], [960, ctY + 45], [ctX + 10, ctY + 45]], 5, 3.0, THERMAL_COLOR_SCALE.RETURN_CONDENSATE, 2.4);
+
+        // 6. Условные аварийные потоки
+        if (sim.saozActive) {
+          drawParticlesOnPath([[saozL_X + saozW / 2, saozY + saozH], [saozL_X + saozW / 2, rxY + 30], [rxX + 4, rxY + 30]], 3, 4.0, '#ec4899', 2.4);
+          drawParticlesOnPath([[saozR_X + saozW / 2, saozY + saozH], [saozR_X + saozW / 2, rxY + 30], [rxX + rxW - 4, rxY + 30]], 3, 4.0, '#ec4899', 2.4);
+        }
+
+        if (sim.sprayActive) {
+          drawParticlesOnPath([[235, 395], [235, kdY + 12], [kdX, kdY + 12]], 3, 3.2, '#38bdf8', 2.2);
+        }
+
+        if (sim.ipuKdOpen) {
+          drawParticlesOnPath([[kdX, kdY + 22], [kdX - 14, kdY + 22], [kdX - 14, bbY + 18], [bbX + bbW, bbY + 18]], 4, 4.5, '#ef4444', 2.5);
+        }
+
+        if (sim.bruKOpen) {
+          drawParticlesOnPath([[815, 236], [920, 236], [920, cdY + 10], [cndCenters[0] - cdW / 2, cdY + 10]], 4, 4.0, '#38bdf8', 2.4);
+        }
+
+        if (sim.bruAOpen) {
+          drawParticlesOnPath([[gpabX + 28, steamY1], [gpabX + 28, steamY1 - 42]], 2, 4.0, '#f59e0b', 2.4);
+        }
+      }
     }
 
+    // Совместимый псевдоним renderPanoramic
+    function renderPanoramic() {
+      return renderPanoramicSystemsView();
+    }
 
     // ============================================================================
-    // РЕЖИМ 1: ТЕХНОЛОГИЧЕСКАЯ СХЕМА 1-ГО И 2-ГО КОНТУРОВ (РАЗРЕЗ В-392М)
+    // РЕЖИМ 2: ВЕРТИКАЛЬНЫЙ РАЗРЕЗ ЗДАНИЯ РЕАКТОРА И ГЕРМООБОЛОЧКИ 10UJA (В-491)
+    // Строгий дизайн-код IAEA SCADA / DARK TECH (#080D14 / #0B0F17)
+    // Машинный зал полностью исключен — строго гермозона 10UJA по центру холста
+    // Высота здания: 85% высоты Canvas (612px из 720px: от Y=58 до Y=670)
     // ============================================================================
     function renderCrossSectionView() {
       activeHotspots = [];
+      window.activeHotspots = activeHotspots;
+      const W = 1360, H = 720;
 
-      // 1. ДВОЙНАЯ ЗАЩИТНАЯ ГЕРМООБОЛОЧКА (КОНТАЙНМЕНТ В-392М)
+      // Палитра SLATE LIGHT SCADA & ИНЖЕНЕРНАЯ ТЕМПЕРАТУРНАЯ ШКАЛА
+      const PAL = {
+        bgDeep: '#FFFFFF',
+        bgInner: '#F8FAFC',
+        wallStroke: '#334155',
+        wallSolid: '#475569',
+        vesselStroke: '#1E293B',
+        textMain: '#0F172A',
+        textSub: '#334155',
+        hotLeg: THERMAL_COLOR_SCALE.REACTOR_CORE,
+        reactorCore: THERMAL_COLOR_SCALE.CRITICAL_OVERHEAT,
+        coldLeg: THERMAL_COLOR_SCALE.REACTOR_CORE,
+        steam: THERMAL_COLOR_SCALE.HOT_STEAM,
+        steamAlt: THERMAL_COLOR_SCALE.HOT_STEAM,
+        feedwater: THERMAL_COLOR_SCALE.RETURN_CONDENSATE,
+        condensate: THERMAL_COLOR_SCALE.COLD_COOLING,
+        safety: THERMAL_COLOR_SCALE.COLD_COOLING,
+        statusOk: '#16A34A',
+        statusOff: '#64748B',
+        statusAlarm: '#DC2626'
+      };
+
       ctx.save();
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 5;
-      ctx.fillStyle = '#f1f5f9';
-      ctx.beginPath();
-      ctx.moveTo(55, 650);
-      ctx.lineTo(55, 220);
-      ctx.arc(340, 220, 285, Math.PI, 0, false);
-      ctx.lineTo(625, 650);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
 
-      // Внутренняя стальная облицовка гермооболочки
-      ctx.strokeStyle = 'rgba(100, 116, 139, 0.45)';
+      // Безопасное получение параметров симуляции
+      const p1 = (typeof sim.primaryPressureMPa === 'number' ? sim.primaryPressureMPa : 16.20);
+      const przLvl = (typeof sim.pressurizerLevelM === 'number' ? sim.pressurizerLevelM : 8.40);
+      const p2 = (typeof sim.steamHeaderPressMPa === 'number' ? sim.steamHeaderPressMPa : 7.00);
+      const heatersOn = Boolean(sim.heatersPowerKW > 0 || sim.heatersMode === 'ON');
+
+      // ========================================================================
+      // 1. ГЕОМЕТРИЯ ЗДАНИЯ РЕАКТОРА 10UJA (СТРОГО ПО ЦЕНТРУ X=680, ВЫСОТА 85% = 612px)
+      // ========================================================================
+      const domeCX = W / 2;         // 680 px — строго по центру холста
+      const topDomeY = 58;          // Верхняя точка наружного купола
+      const groundY = 670;          // Уровень фундаментной плиты 0.000 (670 - 58 = 612px = 85% от 720)
+      const outerR = 300;           // Радиус наружной защитной оболочки (НЗО)
+      const innerR = 276;           // Радиус внутренней преднапряженной гермооболочки (ВЗО)
+      const domeCY = topDomeY + outerR; // Y=358 — центр сферического свода купола
+
+      // Строительные высотные уровни внутри 10UJA:
+      const elev000Y = groundY;     //  0.000 — Фундаментная плита и шахта УЛР (Y=670)
+      const elev132Y = 532;         // +13.200 — Площадка обслуживания ГЦНА и боксов ПГ (Y=532)
+      const elev263Y = 368;         // +26.300 — Перекрытие реакторного зала и ярус ГЕ САОЗ (Y=368)
+      const elev650Y = 138;         // +65.000 — Подкупольное пространство и спринклеры (Y=138)
+
+      // Заголовок чертежа
+      ctx.fillStyle = PAL.safety;
+      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('10UJA: ВЕРТИКАЛЬНЫЙ РАЗРЕЗ ЗДАНИЯ РЕАКТОРА И ДВОЙНОЙ ГЕРМООБОЛОЧКИ В-491 (БелАЭС)', domeCX, 32);
+
+      // 1.1 Монолитная железобетонная фундаментная плита (отм. 0.000)
+      ctx.fillStyle = PAL.bgInner;
+      ctx.fillRect(domeCX - outerR - 30, groundY, (outerR + 30) * 2, 22);
+      ctx.strokeStyle = PAL.wallStroke;
       ctx.lineWidth = 1.5;
-      ctx.setLineDash([8, 5]);
+      ctx.strokeRect(domeCX - outerR - 30, groundY, (outerR + 30) * 2, 22);
+
+      // Штриховка фундаментной плиты
       ctx.beginPath();
-      ctx.moveTo(65, 644);
-      ctx.lineTo(65, 220);
-      ctx.arc(340, 220, 275, Math.PI, 0, false);
-      ctx.lineTo(615, 644);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 11px "Segoe UI", sans-serif';
-      ctx.fillText('ДВОЙНАЯ ЗАЩИТНАЯ ГЕРМООБОЛОЧКА (ПРОЕКТ В-392М)', 200, 668);
-      ctx.restore();
-
-      // 2. СИСТЕМА ПАССИВНОГО ОТВОДА ТЕПЛА (СПОТ) В КУПОЛЕ ГЕРМООБОЛОЧКИ
-      const spotColor = sim.spotActive ? '#1d4ed8' : '#475569';
-      [
-        { x: 115, y: 115, label: 'СПОТ-1 (Теплообменник)' },
-        { x: 515, y: 115, label: 'СПОТ-2 (Теплообменник)' }
-      ].forEach((sp, idx) => {
-        ctx.save();
-        roundRect(ctx, sp.x, sp.y, 54, 78, 6);
-        ctx.fillStyle = sim.spotActive ? 'rgba(29, 78, 216, 0.08)' : '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Змеевик СПОТ и тяговая труба наружу купола
-        ctx.strokeStyle = spotColor;
-        ctx.lineWidth = 1.5;
-        for (let y = sp.y + 14; y <= sp.y + 62; y += 12) {
-          ctx.beginPath();
-          ctx.moveTo(sp.x + 8, y);
-          ctx.lineTo(sp.x + 46, y);
-          ctx.stroke();
-        }
-        // Воздуховод с шибером
-        ctx.beginPath();
-        ctx.moveTo(sp.x + 27, sp.y);
-        ctx.lineTo(sp.x + 27, sp.y - 36);
-        ctx.stroke();
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 10px monospace';
-        ctx.fillText(idx === 0 ? 'СПОТ-1..2' : 'СПОТ-3..4', sp.x + 2, sp.y + 92);
-        if (sim.spotActive) {
-          ctx.fillStyle = '#15803d';
-          ctx.fillText('ОТВОД ПАРА', sp.x - 4, sp.y - 42);
-        }
-        ctx.restore();
-
-        activeHotspots.push({
-          x: sp.x - 5, y: sp.y - 40, w: 65, h: 135,
-          title: 'Система пассивного отвода тепла (СПОТ)',
-          sub: '4 канала воздушных теплообменников (В-392М)',
-          desc: 'При полном обесточивании АЭС отводит остаточное тепло от парогенераторов ПГВ-1000МКП за счет естественной циркуляции пара и атмосферного воздуха неограниченное время.',
-          telemetry: () => `Статус шиберов: ${sim.spotActive ? 'ОТКРЫТЫ (Активный теплоотвод)' : 'ЗАКРЫТЫ (Ожидание)'} | P₂: ${sim.steamHeaderPressMPa.toFixed(2)} МПа`
-        });
-      });
-
-      // 3. ГИДРОЕМКОСТИ САОЗ (ГЕ-1, ГЕ-2, ГЕ-3)
-      [
-        { x: 88, y: 255, name: 'ГЕ-1 САОЗ' },
-        { x: 145, y: 255, name: 'ГЕ-2 САОЗ' }
-      ].forEach(ge => {
-        ctx.save();
-        roundRect(ctx, ge.x, ge.y, 44, 96, 14);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Уровень борированной воды (16 г/кг)
-        const hWater = (sim.saozWaterPct / 100) * 66;
-        ctx.fillStyle = 'rgba(29, 78, 216, 0.15)';
-        roundRect(ctx, ge.x + 3, ge.y + 92 - hWater, 38, hWater, 8);
-        ctx.fill();
-
-        // Линия подачи в корпус реактора с обратным клапаном
-        ctx.strokeStyle = sim.saozActive ? '#15803d' : '#1d4ed8';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(ge.x + 22, ge.y + 96);
-        ctx.lineTo(ge.x + 22, 382);
-        ctx.lineTo(290, 382);
-        ctx.stroke();
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText(ge.name, ge.x + 2, ge.y - 6);
-        ctx.fillStyle = '#0f172a';
-        ctx.fillText(`${Math.round(sim.saozWaterPct)}%`, ge.x + 11, ge.y + 52);
-        ctx.restore();
-
-        if (sim.saozActive && sim.saozWaterPct > 0) {
-          drawParticlesOnPath([[ge.x + 22, ge.y + 96], [ge.x + 22, 382], [290, 382]], 6, 2.5, '#15803d', 3);
-        }
-
-        activeHotspots.push({
-          x: ge.x, y: ge.y, w: 44, h: 96,
-          title: `Гидроемкость пассивной САОЗ (${ge.name})`,
-          sub: 'Давление азотной подушки 5,9 МПа • H₃BO₃ 16 г/кг',
-          desc: 'Пассивная система аварийного охлаждения активной зоны. При падении давления в 1-м контуре ниже 5,9 МПа обратные клапаны открываются автоматически без участия внешних источников тока.',
-          telemetry: () => `Запас раствора бора: ${sim.saozWaterPct.toFixed(1)}% | Клапан: ${sim.saozActive ? 'ОТКРЫТ (Впрыск в реактор)' : 'ЗАКРЫТ'}`
-        });
-      });
-
-      // 4. УСТРОЙСТВО ЛОКАЛИЗАЦИИ РАСПЛАВА (УЛР — «ЛОВУШКА РАСПЛАВА») ПОД РЕАКТОРОМ
-      ctx.save();
-      // Бетонная шахта реактора
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 3;
-      ctx.fillStyle = '#e2e8f0';
-      ctx.beginPath();
-      ctx.rect(275, 515, 130, 125);
-      ctx.fill();
-      ctx.stroke();
-
-      // Конический корпус ловушки расплава (УЛР) с жертвенным материалом
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(290, 540);
-      ctx.lineTo(390, 540);
-      ctx.lineTo(368, 622);
-      ctx.lineTo(312, 622);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Ферма-консоль и блоки жертвенного материала (Fe2O3 + Al2O3 + Gd2O3)
-      for (let bx = 315; bx <= 355; bx += 14) {
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(bx, 582, 10, 28);
-      }
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('УЛР («ЛОВУШКА РАСПЛАВА»)', 273, 636);
-      ctx.restore();
-
-      activeHotspots.push({
-        x: 275, y: 515, w: 130, h: 125,
-        title: 'Устройство локализации расплава (УЛР)',
-        sub: 'Ключевая система безопасности проекта В-392М (Поколение III+)',
-        desc: 'Установлена на дне бетонной шахты строго под корпусом реактора ВВЭР-1200. Содержит кассеты жертвенного материала (оксиды железа, алюминия и гадолиния) для приема, охлаждения и перевода кориума в подкритическое состояние.',
-        telemetry: () => `Статус шахты УЛР: ${sim.ulrCoolingActive ? 'ЗАПОЛНЕНА ОХЛАЖДАЮЩЕЙ ВОДОЙ' : 'СУХОЕ ОЖИДАНИЕ (НОРМА)'}`
-      });
-
-      // 5. ТРУБОПРОВОДЫ ГЛАВНОГО ЦИРКУЛЯЦИОННОГО КОНТУРА (ГОРЯЧИЕ И ХОЛОДНЫЕ НИТКИ)
-      const flowSpeed = (sim.loops.reduce((s, l) => s + l.flowPct, 0) / 400) * 3.5;
-
-      // Левая петля (символизирует Петли №1–2) и Правая петля (Петли №3–4 с КД)
-      // Горячие нитки (насыщенный термический красный #dc2626, 328.9 °C)
-      ctx.save();
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = 10;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // Левая горячая нитка (от реактора к левому ПГВ-1000МКП)
-      const leftHotPath = [[290, 355], [225, 355], [225, 420]];
-      ctx.beginPath();
-      ctx.moveTo(290, 355);
-      ctx.lineTo(225, 355);
-      ctx.lineTo(225, 420);
-      ctx.stroke();
-
-      // Правая горячая нитка (от реактора к правому ПГВ-1000МКП)
-      const rightHotPath = [[390, 355], [465, 355], [465, 420]];
-      ctx.beginPath();
-      ctx.moveTo(390, 355);
-      ctx.lineTo(465, 355);
-      ctx.lineTo(465, 420);
-      ctx.stroke();
-
-      // Холодные нитки (насыщенный холодный синий #1d4ed8, 298.2 °C, через ГЦНА-1391 обратно в реактор)
-      ctx.strokeStyle = '#1d4ed8';
-      const leftColdPath = [[140, 465], [140, 495], [245, 495], [245, 392], [290, 392]];
-      ctx.beginPath();
-      leftColdPath.forEach((p, idx) => idx === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
-      ctx.stroke();
-
-      const rightColdPath = [[550, 465], [550, 495], [435, 495], [435, 392], [390, 392]];
-      ctx.beginPath();
-      rightColdPath.forEach((p, idx) => idx === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
-      ctx.stroke();
-      ctx.restore();
-
-      // Частицы потока в горячих и холодных нитках
-      drawParticlesOnPath(leftHotPath, 5, flowSpeed, '#dc2626', 3.2);
-      drawParticlesOnPath(rightHotPath, 5, flowSpeed, '#dc2626', 3.2);
-      drawParticlesOnPath(leftColdPath, 8, flowSpeed, '#1d4ed8', 3.2);
-      drawParticlesOnPath(rightColdPath, 8, flowSpeed, '#1d4ed8', 3.2);
-
-      // 6. ГОРИЗОНТАЛЬНЫЕ ПАРОГЕНЕРАТОРЫ ПГВ-1000МКП (ЛЕВЫЙ И ПРАВЫЙ БЛОКИ)
-      [
-        { x: 92, y: 405, w: 155, h: 66, name: 'ПГВ-1000МКП (ПГ-1,2)', loopIdx: 0 },
-        { x: 442, y: 405, w: 155, h: 66, name: 'ПГВ-1000МКП (ПГ-3,4)', loopIdx: 3 }
-      ].forEach(sg => {
-        const lp = sim.loops[sg.loopIdx];
-        ctx.save();
-        roundRect(ctx, sg.x, sg.y, sg.w, sg.h, 24);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Водяной объем 2-го контура в ПГВ
-        const lvlRatio = Math.max(0.15, Math.min(0.88, lp.sgLevelM / 2.8));
-        const waterH = sg.h * lvlRatio;
-        ctx.save();
-        roundRect(ctx, sg.x + 2, sg.y + 2, sg.w - 4, sg.h - 4, 22);
-        ctx.clip();
-        ctx.fillStyle = 'rgba(29, 78, 216, 0.12)';
-        ctx.fillRect(sg.x, sg.y + sg.h - waterH, sg.w, waterH);
-
-        // Теплообменный пучок U-образных трубок 1-го контура внутри ПГВ
-        ctx.strokeStyle = 'rgba(220, 38, 38, 0.35)';
-        ctx.lineWidth = 1.4;
-        for (let ty = sg.y + 24; ty <= sg.y + 56; ty += 6) {
-          ctx.beginPath();
-          ctx.moveTo(sg.x + 18, ty);
-          ctx.lineTo(sg.x + sg.w - 18, ty);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 10px monospace';
-        ctx.fillText(sg.name, sg.x + 18, sg.y + 16);
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '9px monospace';
-        ctx.fillText(`P₂=${lp.sgPressMPa.toFixed(2)} МПа | H=${lp.sgLevelM.toFixed(2)} м`, sg.x + 14, sg.y + 36);
-        ctx.restore();
-
-        activeHotspots.push({
-          x: sg.x, y: sg.y, w: sg.w, h: sg.h,
-          title: `Горизонтальный парогенератор ${sg.name}`,
-          sub: 'ПГВ-1000МКП • Поверхность теплообмена 6115 м² (10978 труб)',
-          desc: 'Передает тепло от радиоактивного теплоносителя 1-го контура к питательной воде 2-го контура, генерируя сухой насыщенный пар давлением 7,0 МПа при температуре 285,8 °C.',
-          telemetry: () => `Давление пара: ${lp.sgPressMPa.toFixed(2)} МПа | Уровень воды: ${lp.sgLevelM.toFixed(2)} м | T_гор: ${lp.tHot.toFixed(1)} °C → T_хол: ${lp.tCold.toFixed(1)} °C`
-        });
-      });
-
-      // 7. ГЛАВНЫЕ ЦИРКУЛЯЦИОННЫЕ НАСОСНЫЕ АГРЕГАТЫ (ГЦНА-1391)
-      [
-        { x: 192, y: 495, name: 'ГЦНА-1,2', loopIdx: 0 },
-        { x: 488, y: 495, name: 'ГЦНА-3,4', loopIdx: 3 }
-      ].forEach(p => {
-        const lp = sim.loops[p.loopIdx];
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Вращающаяся крыльчатка ГЦНА-1391
-        const angle = sim.time * (lp.rpm / 1000) * 9.0;
-        ctx.translate(p.x, p.y);
-        ctx.rotate(angle);
-        ctx.strokeStyle = lp.pumpOn ? '#1d4ed8' : '#b45309';
-        ctx.lineWidth = 2;
-        for (let k = 0; k < 4; k++) {
-          ctx.rotate(Math.PI / 2);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(13, 4);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText(p.name, p.x - 24, p.y + 32);
-        ctx.fillStyle = '#0f172a';
-        ctx.fillText(`${Math.round(lp.rpm)} об/м`, p.x - 26, p.y + 43);
-
-        activeHotspots.push({
-          x: p.x - 22, y: p.y - 22, w: 44, h: 44,
-          title: `Главный циркуляционный насос ${p.name} (ГЦНА-1391)`,
-          sub: 'Мощность электродвигателя 6700 кВт • Подача 21400 м³/ч',
-          desc: 'Обеспечивает принудительную циркуляцию теплоносителя 1-го контура через активную зону реактора. Снабжен маховиком для плавного выбега и перехода на естественную циркуляцию при обесточивании.',
-          telemetry: () => `Статус: ${lp.pumpOn ? 'В РАБОТЕ' : 'ВЫБЕГ / ЕЦ'} | Обороты: ${Math.round(lp.rpm)} об/мин | Расход петли: ${lp.flowPct.toFixed(1)}%`
-        });
-      });
-
-      // 8. КОМПЕНСАТОР ДАВЛЕНИЯ (КД) НА 4-Й ПЕТЛЕ
-      const kdX = 438, kdY = 215, kdW = 48, kdH = 115;
-      ctx.save();
-      // Трубопровод дыхательной линии от горячей нитки петли №4 к КД
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(455, 355);
-      ctx.lineTo(455, kdY + kdH);
-      ctx.stroke();
-
-      // Сосуд КД
-      roundRect(ctx, kdX, kdY, kdW, kdH, 18);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Уровень воды и паровая подушка в КД
-      const kdWaterRatio = Math.max(0.15, Math.min(0.92, sim.pressurizerLevelM / 11.0));
-      const kdWaterH = (kdH - 8) * kdWaterRatio;
-      ctx.fillStyle = 'rgba(29, 78, 216, 0.15)';
-      roundRect(ctx, kdX + 3, kdY + kdH - 4 - kdWaterH, kdW - 6, kdWaterH, 12);
-      ctx.fill();
-
-      // Блок электронагревателей (ТЭНы КД) в нижней части КД
-      ctx.strokeStyle = sim.heatersPowerKW > 100 ? '#b91c1c' : '#475569';
-      ctx.lineWidth = 2;
-      for (let hx = kdX + 10; hx <= kdX + 38; hx += 7) {
-        ctx.beginPath();
-        ctx.moveTo(hx, kdY + kdH - 6);
-        ctx.lineTo(hx, kdY + kdH - 22);
-        ctx.stroke();
-      }
-
-      // Впрыск холодной воды сверху в паровую подушку КД
-      if (sim.sprayActive) {
-        ctx.strokeStyle = '#1d4ed8';
-        ctx.lineWidth = 1.5;
-        for (let a = -0.35; a <= 0.35; a += 0.35) {
-          ctx.beginPath();
-          ctx.moveTo(kdX + kdW / 2, kdY + 6);
-          ctx.lineTo(kdX + kdW / 2 + a * 26, kdY + 28);
-          ctx.stroke();
-        }
-      }
-
-      // ИПУ КД (на макушке КД)
-      if (sim.ipuKdOpen) {
-        ctx.fillStyle = '#b91c1c';
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText('СБРОС ИПУ КД!', kdX - 12, kdY - 18);
-      }
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('КД', kdX + 16, kdY - 6);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = '9px monospace';
-      ctx.fillText(`${sim.primaryPressureMPa.toFixed(1)} МПа`, kdX + 3, kdY + 32);
-      ctx.fillText(`${sim.pressurizerLevelM.toFixed(1)} м`, kdX + 9, kdY + 46);
-      ctx.restore();
-
-      activeHotspots.push({
-        x: kdX, y: kdY, w: kdW, h: kdH,
-        title: 'Компенсатор давления (КД)',
-        sub: 'Объем 79 м³ • Блок ТЭНов 2700 кВт • ИПУ КД',
-        desc: 'Поддерживает номинальное давление 1-го контура 16,2 МПа за счет баланса воды и паровой подушки. При росте давления включается впрыск холодной воды, при снижении — электронагреватели (ТЭНы).',
-        telemetry: () => `Давление P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа | Уровень КД: ${sim.pressurizerLevelM.toFixed(2)} м | Мощность ТЭНов: ${sim.heatersPowerKW} кВт`
-      });
-
-      // 9. КОРПУС РЕАКТОРА ВВЭР-1200 (В-392М) В ЦЕНТРЕ ШАХТЫ
-      const rxX = 290, rxY = 235, rxW = 100, rxH = 265;
-      ctx.save();
-
-      // Верхний блок с приводами ШЭМ-3 (шаговые электромагнитные приводы ОР СУЗ)
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 1.5;
-      for (let cx = rxX + 14; cx <= rxX + rxW - 14; cx += 12) {
-        ctx.fillRect(cx - 3, rxY - 58, 6, 58);
-        ctx.strokeRect(cx - 3, rxY - 58, 6, 58);
-      }
-
-      // Основной цилиндрический корпус реактора со сферическим днищем
-      roundRect(ctx, rxX, rxY, rxW, rxH, 38);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Динамическое свечение Вавилова-Черенкова в активной зоне (зависит от нейтронного потока)
-      const coreY = rxY + 115;
-      const coreH = 108;
-      const cherenkovAlpha = Math.max(0.08, Math.min(0.85, sim.neutronFlux * 0.75));
-      const coreGrad = ctx.createRadialGradient(rxX + rxW / 2, coreY + coreH / 2, 6, rxX + rxW / 2, coreY + coreH / 2, 65);
-      coreGrad.addColorStop(0, `rgba(29, 78, 216, ${cherenkovAlpha})`);
-      coreGrad.addColorStop(0.55, `rgba(56, 189, 248, ${cherenkovAlpha * 0.65})`);
-      coreGrad.addColorStop(1, 'rgba(241, 245, 249, 0.1)');
-      ctx.fillStyle = coreGrad;
-      roundRect(ctx, rxX + 8, coreY - 6, rxW - 16, coreH + 12, 10);
-      ctx.fill();
-
-      // Кассеты активной зоны (163 ТВС-2М в вертикальном разрезе)
-      const fuelHeatRatio = Math.max(0, Math.min(1, (sim.fuelTempC - 290) / 700));
-      for (let col = 0; col < 7; col++) {
-        const fx = rxX + 14 + col * 11;
-        let cCol;
-        if (fuelHeatRatio < 0.25) cCol = '#cbd5e1';
-        else if (fuelHeatRatio < 0.65) cCol = '#fef08a';
-        else cCol = '#f97316';
-        ctx.fillStyle = cCol;
-        ctx.fillRect(fx, coreY, 8, coreH);
-        ctx.strokeStyle = '#94a3b8';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(fx, coreY, 8, coreH);
-      }
-
-      // Кластеры поглощающих стержней ОР СУЗ (Группы 1-9 и Рабочая группа №10), опускающиеся сверху
-      for (let col = 0; col < 7; col++) {
-        const rxColX = rxX + 18 + col * 11;
-        const isGroup10 = (col === 1 || col === 3 || col === 5);
-        const posPct = isGroup10 ? sim.group10Pos : sim.groups1to9Pos;
-        const rodTipY = coreY + ((100 - posPct) / 100) * coreH;
-
-        ctx.strokeStyle = isGroup10 ? '#1d4ed8' : '#b45309';
-        ctx.lineWidth = 3.0;
-        ctx.beginPath();
-        ctx.moveTo(rxColX, rxY + 18);
-        ctx.lineTo(rxColX, rodTipY);
-        ctx.stroke();
-      }
-
-      // Четкая информационная плашка реактора в светлой теме
-      roundRect(ctx, rxX + 6, rxY + 12, rxW - 12, 58, 6);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#cbd5e1';
+      ctx.strokeStyle = PAL.wallSolid;
       ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 11px "Segoe UI", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('ВВЭР-1200', rxX + rxW / 2, rxY + 28);
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText(`${Math.round(sim.thermalPowerMW)} МВт (100%)`, rxX + rxW / 2, rxY + 43);
-      ctx.font = '9px monospace';
-      ctx.fillStyle = '#334155';
-      ctx.fillText(`Гр10:${Math.round(sim.group10Pos)}% | P₁:16.2 МПа`, rxX + rxW / 2, rxY + 58);
-      ctx.textAlign = 'left';
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 9.5px monospace';
-      ctx.fillText('163 ТВС-2М', rxX + 18, coreY + coreH + 18);
-      ctx.restore();
-
-      activeHotspots.push({
-        x: rxX, y: rxY - 58, w: rxW, h: rxH + 58,
-        title: 'Реактор ВВЭР-1200 (Проект В-392М)',
-        sub: 'Тепловая мощность 3200 МВт • 163 ТВС-2М • 121 кластер ОР СУЗ (ШЭМ-3)',
-        desc: 'Водо-водяной энергетический реактор под давлением Поколения III+. Обладает внутренней самозащищенностью благодаря отрицательным температурным коэффициентам реактивности топлива (эффект Допплера) и теплоносителя.',
-        telemetry: () => `Nтепл: ${sim.thermalPowerMW.toFixed(1)} МВт | Tвх: ${sim.coreInletTempC.toFixed(1)} °C | Tвых: ${sim.coreOutletTempC.toFixed(1)} °C | ОР СУЗ Гр.10: ${sim.group10Pos.toFixed(1)}%`
-      });
-
-      // ==========================================================================
-      // 10. МАШИННЫЙ ЗАЛ (2-Й КОНТУР: ГПК, БРУ-К/А, ТУРБИНА К-1200-6,8/50, ТЗВ-1200-2, КОНДЕНСАТОР, ПЭН)
-      // ==========================================================================
-      ctx.save();
-      // Контур здания машинного зала (светлый конструкционный бетон #f1f5f9 с границей #64748b)
-      roundRect(ctx, 650, 75, 425, 575, 8);
-      ctx.fillStyle = '#f1f5f9';
-      ctx.fill();
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 11px "Segoe UI", sans-serif';
-      ctx.fillText('МАШИННЫЙ ЗАЛ (2-Й КОНТУР • ТУРБОАГРЕГАТ К-1200-6,8/50)', 685, 668);
-
-      // Паропроводы свежего пара от ПГВ-1000МКП к Главному паровому коллектору (ГПК)
-      const steamPathToGPK = [[515, 405], [515, 165], [705, 165]];
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      steamPathToGPK.forEach((p, i) => i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
-      ctx.stroke();
-      drawParticlesOnPath(steamPathToGPK, 8, (sim.thermalPowerMW / 3200) * 3.8, '#cbd5e1', 3.0);
-
-      // Главный паровой коллектор (ГПК) + БРУ-А и БРУ-К
-      roundRect(ctx, 685, 135, 130, 56, 8);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('ГПК (ПАР 2 КОНТ.)', 698, 154);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillText(`P₂=${sim.steamHeaderPressMPa.toFixed(2)} МПа | ${sim.steamTempC.toFixed(1)}°C`, 693, 174);
-
-      // Индикация БРУ-А и БРУ-К
-      ctx.fillStyle = sim.bruAOpen ? '#b91c1c' : '#64748b';
-      ctx.fillText(`БРУ-А: ${sim.bruAOpen ? 'СБРОС!' : 'ЗАКР'}`, 688, 125);
-      ctx.fillStyle = sim.bruKOpen ? '#1d4ed8' : '#64748b';
-      ctx.fillText(`БРУ-К: ${sim.bruKOpen ? 'СБРОС!' : 'ЗАКР'}`, 762, 125);
-
-      activeHotspots.push({
-        x: 685, y: 115, w: 130, h: 78,
-        title: 'Главный паровой коллектор (ГПК) и БРУ-К / БРУ-А',
-        sub: 'Давление свежего пара 7,0 МПа • Температура 285,8 °C',
-        desc: 'Объединяет паропроводы от 4 парогенераторов ПГВ-1000МКП и направляет пар через стопорно-регулирующие клапаны (СК/РК) на турбину К-1200-6,8/50. Оснащен БРУ-К и БРУ-А для сброса избытка пара.',
-        telemetry: () => `Давление ГПК: ${sim.steamHeaderPressMPa.toFixed(2)} МПа | БРУ-К: ${sim.bruKOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ'} | БРУ-А: ${sim.bruAOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`
-      });
-
-      // Паропровод от ГПК к ЦВД/ЦНД турбины К-1200-6,8/50
-      const gpkToTurbine = [[750, 191], [750, 265]];
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(750, 191);
-      ctx.lineTo(750, 265);
-      ctx.stroke();
-      if (sim.turbineValvePct > 2) {
-        drawParticlesOnPath(gpkToTurbine, 4, (sim.turbineValvePct / 100) * 4.0, '#cbd5e1', 3.0);
+      for (let bx = domeCX - outerR - 24; bx < domeCX + outerR + 24; bx += 16) {
+        ctx.moveTo(bx, groundY);
+        ctx.lineTo(bx - 10, groundY + 22);
       }
+      ctx.stroke();
 
-      // Цилиндры паровой турбины К-1200-6,8/50 (ЦВД + 2 ЦНД)
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      // Трапеция ЦВД/ЦНД
+      // 1.2 Наружная защитная оболочка (НЗО) и Внутренняя преднапряженная оболочка (ВЗО)
       ctx.beginPath();
-      ctx.moveTo(685, 275);
-      ctx.lineTo(835, 250);
-      ctx.lineTo(835, 340);
-      ctx.lineTo(685, 315);
+      ctx.moveTo(domeCX - outerR, groundY);
+      ctx.lineTo(domeCX - outerR, domeCY);
+      ctx.arc(domeCX, domeCY, outerR, Math.PI, 0, false);
+      ctx.lineTo(domeCX + outerR, groundY);
       ctx.closePath();
+      ctx.fillStyle = PAL.bgInner;
       ctx.fill();
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Вал к генератору ТЗВ-1200-2
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 6;
+      // Стены межоболочечного пространства (заливка бетонных стен между outerR и innerR)
       ctx.beginPath();
-      ctx.moveTo(835, 295);
-      ctx.lineTo(885, 295);
+      ctx.moveTo(domeCX - innerR, groundY);
+      ctx.lineTo(domeCX - innerR, domeCY);
+      ctx.arc(domeCX, domeCY, innerR, Math.PI, 0, false);
+      ctx.lineTo(domeCX + innerR, groundY);
+      ctx.closePath();
+      ctx.fillStyle = PAL.bgDeep;
+      ctx.fill();
+      ctx.strokeStyle = PAL.wallSolid;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('ТУРБИНА К-1200-6,8/50', 696, 292);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillText(`РК: ${Math.round(sim.turbineValvePct)}% | ${Math.round(sim.turbineRpm)} об/м`, 696, 308);
+      // Пунктир герметизирующей стальной облицовки ВЗО и кольцевого зазора
+      ctx.save();
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.arc(domeCX, domeCY, (outerR + innerR) / 2, Math.PI, 0, false);
+      ctx.moveTo(domeCX - (outerR + innerR) / 2, domeCY);
+      ctx.lineTo(domeCX - (outerR + innerR) / 2, groundY);
+      ctx.moveTo(domeCX + (outerR + innerR) / 2, domeCY);
+      ctx.lineTo(domeCX + (outerR + innerR) / 2, groundY);
+      ctx.stroke();
+      ctx.restore();
 
-      activeHotspots.push({
-        x: 685, y: 250, w: 150, h: 90,
-        title: 'Паровая турбина К-1200-6,8/50',
-        sub: 'Быстроходная (3000 об/мин, 50 Гц) • Мощность 1200 МВт',
-        desc: 'Однохвальная паровая турбина со схемой ЦВД + 2×ЦНД и промежуточной сепарацией и перегревом пара (СПП). Преобразует тепловую энергию пара 7,0 МПа во вращение ротора генератора.',
-        telemetry: () => `Обороты ротора: ${Math.round(sim.turbineRpm)} об/мин | Открытие РК: ${sim.turbineValvePct.toFixed(0)}% | Электрическая мощность: ${sim.electricalPowerMW.toFixed(1)} МВт`
+      // ========================================================================
+      // 2. СТРОИТЕЛЬНЫЕ ОТМЕТКИ ВЫСОТ СЛЕВА И ПЕРЕКРЫТИЯ ЯРУСОВ
+      // ========================================================================
+      const markLeftX = domeCX - outerR - 145;
+      const markLineEndX = domeCX - innerR;
+
+      const elevations = [
+        { y: elev650Y, code: '+65.000', desc: 'Подкупольное пространство' },
+        { y: elev263Y, code: '+26.300', desc: 'Перекрытие / Реакторный зал' },
+        { y: elev132Y, code: '+13.200', desc: 'Площадка обслуживания ГЦК' },
+        { y: elev000Y, code: ' 0.000', desc: 'Фундаментная плита' }
+      ];
+
+      elevations.forEach((el) => {
+        ctx.save();
+        // Выносная линия отметки слева
+        ctx.strokeStyle = PAL.wallStroke;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(markLeftX, el.y);
+        ctx.lineTo(domeCX + innerR, el.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Строительный репер (треугольник высотной отметки по ГОСТ)
+        ctx.strokeStyle = PAL.safety;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(markLeftX + 10, el.y);
+        ctx.lineTo(markLeftX + 4, el.y - 6);
+        ctx.lineTo(markLeftX + 16, el.y - 6);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(markLeftX, el.y);
+        ctx.lineTo(markLeftX + 75, el.y);
+        ctx.stroke();
+
+        ctx.fillStyle = PAL.safety;
+        ctx.font = 'bold 10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(el.code, markLeftX + 20, el.y - 4);
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = '9px "Segoe UI", sans-serif';
+        ctx.fillText(el.desc, markLeftX, el.y + 13);
+        ctx.restore();
       });
 
-      // Электрогенератор ТЗВ-1200-2 (с полным водяным охлаждением)
-      roundRect(ctx, 885, 255, 165, 80, 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      // Межъярусные железобетонные перекрытия на +26.300 и +13.200
+      ctx.save();
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.5;
+      ctx.fillStyle = '#E2E8F0';
+      // Перекрытие +26.300
+      ctx.fillRect(domeCX - innerR + 2, elev263Y, innerR * 2 - 4, 8);
+      ctx.strokeRect(domeCX - innerR + 2, elev263Y, innerR * 2 - 4, 8);
+      // Площадка +13.200
+      ctx.fillRect(domeCX - innerR + 2, elev132Y, innerR * 2 - 4, 8);
+      ctx.strokeRect(domeCX - innerR + 2, elev132Y, innerR * 2 - 4, 8);
+      ctx.restore();
 
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('ГЕНЕРАТОР ТЗВ-1200-2', 902, 282);
-      ctx.fillStyle = '#15803d';
-      ctx.font = 'bold 13px monospace';
-      ctx.fillText(`${sim.electricalPowerMW.toFixed(1)} МВт (24 кВ)`, 902, 304);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = '9px monospace';
-      ctx.fillText('ВЫДАЧА В ЭНЕРГОСИСТЕМУ 500 кВ', 895, 322);
+      // ========================================================================
+      // 3. ПОД КУПОЛОМ: СПРИНКЛЕРНЫЕ КОЛЛЕКТОРЫ И КРУГОВОЙ ПОЛЯРНЫЙ КРАН
+      // ========================================================================
 
-      activeHotspots.push({
-        x: 885, y: 255, w: 165, h: 80,
-        title: 'Турбогенератор ТЗВ-1200-2',
-        sub: 'Трехфазный синхронный генератор • 1200 МВт • 24 кВ • 50 Гц',
-        desc: 'Генератор серии ТЗВ с полным водяным охлаждением обмоток статора и ротора (взрывопожаробезопасное исполнение без водорода).',
-        telemetry: () => `Активная мощность Nэ: ${sim.electricalPowerMW.toFixed(1)} МВт | Частота сети: ${(sim.turbineRpm / 60).toFixed(1)} Гц`
-      });
-
-      // Конденсатор турбины под ЦНД
-      roundRect(ctx, 685, 385, 165, 85, 8);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Сброс отработавшего пара из ЦНД в конденсатор
-      ctx.strokeStyle = 'rgba(100, 116, 139, 0.4)';
-      ctx.lineWidth = 8;
+      // 3.1 Спринклерные коллекторы распыления раствора бора под сводом (#00E5FF)
+      const spR = innerR - 14;
+      ctx.save();
+      ctx.strokeStyle = PAL.safety;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(765, 340);
-      ctx.lineTo(765, 385);
+      ctx.arc(domeCX, domeCY, spR, Math.PI * 1.12, Math.PI * 1.88, false);
       ctx.stroke();
 
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 10px monospace';
-      ctx.fillText('КОНДЕНСАТОР ТУРБИНЫ', 705, 415);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = '9px monospace';
-      ctx.fillText('Вакуум: 4,2 кПа | Tконд: 30°C', 698, 435);
-      ctx.fillText('Охлаждение от градирен', 705, 452);
+      // Форсунки и факелы распыления бора
+      for (let a = Math.PI * 1.16; a <= Math.PI * 1.84; a += 0.085) {
+        const nx = domeCX + Math.cos(a) * spR;
+        const ny = domeCY + Math.sin(a) * spR;
+        ctx.beginPath();
+        ctx.moveTo(nx, ny);
+        ctx.lineTo(nx, ny + 7);
+        ctx.stroke();
 
-      activeHotspots.push({
-        x: 685, y: 385, w: 165, h: 85,
-        title: 'Конденсатор турбины К-1200-6,8/50',
-        sub: 'Давление в конденсаторе ~4,2 кПа',
-        desc: 'Конденсирует отработавший в турбине пар (а также пар при открытии БРУ-К) в основной конденсат, который затем через систему регенерации и деаэратор подается питательными насосами обратно в ПГВ-1000МКП.',
-        telemetry: () => `Расход питательной воды: ${sim.feedwaterFlowPct.toFixed(0)}% | БРУ-К: ${sim.bruKOpen ? 'ПРИЕМ ПАРА' : 'ЗАКРЫТ'}`
-      });
-
-      // Питательные электронасосы (ПЭН / ПТН) и тракт питательной воды обратно в ПГВ-1000МКП
-      const fwPath = [[765, 470], [765, 560], [515, 560], [515, 471]];
-      ctx.strokeStyle = '#1d4ed8';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      fwPath.forEach((p, i) => i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
-      ctx.stroke();
-      if (sim.feedwaterFlowPct > 2) {
-        drawParticlesOnPath(fwPath, 9, (sim.feedwaterFlowPct / 100) * 3.5, '#1d4ed8', 3.0);
+        if (sim.saozActive || sim.primaryLeakActive) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(nx, ny + 7);
+          ctx.lineTo(nx - 6, ny + 22);
+          ctx.moveTo(nx, ny + 7);
+          ctx.lineTo(nx + 6, ny + 22);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
 
-      // Иконка ПЭН
-      ctx.beginPath();
-      ctx.arc(685, 560, 20, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 9px monospace';
-      ctx.fillText('ПЭН/ПТН', 663, 594);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillText(`${Math.round(sim.feedwaterFlowPct)}%`, 674, 564);
-
-      activeHotspots.push({
-        x: 663, y: 538, w: 45, h: 45,
-        title: 'Питательные насосные агрегаты (ПТН / ПЭН)',
-        sub: 'Подача питательной воды (225 °C) в 4 парогенератора ПГВ-1000МКП',
-        desc: 'Обеспечивают поддержание номинального уровня котловой воды (2,10 м) во всех четырех горизонтальных парогенераторах 2-го контура.',
-        telemetry: () => `Производительность ПЭН: ${sim.feedwaterFlowPct.toFixed(0)}% | Ср. уровень в ПГВ: ${(sim.loops.reduce((s, l) => s + l.sgLevelM, 0) / 4).toFixed(2)} м`
-      });
-
-      ctx.restore();
-    }
-
-    // ============================================================================
-    // РЕЖИМ 2: СХЕМА 4 ПЕТЕЛЬ ГЦК (ВИД СВЕРХУ)
-    // ============================================================================
-    function renderFourLoopsPlanView() {
-      activeHotspots = [];
-      const cx = 550, cy = 360;
-
-      ctx.save();
-
-      // Светлый технологический фон темы (#cbd5e1)
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillRect(0, 0, 1160, 720);
-
-      // Заголовок схемы (смещен на y=52 для исключения перекрытия панелью инструментов)
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 13.5px "Segoe UI", sans-serif';
-      ctx.fillText('СИММЕТРИЧНАЯ КОМПОНОВКА 4 ПЕТЕЛЬ ГЛАВНОГО ЦИРКУЛЯЦИОННОГО КОНТУРА (ВИД СВЕРХУ)', 225, 52);
-
-      // Окружность защитной оболочки: контур стальной #475569 с мягкой светлой заливкой #e2e8f0
-      ctx.beginPath();
-      ctx.arc(cx, cy, 305, 0, Math.PI * 2);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fill();
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 6;
-      ctx.stroke();
-
-      // Внутренний контур стальной облицовки гермооболочки
-      ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([8, 5]);
-      ctx.beginPath();
-      ctx.arc(cx, cy, 296, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // 4 петли под углами 45°, 135°, 225°, 315°
-      const angles = [-Math.PI * 0.75, -Math.PI * 0.25, Math.PI * 0.25, Math.PI * 0.75];
-
-      angles.forEach((ang, idx) => {
-        const lp = sim.loops[idx];
-        const cos = Math.cos(ang);
-        const sin = Math.sin(ang);
-        const perpX = -sin;
-        const perpY = cos;
-
-        // Координаты горизонтального парогенератора ПГВ-1000МКП и насоса ГЦНА-1391
-        const sgX = cx + cos * 185 + perpX * 32;
-        const sgY = cy + sin * 185 + perpY * 32;
-        const pumpX = cx + cos * 170 - perpX * 68;
-        const pumpY = cy + sin * 170 - perpY * 68;
-
-        // Горячая нитка (из реактора в ПГВ-1000МКП) — насыщенный горячий красный #dc2626
-        const hotPath = [
-          [cx + cos * 58, cy + sin * 58],
-          [sgX, sgY]
-        ];
-        ctx.strokeStyle = '#dc2626';
-        ctx.lineWidth = 10;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(hotPath[0][0], hotPath[0][1]);
-        ctx.lineTo(hotPath[1][0], hotPath[1][1]);
-        ctx.stroke();
-
-        // Холодная нитка (из ПГВ-1000МКП через ГЦНА-1391 обратно в реактор) — насыщенный холодный синий #1d4ed8
-        const coldPath = [
-          [sgX - perpX * 26, sgY - perpY * 26],
-          [pumpX, pumpY],
-          [cx + cos * 58 - perpX * 18, cy + sin * 58 - perpY * 18]
-        ];
-        ctx.strokeStyle = '#1d4ed8';
-        ctx.lineWidth = 10;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        coldPath.forEach((p, i) => i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
-        ctx.stroke();
-
-        // Частицы в петле
-        const spd = (lp.flowPct / 100) * 3.2;
-        drawParticlesOnPath(hotPath, 5, spd, '#f97316', 3.4);
-        drawParticlesOnPath(coldPath, 6, spd, '#38bdf8', 3.4);
-
-        // Отрисовка горизонтального ПГВ-1000МКП — белый корпус #ffffff с окантовкой 2px #334155
-        ctx.save();
-        ctx.translate(sgX, sgY);
-        ctx.rotate(ang + Math.PI / 2);
-        roundRect(ctx, -68, -28, 136, 56, 22);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2.0;
-        ctx.stroke();
-
-        // Пучок теплообменных труб
-        ctx.strokeStyle = 'rgba(220, 38, 38, 0.35)';
-        ctx.lineWidth = 1.4;
-        for (let y = -14; y <= 14; y += 7) {
-          ctx.beginPath();
-          ctx.moveTo(-48, y);
-          ctx.lineTo(48, y);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // Подпись ПГВ-1000МКП — четкий темный текст #0f172a
-        const sgOffsets = [
-          { titleY: sgY - 36, teleX: sgX - 5, teleY: sgY + 44 }, // Петля 1
-          { titleY: sgY - 36, teleX: sgX + 12, teleY: sgY + 44 }, // Петля 2
-          { titleY: sgY - 36, teleX: sgX + 12, teleY: sgY + 44 }, // Петля 3
-          { titleY: sgY - 36, teleX: sgX - 5, teleY: sgY + 44 }  // Петля 4
-        ];
-        const sgOff = sgOffsets[idx];
-
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 11px monospace';
-        ctx.fillText(`ПЕТЛЯ №${idx + 1} • ПГВ-${idx + 1}`, sgX, sgOff.titleY);
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '10px monospace';
-        ctx.fillText(`Tг=${lp.tHot.toFixed(1)}°C | P₂=${lp.sgPressMPa.toFixed(2)} МПа`, sgOff.teleX, sgOff.teleY);
-        ctx.restore();
-
-        activeHotspots.push({
-          x: sgX, y: sgY, r: 48,
-          title: `Парогенератор ПГВ-1000МКП (Петля №${idx + 1})`,
-          sub: `Горизонтальный парогенератор ПГ-${idx + 1} • Паропроизводительность 1600 т/ч`,
-          desc: 'Воспринимает тепло от горячей нитки петли ГЦК и вырабатывает насыщенный пар 7,0 МПа для главного парового коллектора турбины.',
-          telemetry: () => `T_гор: ${lp.tHot.toFixed(1)} °C | T_хол: ${lp.tCold.toFixed(1)} °C | Уровень ПГ-${idx + 1}: ${lp.sgLevelM.toFixed(2)} м | P пара: ${lp.sgPressMPa.toFixed(2)} МПа`
-        });
-
-        // Отрисовка ГЦНА-1391 — белый корпус #ffffff с окантовкой 2px #334155
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(pumpX, pumpY, 24, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 2.0;
-        ctx.stroke();
-
-        // Крыльчатка
-        ctx.translate(pumpX, pumpY);
-        ctx.rotate(sim.time * (lp.rpm / 1000) * 8.0);
-        ctx.strokeStyle = lp.pumpOn ? '#1d4ed8' : '#b45309';
-        ctx.lineWidth = 2;
-        for (let k = 0; k < 4; k++) {
-          ctx.rotate(Math.PI / 2);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(15, 5);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // Подпись ГЦНА-1391 — четкий темный текст #0f172a (смещение с учетом квадранта)
-        const pumpOffsets = [
-          { x: pumpX - 42, y: pumpY + 36 }, // Петля 1 (влево-вниз)
-          { x: pumpX - 34, y: pumpY - 32 }, // Петля 2 (влево-вверх, вне корпуса ПГ-2)
-          { x: pumpX + 38, y: pumpY - 32 }, // Петля 3 (вправо-вверх, вне корпуса ПГ-3)
-          { x: pumpX + 42, y: pumpY + 36 }  // Петля 4 (вправо-вниз)
-        ];
-        const pOff = pumpOffsets[idx];
-
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 10px monospace';
-        ctx.fillText(`ГЦНА-${idx + 1} (${Math.round(lp.rpm)} об/м)`, pOff.x, pOff.y);
-        ctx.restore();
-
-        activeHotspots.push({
-          x: pumpX, y: pumpY, r: 26,
-          title: `Главный циркуляционный насос ГЦНА-${idx + 1} (ГЦНА-1391)`,
-          sub: `Петля ГЦК №${idx + 1} • Холодная нитка (${lp.tCold.toFixed(1)} °C)`,
-          desc: 'Перекачивает охлажденный в парогенераторе теплоноситель обратно во входной патрубок реактора ВВЭР-1200.',
-          telemetry: () => `Статус: ${lp.pumpOn ? 'ВКЛЮЧЕН' : 'ОТКЛЮЧЕН (ЕЦ)'} | Обороты: ${Math.round(lp.rpm)} об/мин | Расход: ${lp.flowPct.toFixed(1)}%`
-        });
-
-        // На 4-й петле рисуем подключенный Компенсатор давления (КД)
-        if (idx === 3) {
-          const kdPlanX = cx - 235;
-          const kdPlanY = cy + 25;
-          ctx.strokeStyle = '#dc2626';
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.moveTo(cx + cos * 110, cy + sin * 110);
-          ctx.lineTo(kdPlanX, kdPlanY);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.arc(kdPlanX, kdPlanY, 28, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-          ctx.strokeStyle = '#334155';
-          ctx.lineWidth = 2.0;
-          ctx.stroke();
-
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.fillStyle = '#0f172a';
-          ctx.font = 'bold 10px monospace';
-          ctx.fillText('КД (ПЕТЛЯ №4)', kdPlanX, kdPlanY - 34);
-          ctx.fillStyle = '#b91c1c';
-          ctx.fillText(`${sim.primaryPressureMPa.toFixed(2)} МПа`, kdPlanX, kdPlanY + 4);
-          ctx.restore();
-
-          activeHotspots.push({
-            x: kdPlanX, y: kdPlanY, r: 28,
-            title: 'Компенсатор давления (КД на Петле №4)',
-            sub: 'Подключен дыхательным трубопроводом к горячей нитке Петли №4',
-            desc: 'Поддерживает давление 16,2 МПа во всем 1-м контуре.',
-            telemetry: () => `P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа | Уровень: ${sim.pressurizerLevelM.toFixed(2)} м | ТЭНы: ${sim.heatersPowerKW} кВт`
-          });
-        }
-      });
-
-      // Центральный корпус реактора ВВЭР-1200 (Вид сверху) — светлый #ffffff с окантовкой 2.5px #334155
-      ctx.beginPath();
-      ctx.arc(cx, cy, 64, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Свечение Черенкова в центре
-      const radGlow = ctx.createRadialGradient(cx, cy, 5, cx, cy, 56);
-      radGlow.addColorStop(0, `rgba(59, 130, 246, ${Math.min(0.65, sim.neutronFlux * 0.6)})`);
-      radGlow.addColorStop(1, 'rgba(241, 245, 249, 0.2)');
-      ctx.fillStyle = radGlow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 56, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.save();
+      ctx.fillStyle = PAL.safety;
+      ctx.font = 'bold 9px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 11px monospace';
-      ctx.fillText('ВВЭР-1200', cx, cy - 6);
-      ctx.fillStyle = '#1d4ed8';
-      ctx.fillText(`${Math.round(sim.thermalPowerMW)} МВт`, cx, cy + 10);
+      ctx.fillText('СПРИНКЛЕРНЫЕ КОЛЛЕКТОРЫ РАСПЫЛЕНИЯ БОРА (JNK)', domeCX, domeCY - spR + 18);
       ctx.restore();
 
       activeHotspots.push({
-        x: cx, y: cy, r: 64,
-        title: 'Корпус реактора ВВЭР-1200 (Центральная ось)',
-        sub: '4 входных и 4 выходных патрубка Ду 850 мм',
-        desc: 'Кликните на вкладку «Картограмма активной зоны (163 ТВС)», чтобы детально исследовать каждую из 163 тепловыделяющих сборок.',
-        telemetry: () => `Nтепл: ${sim.thermalPowerMW.toFixed(1)} МВт | ΔT зоны: ${(sim.coreOutletTempC - sim.coreInletTempC).toFixed(1)} °C`
+        x: domeCX - 180, y: domeCY - spR - 6, w: 360, h: 32,
+        title: 'Спринклерная система защитной оболочки (KKS JNK)',
+        sub: 'Коллекторы распыления борного раствора и гидразин-гидрата под сводом',
+        desc: 'Снижает давление и температуру парогазовой смеси внутри гермооболочки при авариях с течью (LOCA) и связывает радиоактивный йод.',
+        telemetry: () => `Статус спринклеров: ${(sim.saozActive || sim.primaryLeakActive) ? 'РАСПЫЛЕНИЕ АКТИВНО' : 'ДЕЖУРНЫЙ РЕЖИМ'} | P_ГО: 0.101 МПа`
+      });
+
+      // 3.2 Круговой полярный кран (балка и грузовая тележка г/п 360 т на рельсовом пути)
+      const craneY = 205;
+      const craneSpan = 238;
+      ctx.save();
+      // Подкрановые консоли на стене ВЗО
+      ctx.fillStyle = PAL.wallSolid;
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(domeCX - innerR + 18, craneY - 4, 22, 14);
+      ctx.strokeRect(domeCX - innerR + 18, craneY - 4, 22, 14);
+      ctx.fillRect(domeCX + innerR - 40, craneY - 4, 22, 14);
+      ctx.strokeRect(domeCX + innerR - 40, craneY - 4, 22, 14);
+
+      // Главная пролетная ферма-балка полярного крана
+      ctx.fillStyle = PAL.bgInner;
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(domeCX - craneSpan, craneY - 12, craneSpan * 2, 12);
+      ctx.strokeRect(domeCX - craneSpan, craneY - 12, craneSpan * 2, 12);
+
+      // Диагональная решетка фермы крана
+      ctx.beginPath();
+      ctx.strokeStyle = PAL.wallSolid;
+      ctx.lineWidth = 1;
+      for (let kx = domeCX - craneSpan + 8; kx < domeCX + craneSpan - 12; kx += 18) {
+        ctx.moveTo(kx, craneY - 12);
+        ctx.lineTo(kx + 9, craneY);
+        ctx.lineTo(kx + 18, craneY - 12);
+      }
+      ctx.stroke();
+
+      // Грузовая тележка полярного крана и полиспаст главного гака
+      const trolleyX = domeCX - 28, trolleyW = 56, trolleyH = 14;
+      ctx.fillStyle = PAL.bgDeep;
+      ctx.strokeStyle = PAL.safety;
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(trolleyX, craneY - 26, trolleyW, trolleyH);
+      ctx.strokeRect(trolleyX, craneY - 26, trolleyW, trolleyH);
+
+      // Ходовые катки тележки
+      ctx.beginPath();
+      ctx.arc(trolleyX + 10, craneY - 12, 3, 0, Math.PI * 2);
+      ctx.arc(trolleyX + trolleyW - 10, craneY - 12, 3, 0, Math.PI * 2);
+      ctx.fillStyle = PAL.safety;
+      ctx.fill();
+
+      // Тросы полиспаста и крюковая подвеска 360 т
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(domeCX - 6, craneY);
+      ctx.lineTo(domeCX - 6, craneY + 22);
+      ctx.moveTo(domeCX + 6, craneY);
+      ctx.lineTo(domeCX + 6, craneY + 22);
+      ctx.stroke();
+
+      ctx.strokeStyle = PAL.safety;
+      ctx.beginPath();
+      ctx.rect(domeCX - 9, craneY + 22, 18, 8);
+      ctx.moveTo(domeCX, craneY + 30);
+      ctx.arc(domeCX, craneY + 35, 5, -Math.PI / 2, Math.PI, false);
+      ctx.stroke();
+
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('КРУГОВОЙ ПОЛЯРНЫЙ КРАН Г/П 360/32 Т', domeCX + 125, craneY - 16);
+      ctx.restore();
+
+      activeHotspots.push({
+        x: domeCX - craneSpan, y: craneY - 28, w: craneSpan * 2, h: 65,
+        title: 'Круговой полярный кран реакторного отделения (Г/П 360/32 т)',
+        sub: 'Круговой рельсовый путь на отметке +47.500 м под куполом 10UJA',
+        desc: 'Предназначен для транспортно-технологических операций с корпусом реактора, верхним блоком ШЭМ-3, парогенераторами и чехлами ТВС.',
+        telemetry: () => `Грузоподъемность: 360 т | Положение моста: 0.0° (Парковка)`
+      });
+
+      // ========================================================================
+      // 4. ВЕРХНИЙ ЯРУС (+26.300): 4 ГИДРОЕМКОСТИ САОЗ 1-Й ОЧЕРЕДИ И СПОТ ГО
+      // ========================================================================
+      // Теплообменники СПОТ ГО на стенах верхнего яруса
+      [
+        { x: domeCX - 252, y: 232, name: 'СПОТ-1,2' },
+        { x: domeCX + 204, y: 232, name: 'СПОТ-3,4' }
+      ].forEach((sp) => {
+        ctx.save();
+        ctx.strokeStyle = sim.spotActive ? PAL.safety : PAL.wallStroke;
+        ctx.lineWidth = 1.2;
+        ctx.fillStyle = PAL.bgInner;
+        ctx.fillRect(sp.x, sp.y, 48, 44);
+        ctx.strokeRect(sp.x, sp.y, 48, 44);
+
+        ctx.beginPath();
+        ctx.strokeStyle = sim.spotActive ? PAL.safety : PAL.statusOff;
+        for (let yy = sp.y + 8; yy <= sp.y + 36; yy += 7) {
+          ctx.moveTo(sp.x + 6, yy);
+          ctx.lineTo(sp.x + 42, yy);
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = 'bold 8px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(sp.name, sp.x + 24, sp.y - 5);
+        ctx.restore();
+
+        activeHotspots.push({
+          x: sp.x, y: sp.y - 12, w: 48, h: 60,
+          title: 'Теплообменник СПОТ ГО (' + sp.name + ')',
+          sub: 'Система пассивного отвода тепла от защитной оболочки и ПГ',
+          desc: 'Конденсирует пар и отводит остаточное тепло в воздушные теплообменники снаружи оболочки при полном обесточивании.',
+          telemetry: () => `Режим СПОТ: ${sim.spotActive ? 'В РАБОТЕ' : 'ОЖИДАНИЕ'} | P₂: ${p2.toFixed(2)} МПа`
+        });
+      });
+
+      // 4 гидроемкости САОЗ 1-й очереди на перекрытии +26.300 (ГЕ-1..4, #00E5FF)
+      const geY = elev263Y - 78;
+      [
+        { x: domeCX - 190, name: 'ГЕ-1' },
+        { x: domeCX - 138, name: 'ГЕ-2' },
+        { x: domeCX + 100, name: 'ГЕ-3' },
+        { x: domeCX + 152, name: 'ГЕ-4' }
+      ].forEach((ge) => {
+        const geW = 38, geH = 76;
+        ctx.save();
+        roundRect(ctx, ge.x, geY, geW, geH, 10);
+        ctx.fillStyle = PAL.bgInner;
+        ctx.fill();
+        ctx.strokeStyle = PAL.safety;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Уровень раствора борной кислоты 16 г/кг
+        const lvlH = (sim.saozWaterPct / 100) * (geH - 20);
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.25)';
+        roundRect(ctx, ge.x + 3, geY + geH - 4 - lvlH, geW - 6, lvlH, 6);
+        ctx.fill();
+
+        ctx.fillStyle = PAL.safety;
+        ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(ge.name, ge.x + geW / 2, geY - 5);
+        ctx.fillStyle = '#0F172A';
+        ctx.fillText(Math.round(sim.saozWaterPct) + '%', ge.x + geW / 2, geY + 26);
+        ctx.fillStyle = PAL.safety;
+        ctx.font = '7.5px "JetBrains Mono", monospace';
+        ctx.fillText('5.9МПа', ge.x + geW / 2, geY + 38);
+
+        // Трубопроводы аварийного впрыска от ГЕ САОЗ в реактор (#00E5FF)
+        ctx.strokeStyle = sim.saozActive ? PAL.statusOk : PAL.safety;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ge.x + geW / 2, geY + geH);
+        ctx.lineTo(ge.x + geW / 2, 412);
+        ctx.lineTo(ge.x < domeCX ? domeCX - 44 : domeCX + 44, 412);
+        ctx.stroke();
+        ctx.restore();
+
+        activeHotspots.push({
+          x: ge.x, y: geY - 12, w: geW, h: geH + 14,
+          title: 'Гидроемкость 1-й очереди САОЗ (' + ge.name + ', KKS JNB)',
+          sub: 'Отметка +26.300 • 60 м³ раствора H₃BO₃ (16 г/кг) под давлением азота 5.9 МПа',
+          desc: 'Мгновенно заливает активную зону реактора при падении давления 1-го контура ниже 5.9 МПа без участия внешних источников тока.',
+          telemetry: () => `Уровень раствора: ${sim.saozWaterPct.toFixed(1)}% | Клапан: ${sim.saozActive ? 'ОТКРЫТ (ПОДАЧА)' : 'ЗАКРЫТ'}`
+        });
+      });
+
+      // ========================================================================
+      // 5. БАССЕЙН ВЫДЕРЖКИ ТОПЛИВА (БВ) СЛЕВА ОТ ШАХТЫ РЕАКТОРА
+      // ========================================================================
+      const sfpX = domeCX - 150, sfpY = elev263Y + 8, sfpW = 74, sfpH = 156;
+      ctx.save();
+      // Бетонные стены бассейна выдержки
+      ctx.fillStyle = PAL.bgInner;
+      ctx.strokeStyle = PAL.wallSolid;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(sfpX - 6, sfpY, sfpW + 12, sfpH + 6);
+      ctx.strokeRect(sfpX - 6, sfpY, sfpW + 12, sfpH + 6);
+
+      // Водяной столб борированной воды в БВ
+      ctx.fillStyle = 'rgba(0, 172, 193, 0.22)';
+      ctx.fillRect(sfpX, sfpY + 12, sfpW, sfpH - 12);
+      ctx.strokeStyle = PAL.feedwater;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(sfpX, sfpY + 12, sfpW, sfpH - 12);
+
+      // Стеллажи отработавших тепловыделяющих сборок (ОТВС) на дне БВ
+      for (let rx = sfpX + 8; rx <= sfpX + sfpW - 12; rx += 10) {
+        ctx.fillStyle = PAL.reactorCore;
+        ctx.fillRect(rx, sfpY + sfpH - 46, 6, 40);
+        ctx.strokeStyle = PAL.steam;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(rx, sfpY + sfpH - 46, 6, 40);
+      }
+
+      ctx.fillStyle = PAL.feedwater;
+      ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('БАССЕЙН ВЫДЕРЖКИ', sfpX + sfpW / 2, sfpY + 26);
+      ctx.fillText('ТОПЛИВА (БВ / JCA)', sfpX + sfpW / 2, sfpY + 37);
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 8px "JetBrains Mono", monospace';
+      ctx.fillText('H₃BO₃ 16 г/кг', sfpX + sfpW / 2, sfpY + 50);
+      ctx.restore();
+
+      activeHotspots.push({
+        x: sfpX - 6, y: sfpY, w: sfpW + 12, h: sfpH + 6,
+        title: 'Бассейн выдержки отработавшего ядерного топлива (БВ, KKS JCA)',
+        sub: 'Расположен слева от шахты реактора между отм. +13.200 и +26.300',
+        desc: 'Обеспечивает хранение и съем остаточного тепловыделения выгруженных кассет ТВС-2М под защитным слоем борированной воды.',
+        telemetry: () => `Температура воды БВ: 42.5 °C | Концентрация бора: 16.0 г/кг | Охлаждение: JNA В РАБОТЕ`
+      });
+
+      // ========================================================================
+      // 6. БЕТОННАЯ ШАХТА РЕАКТОРА ПО ЦЕНТРУ, ОПОРНАЯ ФЕРМА И КОРПУС ВВЭР-1200
+      // ========================================================================
+      const shaftX = domeCX - 66, shaftY = elev263Y + 8, shaftW = 132, shaftH = groundY - shaftY;
+      ctx.save();
+      // Стены шахты реактора (биологическая защита)
+      ctx.fillStyle = PAL.bgInner;
+      ctx.strokeStyle = PAL.wallSolid;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(shaftX, shaftY, 18, shaftH);
+      ctx.strokeRect(shaftX, shaftY, 18, shaftH);
+      ctx.fillRect(shaftX + shaftW - 18, shaftY, 18, shaftH);
+      ctx.strokeRect(shaftX + shaftW - 18, shaftY, 18, shaftH);
+
+      // Опорная ферма корпуса реактора в средней части шахты
+      const trussY = 442;
+      ctx.fillStyle = PAL.wallSolid;
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(shaftX + 12, trussY, 20, 14);
+      ctx.strokeRect(shaftX + 12, trussY, 20, 14);
+      ctx.fillRect(shaftX + shaftW - 32, trussY, 20, 14);
+      ctx.strokeRect(shaftX + shaftW - 32, trussY, 20, 14);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = 'bold 7.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('ОПОРНАЯ ФЕРМА', shaftX - 4, trussY + 10);
+      ctx.restore();
+
+      // 6.1 Под днищем корпуса: конус Устройства локализации расплава (УЛР / Кориум-кетчер, #00E5FF)
+      const ulrX = domeCX - 42, ulrY = 592, ulrW = 84, ulrH = 72;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(ulrX, ulrY);
+      ctx.lineTo(ulrX + ulrW, ulrY);
+      ctx.lineTo(ulrX + ulrW - 18, ulrY + ulrH);
+      ctx.lineTo(ulrX + 18, ulrY + ulrH);
+      ctx.closePath();
+      ctx.fillStyle = sim.ulrCoolingActive ? 'rgba(0, 229, 255, 0.18)' : PAL.bgInner;
+      ctx.fill();
+      ctx.strokeStyle = PAL.safety;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Ферма-ловушка и кассеты жертвенного материала внутри конуса УЛР
+      for (let bx = ulrX + 20; bx <= ulrX + ulrW - 26; bx += 12) {
+        ctx.fillStyle = PAL.reactorCore;
+        ctx.fillRect(bx, ulrY + 24, 7, 34);
+      }
+
+      // Рубашка водяного охлаждения УЛР
+      ctx.strokeStyle = PAL.safety;
+      ctx.lineWidth = 1;
+      for (let zy = ulrY + 10; zy < ulrY + ulrH - 6; zy += 10) {
+        ctx.beginPath();
+        ctx.moveTo(ulrX + 12, zy);
+        ctx.lineTo(ulrX + ulrW - 12, zy);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = PAL.safety;
+      ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('УЛР / КОРИУМ-КЕТЧЕР (JMU)', domeCX, ulrY + ulrH - 4);
+      ctx.restore();
+
+      activeHotspots.push({
+        x: ulrX, y: ulrY, w: ulrW, h: ulrH,
+        title: 'Устройство локализации расплава (УЛР / Кориум-кетчер, KKS JMU)',
+        sub: 'Под днищем корпуса реактора на отм. 0.000 • Жертвенный материал Fe₂O₃/Al₂O₃',
+        desc: 'Конический сосуд в нижней части шахты реактора для приема, удержания и пассивного расхолаживания кориума при тяжелой запроектной аварии.',
+        telemetry: () => `Охлаждение УЛР: ${sim.ulrCoolingActive ? 'ПОДАЧА ВОДЫ ВКЛ' : 'СУХАЯ ШАХТА (НОРМА)'}`
+      });
+
+      // 6.2 Корпус реактора ВВЭР-1200 (В-491) с верхним блоком ШЭМ-3 и патрубками Ду-850
+      const rxX = domeCX - 44, rxY = 382, rxW = 88, rxH = 198;
+      ctx.save();
+      // Верхний блок и чехлы приводов ШЭМ-3 над перекрытием +26.300
+      for (let sx = rxX + 16; sx <= rxX + rxW - 16; sx += 11) {
+        ctx.strokeStyle = sim.az1Tripped ? PAL.statusAlarm : PAL.wallStroke;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sx, rxY + 20);
+        ctx.lineTo(sx, rxY - 56);
+        ctx.stroke();
+      }
+      // Опорная плита верхнего блока БЗТ
+      ctx.fillStyle = PAL.bgInner;
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(rxX + 8, rxY - 26, rxW - 16, 16);
+      ctx.strokeRect(rxX + 8, rxY - 26, rxW - 16, 16);
+
+      // Сферическая крышка и главный разъем корпуса ВВЭР-1200
+      ctx.beginPath();
+      ctx.arc(domeCX, rxY + 26, rxW / 2, Math.PI, 0, false);
+      ctx.fillStyle = PAL.bgInner;
+      ctx.fill();
+      ctx.strokeStyle = PAL.hotLeg;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Цилиндрический корпус с эллиптическим днищем
+      ctx.beginPath();
+      ctx.moveTo(rxX, rxY + 26);
+      ctx.lineTo(rxX, rxY + rxH - 28);
+      ctx.arc(domeCX, rxY + rxH - 28, rxW / 2, Math.PI, 0, true);
+      ctx.lineTo(rxX + rxW, rxY + 26);
+      ctx.closePath();
+      ctx.fillStyle = PAL.bgInner;
+      ctx.fill();
+      ctx.strokeStyle = PAL.hotLeg;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Фланец главного разъема
+      ctx.fillStyle = PAL.wallSolid;
+      ctx.strokeStyle = PAL.hotLeg;
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(rxX - 5, rxY + 22, rxW + 10, 7);
+      ctx.strokeRect(rxX - 5, rxY + 22, rxW + 10, 7);
+
+      // Внутрикорпусная шахта и активная зона 163 ТВС-2М (#E65100 / #FF5722)
+      const coreX = rxX + 14, coreY = rxY + 72, coreW = rxW - 28, coreH = 82;
+      const fluxRatio = Math.min(1.0, Math.max(0.15, sim.thermalPowerMW / 3200));
+      ctx.fillStyle = `rgba(230, 81, 0, ${0.35 + fluxRatio * 0.45})`;
+      ctx.fillRect(coreX, coreY, coreW, coreH);
+      ctx.strokeStyle = PAL.hotLeg;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(coreX, coreY, coreW, coreH);
+
+      // Вертикальные кассеты ТВС-2М и стержни СУЗ
+      for (let tx = coreX + 8; tx < coreX + coreW - 4; tx += 11) {
+        const isGr10 = (tx === coreX + 30);
+        const posPct = isGr10 ? sim.group10Pos : sim.groups1to9Pos;
+        const tipY = coreY + ((100 - posPct) / 100) * coreH;
+        ctx.strokeStyle = sim.az1Tripped ? PAL.statusAlarm : (isGr10 ? PAL.safety : PAL.statusOk);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(tx, rxY - 10);
+        ctx.lineTo(tx, tipY);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 9px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ВВЭР-1200', domeCX, rxY + 46);
+      ctx.fillStyle = PAL.hotLeg;
+      ctx.fillText(Math.round(sim.thermalPowerMW) + ' МВт', domeCX, rxY + 58);
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 8px "JetBrains Mono", monospace';
+      ctx.fillText('163 ТВС-2М', domeCX, coreY + coreH + 14);
+      ctx.restore();
+
+      activeHotspots.push({
+        x: rxX - 8, y: rxY - 56, w: rxW + 16, h: rxH + 60,
+        title: 'Корпус реактора ВВЭР-1200 с верхним блоком ШЭМ-3 (KKS JEA)',
+        sub: 'Центральная шахта 10UJA • 16.20 МПа • 3200 МВт • Патрубки Ду-850',
+        desc: 'Установлен на опорной ферме в центральной бетонной шахте. Содержит 163 ТВС-2М и 121 привод СУЗ.',
+        telemetry: () => `Nтепл: ${sim.thermalPowerMW.toFixed(1)} МВт | P₁: ${p1.toFixed(2)} МПа | Твых: ${sim.coreOutletTempC.toFixed(1)} °C | Твх: ${sim.coreInletTempC.toFixed(1)} °C`
+      });
+
+      // ========================================================================
+      // 7. ПО БОКАМ: БЕТОННЫЕ БОКСЫ ПАРОГЕНЕРАТОРОВ ПГВ-1000МКП, ГЦНА И КД-79
+      // ========================================================================
+      const boxY = elev263Y + 8, boxH = elev132Y - boxY;
+      // Контуры защитных бетонных боксов ПГ/ГЦНА слева и справа от шахты
+      ctx.save();
+      ctx.strokeStyle = PAL.wallStroke;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(domeCX - innerR + 12, boxY, 198, boxH);
+      ctx.strokeRect(domeCX + 66, boxY, 198, boxH);
+      ctx.fillStyle = '#334155';
+      ctx.font = 'bold 8px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('БОКС ПГ/ГЦНА ПЕТЕЛЬ 1-2', domeCX - innerR + 18, boxY + 13);
+      ctx.textAlign = 'right';
+      ctx.fillText('БОКС ПГ/ГЦНА ПЕТЕЛЬ 3-4', domeCX + innerR - 18, boxY + 13);
+      ctx.restore();
+
+      // 7.1 Парогенераторы ПГВ-1000МКП в боковых боксах
+      [
+        { x: domeCX - 252, y: 404, name: 'ПГВ-1000МКП (П1,2)', loopIdx: 0 },
+        { x: domeCX + 144, y: 404, name: 'ПГВ-1000МКП (П3,4)', loopIdx: 2 }
+      ].forEach((sg) => {
+        const sgW = 108, sgH = 58;
+        const lp = sim.loops[sg.loopIdx] || { sgLevelM: 2.10, sgPressMPa: 7.00 };
+        ctx.save();
+        roundRect(ctx, sg.x, sg.y, sgW, sgH, 12);
+        ctx.fillStyle = PAL.bgInner;
+        ctx.fill();
+        ctx.strokeStyle = PAL.wallStroke;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Уровень питательной воды (#00ACC1)
+        const sgLvl = (lp.sgLevelM / 2.7) * (sgH - 14);
+        ctx.fillStyle = 'rgba(0, 172, 193, 0.25)';
+        roundRect(ctx, sg.x + 3, sg.y + sgH - 3 - sgLvl, sgW - 6, sgLvl, 8);
+        ctx.fill();
+
+        // Горячий (#FF5722) и холодный (#FB8C00) коллекторы 1-го контура
+        const hotColX = sg.x < domeCX ? sg.x + sgW - 22 : sg.x + 12;
+        const coldColX = sg.x < domeCX ? sg.x + 12 : sg.x + sgW - 22;
+        ctx.fillStyle = PAL.hotLeg;
+        ctx.fillRect(hotColX, sg.y + 10, 10, sgH - 20);
+        ctx.fillStyle = PAL.coldLeg;
+        ctx.fillRect(coldColX, sg.y + 10, 10, sgH - 20);
+
+        // Паровой коллектор сверху ПГ (#FFB300) и выход пара к гермопроходкам
+        ctx.strokeStyle = PAL.steam;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sg.x + sgW / 2, sg.y);
+        ctx.lineTo(sg.x + sgW / 2, sg.y - 22);
+        ctx.lineTo(sg.x < domeCX ? domeCX - innerR + 4 : domeCX + innerR - 4, sg.y - 22);
+        ctx.stroke();
+
+        // Подвод питательной воды (#00ACC1)
+        ctx.strokeStyle = PAL.feedwater;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sg.x < domeCX ? domeCX - innerR + 4 : domeCX + innerR - 4, sg.y + 24);
+        ctx.lineTo(sg.x < domeCX ? sg.x : sg.x + sgW, sg.y + 24);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(sg.name, sg.x + sgW / 2, sg.y - 5);
+        ctx.fillStyle = PAL.steam;
+        ctx.fillText('P₂: ' + lp.sgPressMPa.toFixed(2) + ' МПа', sg.x + sgW / 2, sg.y + 24);
+        ctx.fillStyle = PAL.feedwater;
+        ctx.fillText('H: ' + lp.sgLevelM.toFixed(2) + ' м', sg.x + sgW / 2, sg.y + 38);
+        ctx.restore();
+
+        activeHotspots.push({
+          x: sg.x, y: sg.y - 12, w: sgW, h: sgH + 16,
+          title: 'Бокс парогенератора ' + sg.name + ' (KKS JEB)',
+          sub: 'Пар 7.0 МПа (285.8 °C) • Питательная вода 225 °C',
+          desc: 'Горизонтальный парогенератор в защитном бетонном боксе гермозоны. Отводит тепло от петель ГЦК во 2-й контур.',
+          telemetry: () => `Давление пара P₂: ${lp.sgPressMPa.toFixed(2)} МПа | Уровень: ${lp.sgLevelM.toFixed(2)} м`
+        });
+      });
+
+      // 7.2 Главные циркуляционные насосы ГЦНА-1391 на отм. +13.200
+      [
+        { x: domeCX - 196, y: 500, name: 'ГЦНА-1,2', loopIdx: 0 },
+        { x: domeCX + 196, y: 500, name: 'ГЦНА-3,4', loopIdx: 2 }
+      ].forEach((p) => {
+        const pr = 17;
+        const lp = sim.loops[p.loopIdx] || { rpm: 1000, pumpOn: true, flowPct: 100 };
+        const pumpRunning = Boolean(lp.pumpOn);
+        const pumpRpm = (typeof lp.rpm === 'number' ? lp.rpm : 1000);
+        const statusCol = pumpRunning ? PAL.statusOk : PAL.statusOff;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pr, 0, Math.PI * 2);
+        ctx.fillStyle = PAL.bgInner;
+        ctx.fill();
+        ctx.strokeStyle = statusCol;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Выносной электродвигатель ГЦНА сверху
+        ctx.fillStyle = PAL.bgDeep;
+        ctx.strokeStyle = PAL.wallStroke;
+        ctx.lineWidth = 1.2;
+        ctx.fillRect(p.x - 9, p.y - pr - 14, 18, 14);
+        ctx.strokeRect(p.x - 9, p.y - pr - 14, 18, 14);
+
+        // Вращающееся рабочее колесо
+        const spinAng = sim.time * (pumpRpm / 1000) * 8.0;
+        ctx.strokeStyle = statusCol;
+        ctx.lineWidth = 1.5;
+        for (let b = 0; b < 4; b++) {
+          const a = spinAng + b * (Math.PI / 2);
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + Math.cos(a) * (pr - 4), p.y + Math.sin(a) * (pr - 4));
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = 'bold 8.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, p.x, p.y + pr + 11);
+        ctx.fillStyle = statusCol;
+        ctx.fillText(Math.round(pumpRpm) + ' об/м', p.x, p.y + pr + 21);
+        ctx.restore();
+
+        activeHotspots.push({
+          x: p.x - pr - 4, y: p.y - pr - 16, w: pr * 2 + 8, h: pr * 2 + 42,
+          title: 'Главный циркуляционный насосный агрегат (' + p.name + ', KKS JEC)',
+          sub: 'Площадка обслуживания +13.200 • Подача 22 000 м³/ч',
+          desc: 'Прокачивает теплоноситель холодной нитки (298.2 °C) из парогенератора обратно во входной патрубок Ду-850 реактора.',
+          telemetry: () => `Статус: ${pumpRunning ? 'РАБОТА' : 'ОСТАНОВ'} | Обороты: ${Math.round(pumpRpm)} об/мин | Расход: ${lp.flowPct.toFixed(1)}%`
+        });
+      });
+
+      // 7.3 Компенсатор давления КД-79 (JEP10) в правом боксе
+      const kdX = domeCX + 82, kdY = 382, kdW = 34, kdH = 104;
+      ctx.save();
+      roundRect(ctx, kdX, kdY, kdW, kdH, 10);
+      ctx.fillStyle = PAL.bgInner;
+      ctx.fill();
+      ctx.strokeStyle = PAL.hotLeg;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      const kdWaterH = (przLvl / 12.0) * (kdH - 14);
+      ctx.fillStyle = 'rgba(255, 87, 34, 0.28)';
+      roundRect(ctx, kdX + 3, kdY + kdH - 3 - kdWaterH, kdW - 6, kdWaterH, 6);
+      ctx.fill();
+
+      // Блок ТЭНов КД
+      ctx.fillStyle = heatersOn ? PAL.statusOk : PAL.statusOff;
+      for (let hx = kdX + 6; hx <= kdX + kdW - 9; hx += 7) {
+        ctx.fillRect(hx, kdY + kdH - 16, 4, 12);
+      }
+
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 8px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('КД 79м³', kdX + kdW / 2, kdY - 5);
+      ctx.fillStyle = PAL.hotLeg;
+      ctx.fillText(p1.toFixed(1) + 'МПа', kdX + kdW / 2, kdY + 20);
+      ctx.restore();
+
+      activeHotspots.push({
+        x: kdX, y: kdY - 10, w: kdW, h: kdH + 16,
+        title: 'Компенсатор давления 1-го контура (КД-79, KKS JEP10)',
+        sub: 'Объем 79 м³ • Номинальное давление 16.20 МПа',
+        desc: 'Поддерживает давление в 1-м контуре за счет паровой подушки и электронагревателей мощностью 2520 кВт.',
+        telemetry: () => `P₁: ${p1.toFixed(2)} МПа | Уровень: ${przLvl.toFixed(2)} м | ТЭНы: ${heatersOn ? 'ВКЛ' : 'ОТКЛ'}`
+      });
+
+      // 7.4 Патрубки и трубопроводы ГЦК Ду-850: горячая нитка (#FF5722) и холодная нитка (#FB8C00)
+      const hotLeft = [[domeCX - 44, 418], [domeCX - 154, 418]];
+      const hotRight = [[domeCX + 44, 418], [domeCX + 154, 418]];
+      ctx.strokeStyle = PAL.hotLeg;
+      ctx.lineWidth = 2.6;
+      [hotLeft, hotRight].forEach((pts) => {
+        ctx.beginPath();
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
+        ctx.stroke();
+      });
+      drawFlowArrow(domeCX - 95, 418, Math.PI, PAL.hotLeg, 5);
+      drawFlowArrow(domeCX + 95, 418, 0, PAL.hotLeg, 5);
+
+      // Дыхательный трубопровод КД
+      ctx.beginPath();
+      ctx.moveTo(kdX + kdW / 2, kdY + kdH);
+      ctx.lineTo(kdX + kdW / 2, 496);
+      ctx.lineTo(domeCX + 132, 496);
+      ctx.lineTo(domeCX + 132, 418);
+      ctx.stroke();
+
+      // Холодные нитки Ду-850 (#FB8C00)
+      const coldLeft = [
+        [domeCX - 236, 462], [domeCX - 236, 500], [domeCX - 213, 500],
+        [domeCX - 179, 500], [domeCX - 76, 500], [domeCX - 76, 438], [domeCX - 44, 438]
+      ];
+      const coldRight = [
+        [domeCX + 236, 462], [domeCX + 236, 500], [domeCX + 213, 500],
+        [domeCX + 179, 500], [domeCX + 122, 500], [domeCX + 122, 438], [domeCX + 44, 438]
+      ];
+      ctx.strokeStyle = PAL.coldLeg;
+      ctx.lineWidth = 2.6;
+      [coldLeft, coldRight].forEach((pts) => {
+        ctx.beginPath();
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]));
+        ctx.stroke();
+      });
+      drawFlowArrow(domeCX - 125, 500, 0, PAL.coldLeg, 5);
+      drawFlowArrow(domeCX + 145, 500, Math.PI, PAL.coldLeg, 5);
+
+      // Бегущие частицы в петлях ГЦК
+      drawParticlesOnPath(hotLeft, 3, 3.0, PAL.hotLeg, 2.2);
+      drawParticlesOnPath(hotRight, 3, 3.0, PAL.hotLeg, 2.2);
+      drawParticlesOnPath(coldLeft, 5, 3.0, PAL.coldLeg, 2.2);
+      drawParticlesOnPath(coldRight, 5, 3.0, PAL.coldLeg, 2.2);
+
+      // 7.5 Бак-приямок аварийного запаса борированной воды (JNK) на нижней отметке
+      [
+        { x: domeCX - 250, y: 562, w: 165, h: 88, name: 'БАК-ПРИЯМОК ГЕРМООБОЛОЧКИ (JNK10..20)' },
+        { x: domeCX + 85, y: 562, w: 165, h: 88, name: 'БАК-ПРИЯМОК ГЕРМООБОЛОЧКИ (JNK30..40)' }
+      ].forEach((sump) => {
+        ctx.save();
+        ctx.fillStyle = PAL.bgInner;
+        ctx.strokeStyle = PAL.wallSolid;
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(sump.x, sump.y, sump.w, sump.h);
+        ctx.strokeRect(sump.x, sump.y, sump.w, sump.h);
+
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.16)';
+        ctx.fillRect(sump.x + 3, sump.y + 24, sump.w - 6, sump.h - 27);
+        ctx.strokeStyle = PAL.safety;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sump.x + 3, sump.y + 24, sump.w - 6, sump.h - 27);
+
+        ctx.fillStyle = PAL.safety;
+        ctx.font = 'bold 8px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(sump.name, sump.x + sump.w / 2, sump.y + 15);
+        ctx.fillStyle = '#0F172A';
+        ctx.fillText('Запас раствора H₃BO₃ 16 г/кг (Рециркуляция САОЗ)', sump.x + sump.w / 2, sump.y + 56);
+        ctx.restore();
       });
 
       ctx.restore();
@@ -1893,5 +2907,5 @@ window.drawClickableArmature = drawClickableArmature;
 window.drawScadaModule = drawScadaModule;
 window.drawPipeLabel = drawPipeLabel;
 window.renderPanoramicSystemsView = renderPanoramicSystemsView;
+window.renderPanoramic = renderPanoramicSystemsView;
 window.renderCrossSectionView = renderCrossSectionView;
-window.renderFourLoopsPlanView = renderFourLoopsPlanView;

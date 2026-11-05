@@ -10,34 +10,32 @@
   <script src="view_3d.js"></script>
   <script src="views_2d.js"></script>
   <script src="core_cartogram.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" async
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+    onerror="window.__threeLoadError = true;"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"
     onerror="window.__threeLoadError = true;"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="edu-enabled">
+<body>
 
   <div class="iaea-shell">
-    <!-- 1. ВЕРХНЯЯ ШАПКА ТРЕНАЖЕРА МАГАТЭ (ЛОГОТИП АТОМА + 4 ВКЛАДКИ ЭКРАНОВ + РЕЖИМ ОБУЧЕНИЯ) -->
+    <!-- 1. ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (ЛОГОТИП + ВКЛАДКИ + ТЕЛЕМЕТРИЯ + УПРАВЛЕНИЕ + ИКОНКА БАЗИСА) -->
     <header class="topbar">
       <div class="brand-block">
         <div class="atom-logo" title="ВВЭР-1200 // Цифровой двойник энергоблока Поколения III+">
-          <!-- Минималистичный SVG-логотип: стилизованный атом (ядро с тремя тонкими орбиталями электронов) -->
-          <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#38bdf8" stroke-width="1.3" opacity="0.85" />
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#38bdf8" stroke-width="1.3"
-              opacity="0.85" />
+          <svg width="22" height="22" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#38bdf8" stroke-width="1.5" opacity="0.9" />
+            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#38bdf8" stroke-width="1.5"
+              opacity="0.9" />
             <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(120 18 18)" stroke="#38bdf8"
-              stroke-width="1.3" opacity="0.85" />
+              stroke-width="1.5" opacity="0.9" />
             <circle cx="18" cy="18" r="3.2" fill="#f97316" />
-            <circle cx="32.5" cy="18" r="1.6" fill="#cbd5e1" />
-            <circle cx="10.8" cy="5.5" r="1.6" fill="#38bdf8" />
-            <circle cx="10.8" cy="30.5" r="1.6" fill="#10b981" />
           </svg>
         </div>
         <div>
-          <div class="brand-title">ReactorLab // DIGITAL TWIN</div>
-          <div class="brand-sub">IAEA SCADA Standard • Проект В-392М</div>
+          <div class="brand-title">ReactorLab</div>
+          <div class="brand-sub">В-491 SCADA</div>
         </div>
       </div>
 
@@ -46,7 +44,7 @@
         <button class="view-tab active" data-view="systems" id="tabSystems">
           <span class="tab-code">[СИСТЕМЫ]</span>
         </button>
-        <button class="view-tab" data-view="controls" id="tabControls">
+        <button class="view-tab" data-view="controls" id="btnTabControls">
           <span class="tab-code">[УПРАВЛЕНИЕ]</span>
         </button>
         <button class="view-tab" data-view="core" id="tabCore">
@@ -57,15 +55,45 @@
         </button>
       </nav>
 
-      <!-- ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА ОБУЧЕНИЯ, СЦЕНАРИЕВ, СКОРОСТИ И ЗВУКА -->
-      <div class="top-controls">
-        <button id="btnAcademicToggle" class="academic-toggle-btn"
-          title="Переключение между простым ознакомительным и инженерным режимом">
-          <span class="mode-dot"></span>
-          <span class="mode-label">🌱 Режим: Ознакомительный</span>
-        </button>
-        <button id="btnOpenTheory" class="theory-btn" style="display: none;">📐 Инженерный базис</button>
+      <!-- ВСТРОЕННАЯ СТРОКА ОПЕРАТИВНОЙ ТЕЛЕМЕТРИИ БЛОКА В ЕДИНОЙ ШАПКЕ -->
+      <div class="telemetry-bar">
+        <div id="modeBadge" class="mode-badge">НОМИНАЛ 100%</div>
 
+        <div class="kpi-strip">
+          <div class="kpi-box" title="Тепловая мощность активной зоны реактора (номинал 3200 МВт)">
+            <span class="kpi-label">Nт</span>
+            <span class="kpi-val" id="kpiThermal" style="color:var(--hot-coolant);">3200.0 МВт (100.0%)</span>
+          </div>
+          <div class="kpi-box" title="Электрическая мощность турбогенератора ТЗВ-1200-2 (номинал 1200 МВт)">
+            <span class="kpi-label">Nэ</span>
+            <span class="kpi-val" id="kpiElec" style="color:var(--green);">1200.0 МВт</span>
+          </div>
+          <div class="kpi-box" title="Давление теплоносителя 1-го контура вверху реактора (номинал 16,2 МПа)">
+            <span class="kpi-label">P₁</span>
+            <span class="kpi-val" id="kpiP1">16.20 МПа</span>
+          </div>
+          <div class="kpi-box" title="Запас до температуры насыщения (кипения) в горячих нитках ГЦК">
+            <span class="kpi-label">ΔTs</span>
+            <span class="kpi-val" id="kpiSubcool" style="color:var(--green);">19.5 °C</span>
+          </div>
+          <div class="kpi-box" title="Концентрация борной кислоты H₃BO₃ в теплоносителе 1-го контура">
+            <span class="kpi-label">H₃BO₃</span>
+            <span class="kpi-val" id="kpiBoron" style="color:var(--amber);">6.20 г/кг</span>
+          </div>
+          <div class="kpi-box" title="Суммарная реактивность активной зоны в pcm (10⁻⁵ Δk/k)">
+            <span class="kpi-label">ρ</span>
+            <span class="kpi-val" id="kpiReactivity" style="color:var(--steam-silver);">0.0 pcm</span>
+          </div>
+        </div>
+
+        <div class="kpi-secondary">
+          <b id="kpiFreq" style="color:var(--green);">50.00 Гц</b> • P₂: <b id="kpiP2"
+            style="color:var(--steam-silver);">7.00 МПа</b>
+        </div>
+      </div>
+
+      <!-- СЦЕНАРИИ, СКОРОСТЬ, ЗВУК И ИКОНКА ИНЖЕНЕРНОГО БАЗИСА В ПРАВОМ УГЛУ -->
+      <div class="top-controls">
         <select id="scenarioSelect" class="scenario-select" title="Выбор сценария или эксплуатационного режима">
           <option value="nominal">1. Номинальный режим (100% Nном — 3200 МВт)</option>
           <option value="startup">2. Выход на МКУ и подъем мощности</option>
@@ -75,76 +103,47 @@
         </select>
 
         <div class="btn-group" title="Масштаб времени моделирования">
-          <button class="btn-mini" data-speed="0" id="spd0">ПАУЗА</button>
+          <button class="btn-mini" data-speed="0" id="spd0">0x</button>
           <button class="btn-mini active" data-speed="1" id="spd1">1x</button>
           <button class="btn-mini" data-speed="10" id="spd10">10x</button>
           <button class="btn-mini" data-speed="60" id="spd60">60x</button>
         </div>
 
         <button id="btnAudio" class="btn-mini"
-          style="background:var(--bg-deep);border:1px solid var(--border-dim);border-radius:5px;padding:5px 9px;">
+          style="background:var(--bg-deep);border:1px solid var(--border-dim);border-radius:4px;padding:4px 7px;">
           ЗВУК: ВЫКЛ
+        </button>
+
+        <button id="btnOpenTheory" class="theory-icon-btn" title="Инженерный базис и математическая модель (#theory)"
+          aria-label="Инженерный базис">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
         </button>
       </div>
     </header>
-
-    <!-- 2. ПОЛОСА ОПЕРАТИВНОЙ ТЕЛЕМЕТРИИ БЛОКА -->
-    <div class="telemetry-bar">
-      <div id="modeBadge" class="mode-badge">НОМИНАЛЬНЫЙ РЕЖИМ (100% Nном)</div>
-
-      <div class="kpi-strip">
-        <div class="kpi-box" title="Тепловая мощность активной зоны реактора (номинал 3200 МВт)">
-          <span class="kpi-label">Nтепл</span>
-          <span class="kpi-val" id="kpiThermal" style="color:var(--hot-coolant);">3200.0 МВт (100.0%)</span>
-        </div>
-        <div class="kpi-box" title="Электрическая мощность турбогенератора ТЗВ-1200-2 (номинал 1200 МВт)">
-          <span class="kpi-label">Nэлектр</span>
-          <span class="kpi-val" id="kpiElec" style="color:var(--green);">1200.0 МВт</span>
-        </div>
-        <div class="kpi-box" title="Давление теплоносителя 1-го контура вверху реактора (номинал 16,2 МПа)">
-          <span class="kpi-label">P₁ конт.</span>
-          <span class="kpi-val" id="kpiP1">16.20 МПа</span>
-        </div>
-        <div class="kpi-box" title="Запас до температуры насыщения (кипения) в горячих нитках ГЦК">
-          <span class="kpi-label">ΔTs кип.</span>
-          <span class="kpi-val" id="kpiSubcool" style="color:var(--green);">19.5 °C</span>
-        </div>
-        <div class="kpi-box" title="Концентрация борной кислоты H₃BO₃ в теплоносителе 1-го контура">
-          <span class="kpi-label">Бор H₃BO₃</span>
-          <span class="kpi-val" id="kpiBoron" style="color:var(--amber);">6.20 г/кг</span>
-        </div>
-        <div class="kpi-box" title="Суммарная реактивность активной зоны в pcm (10⁻⁵ Δk/k)">
-          <span class="kpi-label">Реактивность ρ</span>
-          <span class="kpi-val" id="kpiReactivity" style="color:var(--steam-silver);">0.0 pcm</span>
-        </div>
-      </div>
-
-      <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">
-        Сеть: <b id="kpiFreq" style="color:var(--green);">50.00 Гц</b> • P₂ ГПК: <b id="kpiP2"
-          style="color:var(--steam-silver);">7.00 МПа</b>
-      </div>
-    </div>
 
     <!-- 3. ГЛАВНАЯ ПОЛНОЭКРАННАЯ РАБОЧАЯ ОБЛАСТЬ -->
     <main class="workspace-stage">
 
       <!-- ЭКРАН ХОЛСТА (ОБСЛУЖИВАЕТ [SYSTEMS], [CORE] И [3D TWIN]) -->
       <section class="viewport-screen" id="viewportScreen">
-        <div class="canvas-container" id="canvasContainer">
+        <div class="canvas-container core-container" id="canvasContainer">
           <canvas id="simCanvas"></canvas>
+          <aside id="coreInfoPanel" class="core-info-panel" aria-live="polite"
+            style="position:absolute;right:12px;top:52px;width:320px;pointer-events:none;opacity:0;z-index:-1;"></aside>
 
           <!-- Верхняя панель управления холстом (видна в [SYSTEMS] и [CORE]) -->
           <div class="canvas-overlay-top" id="canvasOverlayTop">
             <div class="overlay-group" id="systemsSubSwitch">
               <button class="sub-view-btn active" id="btnSubPanorama"
                 title="Широкая панорамная мнемосхема контуров слева направо (в стиле тренажера МАГАТЭ)">
-                Панорама: Реактор → КД → ПГВ → ГПК → Турбина → Конденсатор → ПЭН
+                Панорама P&amp;ID энергоблока В-491
               </button>
-              <button class="sub-view-btn" id="btnSubLoops" title="Симметричная компоновка 4 петель ГЦК (вид сверху)">
-                Схема 4 петель ГЦК (Сверху)
-              </button>
-              <button class="sub-view-btn" id="btnSubCross" title="Вертикальный разрез реакторного отделения В-392М">
-                Разрез гермооболочки В-392М
+              <button class="sub-view-btn" id="btnSubCross" title="Вертикальный разрез реакторного отделения В-491 (БелАЭС)">
+                Разрез гермооболочки В-491
               </button>
             </div>
 
@@ -160,31 +159,31 @@
             </div>
           </div>
 
-          <!-- Верхняя лента технологических этапов [01]–[06] -->
+          <!-- Верхняя лента технологических этапов [01]–[06] (РУ В-491) -->
           <div class="stages-ribbon" id="stagesRibbon">
             <div class="stage-card">
-              <span class="stage-code" style="color:var(--hot-coolant);">[01]</span>
-              <span class="stage-name" title="РЕАКТОР ВВЭР-1200 И ЗАЩИТА">РЕАКТОР ВВЭР-1200 И ЗАЩИТА</span>
+              <span class="stage-code" style="color:#ef4444;">[01]</span>
+              <span class="stage-name" title="РЕАКТОР В-491 И САОЗ">РЕАКТОР В-491 И САОЗ</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:var(--amber);">[02]</span>
-              <span class="stage-name" title="КОМПЕНСАТОР ДАВЛ. (КД)">КОМПЕНСАТОР ДАВЛ. (КД)</span>
+              <span class="stage-code" style="color:#38bdf8;">[02]</span>
+              <span class="stage-name" title="4 ПЕТЛИ Ду-850 И ПГВ-1000МКП">4 ПЕТЛИ Ду-850 И ПГВ-1000МКП</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:var(--cyan);">[03]</span>
-              <span class="stage-name" title="ПАРОГЕНЕРАТОРЫ ПГВ И ГЦНА">ПАРОГЕНЕРАТОРЫ ПГВ И ГЦНА</span>
+              <span class="stage-code" style="color:#f59e0b;">[03]</span>
+              <span class="stage-name" title="КД 79 м³ И БАРБОТЕР">КД 79 м³ И БАРБОТЕР</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:var(--steam-silver);">[04]</span>
-              <span class="stage-name" title="ГПК И КЛАПАНЫ БРУ-К/А">ГПК И КЛАПАНЫ БРУ-К/А</span>
+              <span class="stage-code" style="color:#94a3b8;">[04]</span>
+              <span class="stage-name" title="ГПК 7.0 МПа И БРУ-К/А">ГПК 7.0 МПа И БРУ-К/А</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:var(--green);">[05]</span>
-              <span class="stage-name" title="ТУРБИНА И ГЕНЕРАТОР">ТУРБИНА И ГЕНЕРАТОР</span>
+              <span class="stage-code" style="color:#4ade80;">[05]</span>
+              <span class="stage-name" title="ТУРБИНА К-1200 И ТЗВ-1200">ТУРБИНА К-1200 И ТЗВ-1200</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:var(--cyan);">[06]</span>
-              <span class="stage-name" title="КОНДЕНСАТОР И НАСОСЫ ПЭН">КОНДЕНСАТОР И НАСОСЫ ПЭН</span>
+              <span class="stage-code" style="color:#38bdf8;">[06]</span>
+              <span class="stage-name" title="ДЕАЭРАТОР 0.871 МПа И ПЭН 225 °C">ДЕАЭРАТОР 0.871 МПа И ПЭН 225 °C</span>
             </div>
           </div>
 
@@ -197,6 +196,8 @@
             <button class="three-cam-btn" data-cam="top">Вид сверху 4 петли</button>
             <button class="three-cam-btn" data-cam="ulr">УЛР и днище</button>
             <button class="three-cam-btn active" id="btnThreeAutoRotate">Автовращение</button>
+            <button class="three-cam-btn" id="btnThreeXRay" title="Включить рентген корпуса для просмотра внутренних узлов ВКУ и ТВС">РЕНТГЕН / X-RAY</button>
+            <button class="three-cam-btn" id="btnThreeExploded" title="Послойная взрыв-схема активной зоны и внутрикорпусных устройств">ВЗРЫВ-СХЕМА</button>
           </div>
 
           <div id="threeHelpBadge" class="three-help-badge">
@@ -215,7 +216,7 @@
           <!-- Всплывающий инженерный тултип с блоком «Простыми словами» -->
           <div id="canvasTooltip" class="canvas-tooltip">
             <div class="tt-title" id="ttTitle">Корпус реактора ВВЭР-1200</div>
-            <div class="tt-sub" id="ttSub">Индекс: В-392М • Поколение III+</div>
+            <div class="tt-sub" id="ttSub">Индекс: В-491 • Поколение III+ (БелАЭС)</div>
             <div class="tt-desc" id="ttDesc">Описание компонента</div>
             <div class="tt-simple" id="ttSimple"><b>Простыми словами:</b> Назначение узла.</div>
             <div class="tt-telemetry" id="ttTelemetry">Параметры</div>
@@ -240,352 +241,55 @@
         </div>
       </section>
 
-      <!-- ЭКРАН [CONTROLS]: МОДУЛЬНЫЙ ПУЛЬТ УПРАВЛЕНИЯ (3 ПОСТА С ПЕРСОНАЛЬНЫМИ МИНИ-ГРАФИКАМИ) -->
+      <!-- ЭКРАН [CONTROLS]: КАРКАС БЩУ (3 ЧИСТЫХ ГРИД-СЕКЦИИ) -->
       <section class="controls-screen" id="controlsScreen">
-        <div class="posts-grid">
-
-          <!-- ПОСТ 1: РЕАКТОР И СУЗ -->
-          <div class="control-post">
-            <div class="post-header">
-              <div class="post-title">
-                <span style="color:var(--hot-coolant);">●</span> ПОСТ №1: Реактор и СУЗ
-              </div>
-              <span class="post-badge">ПОСТ-1 // ВИУР</span>
+        <div class="controls-grid" id="tabControls">
+          <!-- СЕКЦИЯ 1: Пост ВИУР (реактор, 121 привод СУЗ, бор, АЗ-1) -->
+          <div class="bshu-panel" id="panelViur">
+            <div class="bshu-panel-header">
+              <span class="bshu-panel-title">ПОСТ ВИУР // РЕАКТОР И СУЗ</span>
+              <span class="bshu-panel-badge">БЩУ В-491</span>
             </div>
-
-            <div class="edu-hint-banner">
-              <b>Простыми словами:</b> Стержни СУЗ работают как «быстрый тормоз» цепной реакции, а борная кислота,
-              растворенная в воде, — как «плавный химический регулятор» мощности на длинных интервалах.
-            </div>
-
-            <!-- Персональный мини-график Поста 1 (Тепловая мощность, Уставка АРМ, Реактивность, Бор) -->
-            <div class="post-chart-box">
-              <div class="chart-legend">
-                <span style="color:#f97316;">▬ Nтепл (МВт)</span>
-                <span style="color:#f59e0b;">-- Уставка АРМ</span>
-                <span style="color:#38bdf8;">▬ Гр.10 СУЗ (%)</span>
-                <span style="color:#a78bfa;">▬ Xe-135</span>
-              </div>
-              <canvas id="chartPower"></canvas>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Уставка мощности АРМ (Nзад):</span>
-                <span class="ctrl-val" id="valArmTarget">3200 МВт</span>
-              </div>
-              <input type="range" id="sliderArmTarget" min="100" max="3200" step="50" value="3200">
-
-              <div class="grid-2" style="margin-top:2px;">
-                <button class="btn-ctrl active" id="btnARM"
-                  title="Автоматический регулятор мощности реактора (управляет группой №10)">АРМ: ВКЛЮЧЕН</button>
-                <button class="btn-ctrl" id="btnWithdraw19"
-                  title="Плавный подъем групп 1–9 до 100% при пуске или после АЗ-1">Поднять Гр. 1–9 (100%)</button>
-              </div>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Рабочая группа №10 ОР СУЗ:</span>
-                <span class="ctrl-val" id="valGroup10">80.0 %</span>
-              </div>
-              <input type="range" id="sliderGroup10" min="0" max="100" step="0.5" value="80">
-
-              <div class="grid-4">
-                <button class="btn-ctrl" data-rodstep="-5">-5%</button>
-                <button class="btn-ctrl" data-rodstep="-1">-1%</button>
-                <button class="btn-ctrl" data-rodstep="1">+1%</button>
-                <button class="btn-ctrl" data-rodstep="5">+5%</button>
-              </div>
-
-              <div class="ctrl-row" style="margin-top:2px;">
-                <span class="ctrl-label">Положение групп АЗ №1–9:</span>
-                <span class="ctrl-val" id="valGroups19">100.0 %</span>
-              </div>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Борное регулирование (H₃BO₃):</span>
-                <span class="ctrl-val" id="valBoronFlow">Нейтрально</span>
-              </div>
-              <div class="grid-2">
-                <button class="btn-ctrl" id="btnBoronInject"
-                  title="Подача концентрата борной кислоты H₃BO₃ (40 г/кг) — снижает реактивность">Ввод бора
-                  (+H₃BO₃)</button>
-                <button class="btn-ctrl" id="btnBoronDilute"
-                  title="Подача чистого дистиллята — разбавляет бор, повышает реактивность">Чистый дистиллят</button>
-              </div>
-            </div>
-
-            <!-- Защищенный блок АЗ-1 -->
-            <div class="az1-container">
-              <div class="az1-header">
-                <span style="font-weight:800;color:#fca5a5;font-size:10.5px;">АВАРИЙНАЯ ЗАЩИТА РЕАКТОРА (АЗ-1)</span>
-                <button class="cover-toggle" id="btnAzCover">Откинуть крышку</button>
-              </div>
-              <div class="az1-button-wrap">
-                <button class="btn-az1" id="btnTriggerAZ1">АЗ-1 • СБРОС ОР СУЗ</button>
-                <div class="az1-cover-shield" id="az1Shield">
-                  <span>КРЫШКА ЗАКРЫТА (НАЖМИТЕ «ОТКИНУТЬ КРЫШКУ»)</span>
-                </div>
-              </div>
-              <button class="btn-ctrl" id="btnResetAZ1" style="font-size:10.5px;padding:5px 8px 5px 24px;">Деблокировка
-                сигнала АЗ-1 /
-                Взвод СУЗ</button>
+            <div class="bshu-panel-content">
+              <!-- Каркас подготовлен под 121 привод СУЗ, борное регулирование и АЗ-1 -->
             </div>
           </div>
 
-          <!-- ПОСТ 2: ТУРБИНА И СЕТЬ -->
-          <div class="control-post">
-            <div class="post-header">
-              <div class="post-title">
-                <span style="color:var(--steam-silver);">●</span> ПОСТ №2: Турбина и Сеть
-              </div>
-              <span class="post-badge">ПОСТ-2 // ВИУТ</span>
+          <!-- СЕКЦИЯ 2: Пост ВИУТ (турбина К-1200, 4 ПГ, пар, ПЭН, БРУ-К) -->
+          <div class="bshu-panel" id="panelViut">
+            <div class="bshu-panel-header">
+              <span class="bshu-panel-title">ПОСТ ВИУТ // ТУРБИНА И ПАРОГЕНЕРАТОРЫ</span>
+              <span class="bshu-panel-badge">БЩУ В-491</span>
             </div>
-
-            <div class="edu-hint-banner">
-              <b>Простыми словами:</b> Пар из парогенераторов вращает турбину со скоростью 50 оборотов в секунду (3000
-              об/мин), вырабатывая ток частотой 50 Гц для энергосистемы. Питательные насосы (ПЭН) возвращают
-              сконденсированную воду обратно в парогенераторы.
-            </div>
-
-            <!-- Персональный мини-график Поста 2 (Мегаватты генератора, Давление пара ГПК, Частота сети) -->
-            <div class="post-chart-box">
-              <div class="chart-legend">
-                <span style="color:#10b981;">▬ Nэлектр (МВт)</span>
-                <span style="color:#cbd5e1;">▬ РК Турбины (%)</span>
-                <span style="color:#38bdf8;">▬ Частота сети (Гц)</span>
-              </div>
-              <canvas id="chartNeutronics"></canvas>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Активная мощность генератора:</span>
-                <span class="ctrl-val" id="post2ElecMW">1200.0 МВт</span>
-              </div>
-              <div class="ctrl-row">
-                <span class="ctrl-label">Частота сети / Обороты ротора:</span>
-                <span class="ctrl-val" id="post2FreqRpm">50.00 Гц (3000
-                  об/мин)</span>
-              </div>
-              <div class="ctrl-row">
-                <span class="ctrl-label">Давление и температура в ГПК:</span>
-                <span class="ctrl-val" id="post2SteamState">7.00 МПа / 285.8 °C</span>
-              </div>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Клапан пара турбины (РК):</span>
-                <span class="ctrl-val" id="valTurbineValve">100 %</span>
-              </div>
-              <input type="range" id="sliderTurbineValve" min="0" max="100" step="1" value="100">
-
-              <div class="grid-4">
-                <button class="btn-ctrl" data-turbpreset="0">0% (Стоп)</button>
-                <button class="btn-ctrl" data-turbpreset="30">30%</button>
-                <button class="btn-ctrl" data-turbpreset="75">75%</button>
-                <button class="btn-ctrl" data-turbpreset="100">100%</button>
-              </div>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Питательные насосы (ПЭН / Расход):</span>
-                <span class="ctrl-val" id="valFeedwater">100 %</span>
-              </div>
-              <input type="range" id="sliderFeedwater" min="0" max="130" step="1" value="100">
-            </div>
-
-            <div class="ctrl-group-box" style="margin-top:auto;">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Арматура сброса пара ГПК (БРУ):</span>
-                <span class="ctrl-val" id="post2BruState">Клапаны закрыты</span>
-              </div>
-              <div class="grid-2">
-                <button class="btn-ctrl" id="btnBruK"
-                  title="Быстродействующая редукционная установка сброса пара в конденсатор турбины">БРУ-К (В
-                  конденс.)</button>
-                <button class="btn-ctrl" id="btnBruA"
-                  title="Быстродействующая редукционная установка сброса пара в атмосферу">БРУ-А (В атмосф.)</button>
-              </div>
+            <div class="bshu-panel-content">
+              <!-- Каркас подготовлен под турбину К-1200, 4 ПГ, ПЭН и БРУ-К -->
             </div>
           </div>
 
-          <!-- ПОСТ 3: 1-Й КОНТУР И ДАВЛЕНИЕ -->
-          <div class="control-post">
-            <div class="post-header">
-              <div class="post-title">
-                <span style="color:var(--cold-water);">●</span> ПОСТ №3: 1-й контур и Давление
-              </div>
-              <span class="post-badge">ПОСТ-3 // ВИУБ</span>
+          <!-- СЕКЦИЯ 3: Журнал событий и технологические сигналы -->
+          <div class="bshu-panel" id="panelTelemetry">
+            <div class="bshu-panel-header">
+              <span class="bshu-panel-title">ОПЕРАТИВНЫЙ ЖУРНАЛ И СИГНАЛИЗАЦИЯ</span>
+              <span class="bshu-panel-badge">ТЕЛЕМЕТРИЯ</span>
             </div>
-
-            <div class="edu-hint-banner">
-              <b>Простыми словами:</b> Вода в 1-м контуре нагрета до 329 °C, но не закипает, потому что Компенсатор
-              давления (КД) зажимает её под огромным давлением 160 атмосфер (16,2 МПа), как в герметичной скороварке.
+            <div class="bshu-panel-content">
+              <div class="event-log" id="eventLog"></div>
             </div>
-
-            <!-- Персональный мини-график Поста 3 (Давление 1 контура P1, Давление ГПК P2, Запас до кипения ΔTs) -->
-            <div class="post-chart-box">
-              <div class="chart-legend">
-                <span style="color:#f97316;">▬ P₁ 1-й конт (МПа)</span>
-                <span style="color:#38bdf8;">▬ P₂ ГПК (МПа)</span>
-                <span style="color:#10b981;">▬ ΔTs кип (°C)</span>
-              </div>
-              <canvas id="chartPressure"></canvas>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Уровень в КД / Мощность ТЭНов:</span>
-                <span class="ctrl-val" id="valPressurizer">8.40 м / 900 кВт</span>
-              </div>
-              <div class="grid-2">
-                <button class="btn-ctrl active" id="btnHeatersMode"
-                  title="Переключение режима электронагревателей КД (АВТО / РУЧНОЙ ВКЛ / ВЫКЛ)">ТЭНы КД: АВТО</button>
-                <button class="btn-ctrl" id="btnSprayKD"
-                  title="Впрыск холодного теплоносителя из холодной нитки в паровую подушку КД для снижения давления">Впрыск
-                  в КД</button>
-              </div>
-              <div class="grid-2">
-                <button class="btn-ctrl" id="btnIpuKD"
-                  title="Импульсное предохранительное устройство КД (автоматически открывается при P₁ > 18,1 МПа)">ИПУ
-                  КД (Сброс P₁)</button>
-                <button class="btn-ctrl" id="btnLeakLoop1"
-                  title="Имитация малой течи теплоносителя 1-го контура (для проверки САОЗ)">Течь 1-го контура</button>
-              </div>
-            </div>
-
-            <div class="ctrl-group-box">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Главные циркуляционные насосы (ГЦНА-1391):</span>
-              </div>
-              <div class="grid-4">
-                <button class="btn-ctrl active" id="btnPump0" data-pump="0">ГЦНА-1</button>
-                <button class="btn-ctrl active" id="btnPump1" data-pump="1">ГЦНА-2</button>
-                <button class="btn-ctrl active" id="btnPump2" data-pump="2">ГЦНА-3</button>
-                <button class="btn-ctrl active" id="btnPump3" data-pump="3">ГЦНА-4</button>
-              </div>
-            </div>
-
-            <div class="ctrl-group-box" style="margin-top:auto;">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Гидроемкости САОЗ (ГЕ-1..3):</span>
-                <span class="ctrl-val" id="valSAOZ">Ожидание (P₁ &lt; 5.9 МПа)</span>
-              </div>
-              <div class="grid-2">
-                <button class="btn-ctrl" id="btnTriggerSAOZ"
-                  title="Принудительное открытие обратных клапанов гидроемкостей САОЗ ГЕ-1, ГЕ-2, ГЕ-3">Подача ГЕ
-                  САОЗ</button>
-                <button class="btn-ctrl" id="btnToggleSPOT"
-                  title="Открытие шиберов воздушных теплообменников Системы пассивного отвода тепла (СПОТ)">Шиберы СПОТ:
-                  ЗАКР</button>
-              </div>
-              <div class="ctrl-row" style="margin-top:2px;">
-                <span class="ctrl-label">Ловушка расплава (УЛР):</span>
-                <span class="ctrl-val" id="valULR">Сухая шахта (Норма)</span>
-              </div>
-              <button class="btn-ctrl" id="btnFloodULR"
-                title="Подача охлаждающей воды в устройство локализации расплава (УЛР) под корпусом реактора">Охлаждение
-                шахты УЛР</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- НИЖНИЙ РЯД ЭКРАНА [CONTROLS]: ДИАГНОСТИКА 4 ПЕТЕЛЬ ГЦК И ОПЕРАТИВНЫЙ ЖУРНАЛ БЩУ -->
-        <div class="controls-bottom-row">
-          <div class="control-post" style="padding:8px 10px;">
-            <div class="post-header" style="padding-bottom:4px;">
-              <span class="post-title" style="font-size:11px;">Диагностика 4 петель ГЦК и парогенераторов
-                ПГВ-1000МКП</span>
-              <span class="post-badge">1 / 2 КОНТУР</span>
-            </div>
-            <div class="loops-grid">
-              <div class="loop-card" id="loopCard0">
-                <div class="loop-card-top"><span>ПЕТЛЯ №1 (ГЦНА-1)</span><span class="status-dot" id="loopDot0"></span>
-                </div>
-                <div class="loop-metrics">
-                  <div><span>Обороты:</span><span class="v" id="l0_rpm">1000 об/м</span></div>
-                  <div><span>P пара ПГ-1:</span><span class="v" id="l0_psg">7.00 МПа</span></div>
-                  <div><span>T гор.:</span><span class="v" id="l0_th" style="color:var(--hot-coolant);">328.9 °C</span>
-                  </div>
-                  <div><span>T хол.:</span><span class="v" id="l0_tc" style="color:var(--cold-water);">298.2 °C</span>
-                  </div>
-                  <div><span>Уровень ПГ:</span><span class="v" id="l0_lvl">2.10 м</span></div>
-                  <div><span>Расход:</span><span class="v" id="l0_flw">100 %</span></div>
-                </div>
-              </div>
-              <div class="loop-card" id="loopCard1">
-                <div class="loop-card-top"><span>ПЕТЛЯ №2 (ГЦНА-2)</span><span class="status-dot" id="loopDot1"></span>
-                </div>
-                <div class="loop-metrics">
-                  <div><span>Обороты:</span><span class="v" id="l1_rpm">1000 об/м</span></div>
-                  <div><span>P пара ПГ-2:</span><span class="v" id="l1_psg">7.00 МПа</span></div>
-                  <div><span>T гор.:</span><span class="v" id="l1_th" style="color:var(--hot-coolant);">328.9 °C</span>
-                  </div>
-                  <div><span>T хол.:</span><span class="v" id="l1_tc" style="color:var(--cold-water);">298.2 °C</span>
-                  </div>
-                  <div><span>Уровень ПГ:</span><span class="v" id="l1_lvl">2.10 м</span></div>
-                  <div><span>Расход:</span><span class="v" id="l1_flw">100 %</span></div>
-                </div>
-              </div>
-              <div class="loop-card" id="loopCard2">
-                <div class="loop-card-top"><span>ПЕТЛЯ №3 (ГЦНА-3)</span><span class="status-dot" id="loopDot2"></span>
-                </div>
-                <div class="loop-metrics">
-                  <div><span>Обороты:</span><span class="v" id="l2_rpm">1000 об/м</span></div>
-                  <div><span>P пара ПГ-3:</span><span class="v" id="l2_psg">7.00 МПа</span></div>
-                  <div><span>T гор.:</span><span class="v" id="l2_th" style="color:var(--hot-coolant);">328.9 °C</span>
-                  </div>
-                  <div><span>T хол.:</span><span class="v" id="l2_tc" style="color:var(--cold-water);">298.2 °C</span>
-                  </div>
-                  <div><span>Уровень ПГ:</span><span class="v" id="l2_lvl">2.10 м</span></div>
-                  <div><span>Расход:</span><span class="v" id="l2_flw">100 %</span></div>
-                </div>
-              </div>
-              <div class="loop-card" id="loopCard3">
-                <div class="loop-card-top"><span>ПЕТЛЯ №4 (+ КД)</span><span class="status-dot" id="loopDot3"></span>
-                </div>
-                <div class="loop-metrics">
-                  <div><span>Обороты:</span><span class="v" id="l3_rpm">1000 об/м</span></div>
-                  <div><span>P пара ПГ-4:</span><span class="v" id="l3_psg">7.00 МПа</span></div>
-                  <div><span>T гор.:</span><span class="v" id="l3_th" style="color:var(--hot-coolant);">328.9 °C</span>
-                  </div>
-                  <div><span>T хол.:</span><span class="v" id="l3_tc" style="color:var(--cold-water);">298.2 °C</span>
-                  </div>
-                  <div><span>Уровень ПГ:</span><span class="v" id="l3_lvl">2.10 м</span></div>
-                  <div><span>Расход:</span><span class="v" id="l3_flw">100 %</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="control-post" style="padding:8px 10px;">
-            <div class="post-header" style="padding-bottom:4px;">
-              <span class="post-title" style="font-size:11px;">Оперативный журнал событий БЩУ</span>
-              <button id="btnClearLog" class="btn-mini"
-                style="padding:2px 7px;font-size:9.5px;border:1px solid var(--border-dim);border-radius:3px;">ОЧИСТИТЬ</button>
-            </div>
-            <div class="event-log" id="eventLog"></div>
           </div>
         </div>
       </section>
 
   </div>
 
-  <!-- ВЫДВИЖНАЯ БОКОВАЯ ШТОРКА СПРАВОЧНИКА (REACTORLAB // ФИЗИЧЕСКИЙ БАЗИС) -->
-  <aside id="theoryDrawer" class="theory-drawer" aria-label="Инженерный базис ReactorLab">
+  <!-- ПОЛНОЭКРАННОЕ МОДАЛЬНОЕ ОКНО [ИНЖЕНЕРНЫЙ БАЗИС] (#theory) -->
+  <aside id="theoryDrawer" class="theory-drawer" role="dialog" aria-modal="true" aria-label="Инженерный базис ReactorLab">
     <div class="theory-drawer-header">
       <div class="theory-drawer-title-group">
-        <div class="theory-badge">ACADEMIC // SCADA</div>
-        <h2 class="theory-drawer-title">ReactorLab // Физический базис</h2>
-        <div class="theory-drawer-subtitle">ВВЭР-1200 (Проект В-392М) • Математическая модель</div>
+        <div class="theory-badge">ACADEMIC // SCADA (#theory)</div>
+        <h2 class="theory-drawer-title">ReactorLab // Инженерный базис</h2>
+        <div class="theory-drawer-subtitle">ВВЭР-1200 (Проект В-491, БелАЭС) • Математическая модель и нормативная база</div>
       </div>
-      <button id="btnCloseTheory" class="theory-close-btn" title="Закрыть справочник" aria-label="Закрыть">✕</button>
+      <button id="btnCloseTheory" class="theory-close-btn" title="Закрыть и вернуться к предыдущему экрану" aria-label="Закрыть">✕ Закрыть</button>
     </div>
 
     <!-- Переключатель вкладок по 4 разделам физики + первоисточники -->
@@ -594,7 +298,7 @@
       <button class="theory-tab" data-theory-tab="feedbacks">Обратные связи</button>
       <button class="theory-tab" data-theory-tab="poisoning">Отравление Xe</button>
       <button class="theory-tab" data-theory-tab="thermohydraulics">Теплогидравлика</button>
-      <button class="theory-tab" data-theory-tab="sources">📚 Источники & Архивы</button>
+      <button id="tabTheorySources" class="theory-tab" data-theory-tab="sources">📚 Источники & Архивы</button>
     </div>
 
     <!-- Контейнер вывода формул с пояснениями -->

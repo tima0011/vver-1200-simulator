@@ -1,1311 +1,1302 @@
 :root {
-      /* Стандарт "Slate Light SCADA" (зафиксированные переменные темы) */
-      --bg-main: #F1F5F9;
-      --bg-panel: #FFFFFF;
-      --border-subtle: #E2E8F0;
-      --text-main: #0F172A;
-      --text-muted: #64748B;
-      --text-dim: #64748B;
-
-      /* Главный технологический акцент и адаптированные линии */
-      --accent-primary: #0284C7;
-      --accent-loop1: #DC2626;
-      --accent-loop1-alt: #C2410C;
-      --accent-loop1-cold: #EA580C;
-      --accent-loop2: #0284C7;
-      --accent-steam: #D97706;
-      --accent-feedwater: #0284C7;
-
-      /* Статусы оборудования */
-      --status-ok: #16A34A;
-      --status-alarm: #DC2626;
-      --status-off: #64748B;
-
-      /* Системные алиасы темы */
-      --bg-deep: var(--bg-main);
-      --bg-card: var(--bg-panel);
-      --bg-card-hover: #E2E8F0;
-
-      --border-dim: var(--border-subtle);
-      --border-bright: #CBD5E1;
-
-      --green: var(--status-ok);
-      --green-dim: rgba(22, 163, 74, 0.12);
-      --amber: var(--accent-steam);
-      --amber-dim: rgba(217, 119, 6, 0.12);
-      --red: var(--status-alarm);
-      --red-dim: rgba(220, 38, 38, 0.12);
-      --cyan: var(--accent-primary);
-      --cyan-dim: rgba(2, 132, 199, 0.12);
-
-      --cold-water: var(--accent-loop1-cold);
-      --blue-cherenkov: var(--accent-primary);
-      --hot-coolant: var(--accent-loop1);
-      --hot-dim: rgba(220, 38, 38, 0.12);
-
-      --steam-silver: var(--accent-steam);
-      --steam-dim: rgba(217, 119, 6, 0.12);
-      --purple: #7C3AED;
-
-      --font-ui: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-      --font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      box-shadow: none !important;
-      text-shadow: none !important;
-    }
-
-    html,
-    body {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background-color: var(--bg-main, #F1F5F9);
-      color: var(--text-main, #0F172A);
-      font-family: var(--font-ui);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    /* ГЛАВНЫЙ КАРКАС ТРЕНАЖЕРА МАГАТЭ (ЕДИНАЯ КОМПАКТНАЯ ШАПКА РОВНО 44px + ПОЛНОЭКРАННАЯ РАБОЧАЯ ОБЛАСТЬ) */
-    .iaea-shell {
-      display: grid;
-      grid-template-rows: 44px calc(100vh - 44px);
-      width: 100vw;
-      height: 100vh;
-      background-color: var(--bg-main);
-    }
-
-    /* ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (РОВНО 44px) */
-    .topbar {
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 10px;
-      height: 44px;
-      max-height: 44px;
-      gap: 8px;
-      z-index: 30;
-    }
-
-    .brand-block {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      flex-shrink: 0;
-    }
-
-    .atom-logo {
-      width: 28px;
-      height: 28px;
-      border-radius: 4px;
-      background: var(--bg-main);
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .brand-title {
-      font-weight: 800;
-      font-size: 11.5px;
-      letter-spacing: 0.4px;
-      color: var(--text-main);
-      font-family: var(--font-mono);
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    .brand-sub {
-      font-size: 9px;
-      color: var(--text-muted);
-      letter-spacing: 0.2px;
-      line-height: 1.1;
-      white-space: nowrap;
-    }
-
-    /* ГЛАВНЫЕ ВКЛАДКИ РЕЖИМОВ В ШАПКЕ (IAEA SIMULATOR TABS) */
-    .mode-tabs {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      background: var(--bg-main);
-      padding: 3px;
-      border-radius: 3px;
-      border: 1px solid var(--border-subtle);
-      flex-shrink: 0;
-    }
-
-    .view-tab {
-      background: var(--bg-panel);
-      color: var(--text-muted);
-      border: 1px solid var(--border-subtle);
-      border-radius: 2px;
-      padding: 4px 10px;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      white-space: nowrap;
-    }
-
-    .view-tab .tab-code {
-      color: var(--text-muted);
-      font-weight: 800;
-    }
-
-    .view-tab:hover {
-      background: var(--bg-main);
-      color: var(--text-main);
-      border-color: var(--accent-primary);
-    }
-
-    .view-tab.active {
-      background: var(--cyan-dim) !important;
-      color: var(--accent-primary) !important;
-      border: 1px solid var(--accent-primary) !important;
-      font-weight: 800;
-    }
-
-    .view-tab.active .tab-code {
-      color: var(--accent-primary) !important;
-    }
-
-    /* ПРАВЫЙ БЛОК ШАПКИ (СЦЕНАРИИ, ВРЕМЯ, ЗВУК, ИКОНКА БАЗИСА) */
-    .top-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-
-    .scenario-select {
-      background: var(--bg-main);
-      color: var(--text-main);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      padding: 4px 6px;
-      font-size: 10.5px;
-      font-family: var(--font-ui);
-      cursor: pointer;
-      outline: none;
-      max-width: 145px;
-      transition: border-color 0.15s;
-    }
-
-    .scenario-select:hover {
-      border-color: var(--border-bright);
-    }
-
-    .btn-group {
-      display: flex;
-      background: var(--bg-main);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .btn-mini {
-      background: transparent;
-      color: var(--text-muted);
-      border: none;
-      border-right: 1px solid var(--border-subtle);
-      padding: 4px 7px;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
-
-    .btn-mini:last-child {
-      border-right: none;
-    }
-
-    .btn-mini:hover {
-      color: var(--text-main);
-      background: var(--bg-card-hover);
-    }
-
-    .btn-mini.active {
-      background: var(--cyan-dim);
-      color: var(--cyan);
-    }
-
-    /* ВСТРОЕННАЯ СТРОКА ТЕЛЕМЕТРИИ ВНУТРИ ЕДИНОЙ ШАПКИ */
-    .telemetry-bar {
-      background: transparent;
-      border: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      gap: 6px;
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-    }
-
-    .mode-badge {
-      padding: 3px 7px;
-      border-radius: 3px;
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 9.5px;
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-      border: 1px solid var(--green);
-      background: var(--green-dim);
-      color: var(--green);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .mode-badge.warn {
-      border-color: var(--amber);
-      background: var(--amber-dim);
-      color: var(--amber);
-    }
-
-    .mode-badge.danger {
-      border-color: var(--red);
-      background: var(--red-dim);
-      color: var(--red);
-      animation: pulse-danger 0.9s infinite alternate;
-    }
-
-    @keyframes pulse-danger {
-      from {
-        opacity: 1;
-      }
-
-      to {
-        opacity: 0.65;
-      }
-    }
-
-    .kpi-strip {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      min-width: 0;
-      overflow: hidden;
-    }
-
-    .kpi-box {
-      background: var(--bg-main);
-      border: 1px solid var(--border-subtle);
-      border-radius: 3px;
-      padding: 2px 6px;
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-      white-space: nowrap;
-    }
-
-    .kpi-label {
-      font-size: 9px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-
-    .kpi-val {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .kpi-secondary {
-      font-family: var(--font-mono);
-      font-size: 9.5px;
-      color: var(--text-muted);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    @media (max-width: 1480px) {
-      .kpi-secondary {
-        display: none;
-      }
-    }
-
-    /* ПОЛНОЭКРАННАЯ РАБОЧАЯ ОБЛАСТЬ (ПЕРЕКЛЮЧЕНИЕ МЕЖДУ CANVAS И ПУЛЬТОМ CONTROLS) */
-    .workspace-stage {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: var(--bg-deep);
-    }
-
-    /* СЦЕНА ХОЛСТА (ДЛЯ ВКЛАДОК [SYSTEMS], [CORE], [3D TWIN]) */
-    .viewport-screen {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-    }
-
-    .canvas-container,
-    .core-container {
-      flex: 1;
-      position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      cursor: grab;
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-    }
-
-    .canvas-container:active {
-      cursor: grabbing;
-    }
-
-    #simCanvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* ВЕРХНЯЯ ПАНЕЛЬ ИНСТРУМЕНТОВ НА ХОЛСТЕ (ПОДРЕЖИМЫ И МАСШТАБ) */
-    .canvas-overlay-top {
-      position: absolute;
-      top: 6px;
-      left: 8px;
-      right: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      pointer-events: none;
-      z-index: 20;
-    }
-
-    .overlay-group {
-      pointer-events: auto;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      background: rgba(255, 255, 255, 0.94);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      padding: 2px 5px;
-      backdrop-filter: blur(6px);
-    }
-
-    .sub-view-btn {
-      background: var(--bg-panel);
-      color: var(--text-muted);
-      border: 1px solid var(--border-subtle);
-      border-radius: 3px;
-      padding: 3px 8px;
-      font-size: 10.5px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .sub-view-btn:hover {
-      color: var(--text-main);
-      background: var(--bg-main);
-      border-color: var(--border-bright);
-    }
-
-    .sub-view-btn.active {
-      background: var(--cyan-dim);
-      color: var(--accent-primary);
-      border-color: var(--accent-primary);
-    }
-
-    /* ВЕРХНЯЯ ЛЕНТА ТЕХНОЛОГИЧЕСКИХ ЭТАПОВ [01]–[06] (СКРЫТА В РЕЖИМЕ ВЕКТОРНОГО P&ID) */
-    .stages-ribbon {
-      display: none !important;
-    }
-
-    .stage-card {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 6px;
-      padding: 4px 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-      overflow: hidden;
-      pointer-events: auto;
-      transition: background 0.15s, border-color 0.15s;
-    }
-
-    .stage-card:hover {
-      border-color: #0284C7;
-      background: #F8FAFC;
-    }
-
-    .stage-code {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: clamp(9px, 0.75vw, 11px);
-      flex-shrink: 0;
-      color: var(--cyan);
-    }
-
-    .stage-name {
-      font-family: var(--font-ui);
-      font-weight: 600;
-      font-size: clamp(9px, 0.75vw, 11px);
-      color: #0F172A;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* КОНТЕЙНЕР THREE.JS 3D TWIN */
-    .three-container {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      z-index: 10;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 6px;
-    }
-
-    .three-toolbar {
-      position: absolute;
-      top: 10px;
-      left: 12px;
-      z-index: 25;
-      display: none;
-      flex-wrap: wrap;
-      gap: 5px;
-      background: rgba(248, 250, 252, 0.96);
-      border: 1px solid #E2E8F0;
-      border-radius: 6px;
-      padding: 4px 6px;
-    }
-
-    .three-cam-btn {
-      background: #FFFFFF;
-      color: #0F172A;
-      border: 1px solid #CBD5E1;
-      border-radius: 4px;
-      padding: 4px 9px;
-      font-size: 10.5px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .three-cam-btn:hover {
-      color: var(--text-main);
-      border-color: var(--border-bright);
-      background: var(--bg-card-hover);
-    }
-
-    .three-cam-btn.active {
-      background: var(--cyan-dim);
-      color: var(--cyan);
-      border-color: var(--cyan);
-    }
-
-    .three-help-badge {
-      position: absolute;
-      top: 52px;
-      left: 12px;
-      z-index: 25;
-      display: none;
-      background: rgba(248, 250, 252, 0.96);
-      border: 1px solid #E2E8F0;
-      border-radius: 6px;
-      padding: 4px 9px;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-muted);
-      pointer-events: none;
-    }
-
-    .webgl-error-banner {
-      position: absolute;
-      inset: 20px;
-      z-index: 35;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-panel);
-      border: 1px solid var(--red);
-      border-radius: 6px;
-      padding: 20px;
-      text-align: center;
-      color: var(--text-main);
-    }
-
-    /* ВСПЛЫВАЮЩАЯ ИНЖЕНЕРНАЯ ПОДСКАЗКА (SLATE LIGHT SCADA) */
-    .canvas-tooltip {
-      position: absolute;
-      pointer-events: none;
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-left: 3px solid #0284C7;
-      border-radius: 8px;
-      padding: 10px 12px;
-      max-width: 350px;
-      z-index: 50;
-      display: none;
-    }
-
-    .tt-title {
-      font-weight: 700;
-      font-size: 12px;
-      color: #0F172A;
-      margin-bottom: 2px;
-    }
-
-    .tt-sub {
-      font-size: 10px;
-      color: #0284C7;
-      font-family: var(--font-mono);
-      margin-bottom: 5px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #E2E8F0;
-    }
-
-    .tt-desc {
-      font-size: 11px;
-      color: #64748B;
-      margin-bottom: 6px;
-      line-height: 1.35;
-    }
-
-    .tt-simple {
-      font-size: 11px;
-      color: #0F172A;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 6px;
-      padding: 5px 7px;
-      margin-bottom: 6px;
-      line-height: 1.35;
-    }
-
-    .tt-simple b {
-      color: #0284C7;
-    }
-
-    .tt-telemetry {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: #0F172A;
-      font-weight: 700;
-      background: #F8FAFC;
-      padding: 4px 6px;
-      border-radius: 6px;
-      border: 1px solid #E2E8F0;
-    }
-
-    /* БОКОВАЯ ПАНЕЛЬ ПАРАМЕТРОВ КАССЕТЫ (#coreInfoPanel) И ЛЕГЕНДА АКТИВНОЙ ЗОНЫ */
-    #coreInfoPanel,
-    .core-info-panel {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
-      padding: 12px 14px;
-      color: #0F172A;
-      font-family: var(--font-ui);
-    }
-
-    #coreInfoPanel .cip-title,
-    .core-info-panel .cip-title {
-      font-family: var(--font-ui);
-      font-weight: 700;
-      font-size: 14px;
-      color: #0F172A;
-      margin-bottom: 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #E2E8F0;
-    }
-
-    #coreInfoPanel .cip-row,
-    .core-info-panel .cip-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-      padding: 4px 0;
-      border-bottom: 1px solid #F1F5F9;
-      font-size: 11px;
-    }
-
-    #coreInfoPanel .cip-row span,
-    .core-info-panel .cip-row span {
-      color: #64748B;
-      font-weight: 500;
-    }
-
-    #coreInfoPanel .cip-row b,
-    .core-info-panel .cip-row b {
-      color: #0F172A;
-      font-family: var(--font-mono);
-      font-weight: 700;
-    }
-
-    .core-legend-bar {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 8px;
-      padding: 6px 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .bank-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px 7px;
-      border-radius: 4px;
-      border: 1px solid #CBD5E1;
-      font-family: var(--font-mono);
-      font-size: 9.5px;
-      font-weight: 700;
-      color: #0F172A;
-      background: #F1F5F9;
-    }
-
-    /* НИЖНИЙ HUD БАЛАНСА РЕАКТИВНОСТИ НА ХОЛСТЕ (СВЕТЛЫЙ ФОН #F8FAFC С БОРДЕРОМ #E2E8F0) */
-    .canvas-hud-bottom {
-      position: absolute;
-      bottom: 4px;
-      left: 8px;
-      right: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      pointer-events: none;
-      gap: 6px;
-      z-index: 20;
-    }
-
-    .hud-pill {
-      pointer-events: auto;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      color: #0F172A;
-      border-radius: 6px;
-      padding: 3px 10px;
-      font-family: var(--font-mono);
-      font-size: 9.5px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-    }
-
-    .hud-pill span.lbl {
-      color: #64748B;
-    }
-
-    /* ==========================================================================
-       ЭКРАН 2: [CONTROLS] — КАРКАС БЩУ (3 ЧИСТЫХ ГРИД-СЕКЦИИ)
-       ========================================================================== */
-    .controls-screen {
-      position: absolute;
-      inset: 0;
-      display: none;
-      width: 100%;
-      height: 100%;
-      padding: 8px;
-      background: var(--bg-main);
-      overflow: hidden;
-      z-index: 15;
-    }
-
-    .controls-screen.active {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .controls-grid,
-    #tabControls {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-    }
-
-    .bshu-panel {
-      background: var(--bg-panel);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-height: 0;
-    }
-
-    .bshu-panel-header {
-      height: 34px;
-      background: var(--bg-main);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 10px;
-      flex-shrink: 0;
-    }
-
-    .bshu-panel-title {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-main);
-      letter-spacing: 0.5px;
-    }
-
-    .bshu-panel-badge {
-      font-family: var(--font-mono);
-      font-size: 9.5px;
-      font-weight: 600;
-      color: var(--accent-primary);
-      background: var(--cyan-dim);
-      padding: 2px 6px;
-      border-radius: 2px;
-      border: 1px solid rgba(2, 132, 199, 0.25);
-    }
-
-    .bshu-panel-content {
-      flex: 1;
-      padding: 8px;
-      overflow-y: auto;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Оперативный журнал БЩУ */
-    .event-log {
-      flex: 1;
-      background: var(--bg-main);
-      border: 1px solid var(--border-subtle);
-      border-radius: 3px;
-      padding: 6px 8px;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      min-height: 0;
-    }
-
-    .log-entry {
-      padding: 3px 6px;
-      border-left: 2px solid var(--border-subtle);
-      background: var(--bg-panel);
-      line-height: 1.35;
-      color: var(--text-main);
-      border-radius: 0 2px 2px 0;
-    }
-
-    .log-entry.warn {
-      border-left-color: var(--accent-steam);
-      color: var(--accent-steam);
-      background: var(--amber-dim);
-    }
-
-    .log-entry.danger {
-      border-left-color: var(--status-alarm);
-      color: var(--status-alarm);
-      background: var(--red-dim);
-      font-weight: 600;
-    }
-
-    .log-entry.ok {
-      border-left-color: var(--status-ok);
-      color: var(--status-ok);
-      background: var(--green-dim);
-    }
-
-    .log-time {
-      color: var(--text-muted);
-      margin-right: 6px;
-      font-weight: 500;
-    }
-
-    @media (max-width: 1180px) {
-      .controls-grid,
-      #tabControls {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* ==========================================================================
-       ReactorLab: ПОЛНОЭКРАННОЕ МОДАЛЬНОЕ ОКНО [ИНЖЕНЕРНЫЙ БАЗИС] (#theory)
-       ========================================================================== */
-    .theory-icon-btn {
-      background: var(--bg-card);
-      color: #1d4ed8;
-      border: 1px solid #94a3b8;
-      border-radius: 4px;
-      width: 30px;
-      height: 28px;
-      padding: 0;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s ease;
-      flex-shrink: 0;
-    }
-
-    .theory-icon-btn:hover {
-      background: rgba(29, 78, 216, 0.12);
-      border-color: #1d4ed8;
-      color: #1e40af;
-    }
-
-    /* Полупрозрачная подложка модального оверлея */
-    .theory-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(3px);
-      -webkit-backdrop-filter: blur(3px);
-      z-index: 119;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-    }
-
-    .theory-backdrop.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* Полноэкранный модальный оверлей (#theoryDrawer) */
-    .theory-drawer {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      max-width: 100vw;
-      height: 100vh;
-      background: #f8fafc;
-      z-index: 120;
-      display: flex;
-      flex-direction: column;
-      opacity: 0;
-      pointer-events: none;
-      transform: scale(0.985);
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      color: #0f172a;
-      font-family: var(--font-ui);
-    }
-
-    .theory-drawer.open {
-      opacity: 1;
-      pointer-events: auto;
-      transform: scale(1);
-    }
-
-    .theory-drawer-header {
-      padding: 12px 24px;
-      background: #e2e8f0;
-      border-bottom: 1px solid #94a3b8;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-shrink: 0;
-    }
-
-    .theory-drawer-title-group {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .theory-badge {
-      font-size: 10px;
-      font-family: var(--font-mono);
-      font-weight: 700;
-      color: #1d4ed8;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-    }
-
-    .theory-drawer-title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.2px;
-    }
-
-    .theory-drawer-subtitle {
-      font-size: 11.5px;
-      color: #475569;
-    }
-
-    .theory-close-btn {
-      background: #ffffff;
-      border: 1px solid #475569;
-      border-radius: 4px;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      cursor: pointer;
-      color: #0f172a;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: all 0.15s ease;
-      flex-shrink: 0;
-    }
-
-    .theory-close-btn:hover {
-      background: #fee2e2;
-      border-color: #dc2626;
-      color: #b91c1c;
-    }
-
-    /* Переключатель вкладок 5 разделов физики и первоисточников */
-    .theory-tabs {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 220px));
-      justify-content: center;
-      background: #cbd5e1;
-      border-bottom: 1px solid #94a3b8;
-      padding: 6px 24px 0 24px;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-
-    .theory-tab {
-      background: #e2e8f0;
-      border: 1px solid #94a3b8;
-      border-bottom: none;
-      border-radius: 4px 4px 0 0;
-      padding: 8px 10px;
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #475569;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.15s ease;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-family: var(--font-ui);
-    }
-
-    .theory-tab:hover {
-      background: #f1f5f9;
-      color: #0f172a;
-    }
-
-    .theory-tab.active {
-      background: #f8fafc;
-      color: #1d4ed8;
-      border-color: #94a3b8;
-      border-top: 2px solid #1d4ed8;
-      font-weight: 700;
-    }
-
-    /* Тело полноэкранного модального окна */
-    .theory-drawer-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 24px;
-      max-width: 1140px;
-      width: 100%;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: transparent;
-    }
-
-    .theory-section-lead {
-      font-size: 11.5px;
-      line-height: 1.45;
-      color: #334155;
-      background: #f8fafc;
-      border-left: 3px solid #1d4ed8;
-      border-top: 1px solid #cbd5e1;
-      border-right: 1px solid #cbd5e1;
-      border-bottom: 1px solid #cbd5e1;
-      padding: 9px 11px;
-      border-radius: 0 4px 4px 0;
-    }
-
-    /* Карточки формул */
-    .theory-card {
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-radius: 4px;
-      padding: 10px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .theory-card-header {
-      font-size: 11px;
-      font-weight: 700;
-      color: #0f172a;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .theory-card-header::before {
-      content: '';
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #1d4ed8;
-      flex-shrink: 0;
-    }
-
-    .theory-formula-box {
-      background: #ffffff;
-      border: 1px solid #94a3b8;
-      border-radius: 3px;
-      padding: 7px 9px;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #0f172a;
-      letter-spacing: 0.1px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      line-height: 1.35;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
-    }
-
-    .theory-explanation {
-      font-size: 10.5px;
-      line-height: 1.4;
-      color: #475569;
-    }
-
-    /* Таблица параметров */
-    .theory-params-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10.5px;
-      margin-top: 2px;
-    }
-
-    .theory-params-table th {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
-      padding: 5px 7px;
-      text-align: left;
-      font-weight: 600;
-      color: #334155;
-    }
-
-    .theory-params-table td {
-      border: 1px solid #e2e8f0;
-      padding: 5px 7px;
-      vertical-align: top;
-      color: #334155;
-      line-height: 1.35;
-    }
-
-    .theory-param-sym {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      color: #1d4ed8;
-      white-space: nowrap;
-    }
-
-    .theory-param-val {
-      font-family: var(--font-mono);
-      font-weight: 600;
-      color: #0f172a;
-      font-size: 10px;
-    }
-
-    /* Футер шторки с литературой */
-    .theory-drawer-footer {
-      border-top: 1px solid #cbd5e1;
-      background: #f1f5f9;
-      padding: 10px 16px;
-      max-height: 200px;
-      overflow-y: auto;
-      flex-shrink: 0;
-    }
-
-    .theory-sources-header {
-      font-size: 11px;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 7px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .theory-sources-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .theory-source-item {
-      font-size: 10px;
-      line-height: 1.35;
-      color: #334155;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 3px;
-      padding: 6px 8px;
-    }
-
-    .theory-source-title {
-      font-weight: 600;
-      color: #0f172a;
-    }
-
-    /* Плашка «ТЕКУЩИЕ ПАРАМЕТРЫ РЕАКТОРА (LIVE SCADA)» */
-    .theory-live-panel {
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-left: 3px solid #1d4ed8;
-      border-radius: 4px;
-      padding: 9px 11px;
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-    }
-
-    .theory-live-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #0f172a;
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-      font-family: var(--font-mono);
-    }
-
-    .theory-live-indicator {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #15803d;
-      box-shadow: 0 0 6px rgba(21, 128, 61, 0.7);
-      animation: livePulse 2s infinite ease-in-out;
-    }
-
-    @keyframes livePulse {
-
-      0%,
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-
-      50% {
-        opacity: 0.35;
-        transform: scale(0.85);
-      }
-    }
-
-    .theory-live-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 8px;
-    }
-
-    .theory-live-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 3px;
-      padding: 5px 7px;
-    }
-
-    .theory-live-item.full-width {
-      grid-column: span 2;
-    }
-
-    .theory-live-lbl {
-      font-size: 9px;
-      color: #64748b;
-      font-family: var(--font-ui);
-      font-weight: 500;
-    }
-
-    .theory-live-val {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 700;
-      color: #0f172a;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Компактная шапка: исключаем горизонтальное переполнение при появлении кнопки «Инженерный базис» */
-    .iaea-shell {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .topbar {
-      min-width: 0;
-      overflow: hidden;
-      gap: 8px;
-    }
-
-    .brand-block {
-      min-width: 0;
-      flex-shrink: 0;
-    }
-
-    .top-controls {
-      min-width: 0;
-      gap: 6px;
-    }
-
-    .scenario-select {
-      max-width: 128px;
-      min-width: 0;
-    }
-
-    .theory-btn {
-      padding: 5px 8px;
-    }
+  /* ЖЕСТКИЙ ДИЗАЙН-КОД: SLATE LIGHT (SINGLE SOURCE OF TRUTH) */
+  --bg-main: #F1F5F9;
+  --bg-panel: #FFFFFF;
+  --border-subtle: #E2E8F0;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --text-dim: #64748B;
+
+  /* Единственный акцент */
+  --accent-primary: #0284C7;
+  --accent-loop1: #DC2626;
+  --accent-loop1-alt: #DC2626;
+  --accent-loop1-cold: #0284C7;
+  --accent-loop2: #0284C7;
+  --accent-steam: #D97706;
+  --accent-feedwater: #0284C7;
+
+  /* Статусные цвета (ТОЛЬКО для индикаторов и аварий) */
+  --status-ok: #16A34A;
+  --status-warn: #D97706;
+  --status-alarm: #DC2626;
+  --status-off: #64748B;
+
+  /* Системные алиасы темы */
+  --bg-deep: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F1F5F9;
+
+  --border-dim: #E2E8F0;
+  --border-bright: #E2E8F0;
+
+  --green: #16A34A;
+  --green-dim: rgba(22, 163, 74, 0.10);
+  --amber: #D97706;
+  --amber-dim: rgba(217, 119, 6, 0.10);
+  --red: #DC2626;
+  --red-dim: rgba(220, 38, 38, 0.10);
+  --cyan: #0284C7;
+  --cyan-dim: rgba(2, 132, 199, 0.10);
+
+  --cold-water: #0284C7;
+  --blue-cherenkov: #0284C7;
+  --hot-coolant: #DC2626;
+  --hot-dim: rgba(220, 38, 38, 0.10);
+
+  --steam-silver: #D97706;
+  --steam-dim: rgba(217, 119, 6, 0.10);
+  --purple: #0284C7;
+
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Сохранение математических глифов KaTeX внутри формул */
+.katex,
+.katex * {
+  font-family: KaTeX_Main, 'Inter', serif !important;
+}
+.katex .mathnormal,
+.katex .mathit {
+  font-family: KaTeX_Math, 'Inter', serif !important;
+}
+.katex .op-symbol.large-op {
+  font-family: KaTeX_Size2, KaTeX_Size1, serif !important;
+}
+
+html,
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #F1F5F9;
+  color: #0F172A;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* Табличное моноширинное выравнивание для всех цифровых индикаторов, телеметрии, датчиков и кассет */
+.kpi-val,
+.kpi-secondary,
+.kpi-secondary b,
+.hud-pill,
+.hud-pill b,
+.tt-telemetry,
+#coreInfoPanel .cip-row b,
+.core-info-panel .cip-row b,
+.theory-param-val,
+.theory-param-sym,
+.btn-mini,
+.mode-badge,
+.stage-code,
+.log-time,
+.bank-badge {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ГЛАВНЫЙ КАРКАС ТРЕНАЖЕРА (ШАПКА 44px + РАБОЧАЯ ОБЛАСТЬ) */
+.iaea-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 44px calc(100vh - 44px);
+  width: 100vw;
+  height: 100vh;
+  background-color: #F1F5F9;
+}
+
+/* ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (44px) */
+.topbar {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  height: 44px;
+  max-height: 44px;
+  min-width: 0;
+  overflow: hidden;
+  gap: 8px;
+  z-index: 30;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.atom-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: -0.2px;
+  color: #0F172A;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.brand-sub {
+  font-size: 9.5px;
+  color: #64748B;
+  font-weight: 500;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* ГЛАВНЫЕ НАВИГАЦИОННЫЕ ВКЛАДКИ РЕЖИМОВ В ШАПКЕ */
+.mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F1F5F9;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+
+.view-tab {
+  background: transparent;
+  color: #64748B;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.view-tab .tab-code {
+  color: inherit;
+  font-weight: 600;
+}
+
+.view-tab:hover {
+  color: #0F172A;
+}
+
+.view-tab.active {
+  background: #FFFFFF !important;
+  color: #0284C7 !important;
+  border: 1px solid #E2E8F0 !important;
+  font-weight: 700;
+}
+
+.view-tab.active .tab-code {
+  color: #0284C7 !important;
+  font-weight: 700;
+}
+
+/* ПРАВЫЙ БЛОК ШАПКИ (СЦЕНАРИИ, ВРЕМЯ, ЗВУК, ИКОНКА БАЗИСА) */
+.top-controls {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.scenario-select {
+  background: #F1F5F9;
+  color: #0F172A;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  max-width: 128px;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+.scenario-select:hover {
+  border-color: #0284C7;
+}
+
+.btn-group {
+  display: flex;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.btn-mini {
+  background: transparent;
+  color: #64748B;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-mini:hover {
+  color: #0F172A;
+}
+
+.btn-mini.active {
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #E2E8F0;
+}
+
+/* ВСТРОЕННАЯ СТРОКА ТЕЛЕМЕТРИИ ВНУТРИ ЕДИНОЙ ШАПКИ */
+.telemetry-bar {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mode-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #16A34A;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mode-badge.warn {
+  border-color: #E2E8F0;
+  background: #FFFFFF;
+  color: #D97706;
+}
+
+.mode-badge.danger {
+  border-color: #DC2626;
+  background: #FFFFFF;
+  color: #DC2626;
+  animation: pulse-danger 0.9s infinite alternate;
+}
+
+@keyframes pulse-danger {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.65;
+  }
+}
+
+.kpi-strip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.kpi-box {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 3px 7px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.kpi-label {
+  font-size: 9.5px;
+  color: #64748B;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.kpi-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.kpi-secondary {
+  font-size: 10px;
+  color: #64748B;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kpi-secondary b {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+@media (max-width: 1480px) {
+  .kpi-secondary {
+    display: none;
+  }
+}
+
+/* ПОЛНОЭКРАННАЯ РАБОЧАЯ ОБЛАСТЬ */
+.workspace-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #F1F5F9;
+}
+
+.viewport-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-container,
+.core-container {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+}
+
+.canvas-container:active {
+  cursor: grabbing;
+}
+
+#simCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ВЕРХНЯЯ ПАНЕЛЬ ИНСТРУМЕНТОВ НА ХОЛСТЕ */
+.canvas-overlay-top {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.overlay-group {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.sub-view-btn {
+  background: transparent;
+  color: #64748B;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.sub-view-btn:hover {
+  color: #0F172A;
+}
+
+.sub-view-btn.active {
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #E2E8F0;
+  font-weight: 700;
+}
+
+/* ВЕРХНЯЯ ЛЕНТА ТЕХНОЛОГИЧЕСКИХ ЭТАПОВ [01]–[06] */
+.stages-ribbon {
+  display: none !important;
+}
+
+.stage-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.stage-code {
+  font-weight: 700;
+  font-size: 10.5px;
+  flex-shrink: 0;
+  color: #0284C7;
+}
+
+.stage-name {
+  font-weight: 600;
+  font-size: 10.5px;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* КОНТЕЙНЕР THREE.JS 3D TWIN */
+.three-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  z-index: 10;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+}
+
+.three-toolbar {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 25;
+  display: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.three-cam-btn {
+  background: transparent;
+  color: #64748B;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.three-cam-btn:hover {
+  color: #0F172A;
+}
+
+.three-cam-btn.active {
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #E2E8F0;
+  font-weight: 700;
+}
+
+.three-help-badge {
+  position: absolute;
+  top: 52px;
+  left: 12px;
+  z-index: 25;
+  display: none;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  color: #64748B;
+  pointer-events: none;
+}
+
+.webgl-error-banner {
+  position: absolute;
+  inset: 20px;
+  z-index: 35;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  color: #0F172A;
+}
+
+/* ВСПЛЫВАЮЩАЯ ИНЖЕНЕРНАЯ ПОДСКАЗКА */
+.canvas-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 10px 12px;
+  max-width: 350px;
+  z-index: 50;
+  display: none;
+}
+
+.tt-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: #0F172A;
+  margin-bottom: 2px;
+}
+
+.tt-sub {
+  font-size: 10px;
+  color: #0284C7;
+  font-weight: 600;
+  margin-bottom: 5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.tt-desc {
+  font-size: 11px;
+  color: #64748B;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.tt-simple {
+  font-size: 11px;
+  color: #0F172A;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 5px 7px;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.tt-simple b {
+  color: #0284C7;
+}
+
+.tt-telemetry {
+  font-size: 10.5px;
+  color: #0F172A;
+  font-weight: 700;
+  background: #F1F5F9;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+}
+
+/* БОКОВАЯ ПАНЕЛЬ ПАРАМЕТРОВ КАССЕТЫ (#coreInfoPanel) И ЛЕГЕНДА АКТИВНОЙ ЗОНЫ */
+#coreInfoPanel,
+.core-info-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: #0F172A;
+}
+
+#coreInfoPanel .cip-title,
+.core-info-panel .cip-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #0F172A;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+#coreInfoPanel .cip-row,
+.core-info-panel .cip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 11px;
+}
+
+#coreInfoPanel .cip-row span,
+.core-info-panel .cip-row span {
+  color: #64748B;
+  font-weight: 500;
+}
+
+#coreInfoPanel .cip-row b,
+.core-info-panel .cip-row b {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.core-legend-bar {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #0F172A;
+  background: #F1F5F9;
+}
+
+/* НИЖНИЙ HUD БАЛАНСА РЕАКТИВНОСТИ НА ХОЛСТЕ */
+.canvas-hud-bottom {
+  position: absolute;
+  bottom: 4px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  gap: 6px;
+  z-index: 20;
+}
+
+.hud-pill {
+  pointer-events: auto;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.hud-pill span {
+  color: #64748B;
+}
+
+.hud-pill span.lbl {
+  color: #64748B;
+  font-weight: 500;
+}
+
+.hud-pill b {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   ЭКРАН 2: [CONTROLS] — КАРКАС БЩУ (3 ЧИСТЫХ ГРИД-СЕКЦИИ)
+   ========================================================================== */
+.controls-screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  background: #F1F5F9;
+  overflow: hidden;
+  z-index: 15;
+}
+
+.controls-screen.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.controls-grid,
+#tabControls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.bshu-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.bshu-panel-header {
+  height: 36px;
+  background: #F1F5F9;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.bshu-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.bshu-panel-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0284C7;
+  background: #FFFFFF;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+}
+
+.bshu-panel-content {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Оперативный журнал БЩУ */
+.event-log {
+  flex: 1;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+.log-entry {
+  padding: 4px 8px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  line-height: 1.35;
+  color: #0F172A;
+  border-radius: 6px;
+}
+
+.log-entry.warn {
+  color: #D97706;
+}
+
+.log-entry.danger {
+  color: #DC2626;
+  font-weight: 600;
+}
+
+.log-entry.ok {
+  color: #16A34A;
+}
+
+.log-time {
+  color: #64748B;
+  margin-right: 6px;
+  font-weight: 500;
+}
+
+@media (max-width: 1180px) {
+  .controls-grid,
+  #tabControls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   ReactorLab: ПОЛНОЭКРАННОЕ МОДАЛЬНОЕ ОКНО [ИНЖЕНЕРНЫЙ БАЗИС] (#theory)
+   ========================================================================== */
+.theory-icon-btn {
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.theory-icon-btn:hover {
+  background: #F1F5F9;
+  color: #0284C7;
+}
+
+.theory-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 119;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.theory-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#modalTheory,
+#theoryDrawer,
+.theory-drawer,
+.modal-theory {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100vh;
+  background: #F1F5F9;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.985);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  color: #0F172A;
+}
+
+#modalTheory.open,
+#theoryDrawer.open,
+.theory-drawer.open,
+.modal-theory.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+/* Верхняя навигационная панель (шапка + вкладки) */
+.theory-nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #F1F5F9;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+
+.theory-drawer-header {
+  padding: 12px 24px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.theory-drawer-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theory-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0284C7;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.theory-drawer-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.2px;
+}
+
+.theory-drawer-subtitle {
+  font-size: 11.5px;
+  color: #64748B;
+}
+
+.theory-close-btn {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #0F172A;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.theory-close-btn:hover {
+  background: #F1F5F9;
+  color: #0284C7;
+}
+
+/* Переключатель вкладок по 4 разделам физики + первоисточники */
+.theory-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 220px));
+  justify-content: center;
+  background: #F1F5F9;
+  padding: 6px 24px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.theory-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theory-tab:hover {
+  color: #0F172A;
+}
+
+.theory-tab.active {
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #E2E8F0;
+  font-weight: 700;
+}
+
+/* Центральный контентный блок окна теории */
+.theory-drawer-body {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 28px 60px 28px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: transparent;
+  overflow: visible;
+}
+
+.theory-section-lead {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  padding: 14px 18px;
+  border-radius: 6px;
+}
+
+/* Карточки контента и формул */
+.theory-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #0F172A;
+}
+
+.theory-card-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theory-card-header::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0284C7;
+  flex-shrink: 0;
+}
+
+/* Блок отображения формулы */
+.theory-formula-box {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 16px 20px;
+  font-size: 16px;
+  color: #0F172A;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow-x: auto;
+  min-height: 54px;
+  line-height: 1.5;
+}
+
+.theory-formula-box .katex-display {
+  margin: 0;
+  text-align: center;
+  width: 100%;
+}
+
+.theory-formula-box .katex {
+  font-size: 1.15em;
+  color: #0F172A;
+}
+
+.theory-explanation {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #64748B;
+}
+
+/* Контейнер векторных SVG-графиков и схем */
+.theory-svg-wrap {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.theory-svg-wrap svg {
+  width: 100%;
+  max-width: 960px;
+  height: auto;
+  display: block;
+}
+
+/* Двухколоночная сетка карточек академической литературы */
+.theory-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 820px) {
+  .theory-sources-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.theory-org-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748B;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+.theory-ext-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F1F5F9;
+  color: #0284C7;
+  border: 1px solid #E2E8F0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.theory-ext-link:hover {
+  background: #0284C7;
+  color: #FFFFFF;
+  border-color: #0284C7;
+}
+
+/* Обертка карточки таблицы констант */
+.theory-table-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+/* Таблица физических констант */
+.theory-params-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  background: #FFFFFF;
+}
+
+.theory-params-table thead th {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  border-bottom: 2px solid #E2E8F0;
+  text-align: left;
+}
+
+.theory-params-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.theory-params-table tbody tr:nth-child(odd) {
+  background-color: #FFFFFF;
+}
+
+.theory-params-table tbody tr:nth-child(even) {
+  background-color: #F8FAFC;
+}
+
+.theory-params-table tbody tr:hover {
+  background-color: #F1F5F9;
+}
+
+.theory-params-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #E2E8F0;
+  font-size: 13px;
+  vertical-align: middle;
+  line-height: 1.45;
+}
+
+.theory-params-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.theory-param-sym {
+  font-size: 13px;
+  color: #0F172A !important;
+  white-space: nowrap;
+}
+
+.theory-param-sym .katex {
+  font-size: 1.08em;
+  color: #0F172A;
+}
+
+.theory-param-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0F172A !important;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.theory-param-desc {
+  color: #334155;
+  font-size: 13px;
+}
+
+.theory-btn {
+  padding: 5px 8px;
+}

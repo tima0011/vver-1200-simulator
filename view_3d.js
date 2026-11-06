@@ -272,7 +272,156 @@ const VVER_SPECS = {
     labelPos: [0, 11.5, 1.8],
     hot: true,
     showPin: false
+  },
+
+  // Режим «Оборудование РУ» (модель vver1200_primary_circuit.glb)
+  eq_overview: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Реакторная установка: 4 петли',
+    desc: 'Компоновка оборудования первого контура и систем безопасности. Нажмите на узел на схеме или в списке, чтобы открыть его отдельно.',
+    specs: [
+      ['Петли ГЦК', '4'],
+      ['Источник 3D-модели', 'АЭМ-технологии, aemtech.ru']
+    ],
+    nodes: ['eq_reactor', 'eq_sg', 'eq_rcp', 'eq_pressurizer', 'eq_bubbler', 'eq_saoz', 'eq_passive', 'eq_catcher', 'eq_loop', 'eq_pipes'],
+    showPin: false
+  },
+  eq_reactor: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Реактор В-491',
+    desc: 'Центральный элемент установки. Подробная модель корпуса и внутрикорпусных устройств доступна в основном режиме 3D-сцены.',
+    specs: [
+      ['Высота с верхним блоком', '16,72 м'],
+      ['Давление', '16,2 МПа']
+    ],
+    showPin: false
+  },
+  eq_sg: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Парогенератор ПГВ-1000МКП',
+    desc: 'Горизонтальный теплообменник. Теплоноситель первого контура нагревает и испаряет воду второго контура, не смешиваясь с ней.',
+    specs: [
+      ['Количество', '4 шт.'],
+      ['Контур', 'Первый / второй']
+    ],
+    showPin: false
+  },
+  eq_rcp: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Главный циркуляционный насос ГЦНА-1391',
+    desc: 'Вертикальный насос, прокачивающий теплоноситель через реактор и парогенератор своей петли.',
+    specs: [
+      ['Количество', '4 шт.'],
+      ['Контур', 'Первый']
+    ],
+    showPin: false
+  },
+  eq_pressurizer: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Компенсатор давления',
+    desc: 'Вертикальный сосуд с паровой подушкой, поддерживающий давление первого контура и сглаживающий его колебания.',
+    specs: [
+      ['Объём', '79 м³'],
+      ['Количество', '1 шт.']
+    ],
+    showPin: false
+  },
+  eq_bubbler: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Барботер',
+    desc: 'Горизонтальная ёмкость, принимающая и конденсирующая пар при срабатывании импульсных предохранительных устройств компенсатора давления.',
+    specs: [
+      ['Количество', '1 шт.'],
+      ['Связан с', 'Компенсатором давления']
+    ],
+    showPin: false
+  },
+  eq_saoz: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Гидроёмкости САОЗ',
+    desc: 'Ёмкости системы аварийного охлаждения зоны с раствором бора. При падении давления в первом контуре раствор поступает в реактор.',
+    specs: [
+      ['Количество', '4 шт.'],
+      ['Тип системы', 'Безопасность']
+    ],
+    showPin: false
+  },
+  eq_passive: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Гидроёмкости второй ступени',
+    desc: 'Группа из восьми ёмкостей на верхнем ярусе компоновки, относящаяся к пассивным системам аварийного охлаждения.',
+    specs: [
+      ['Количество', '8 шт.'],
+      ['Тип системы', 'Пассивная']
+    ],
+    showPin: false
+  },
+  eq_catcher: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Устройство локализации расплава',
+    desc: 'Конструкция под днищем реактора, рассчитанная на удержание и охлаждение расплава активной зоны при тяжёлой аварии.',
+    specs: [
+      ['Расположение', 'Под корпусом реактора'],
+      ['Тип системы', 'Безопасность']
+    ],
+    showPin: false
+  },
+  eq_loop: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Главный циркуляционный трубопровод',
+    desc: 'Трубопроводы Ду-850, соединяющие реактор, парогенератор и ГЦНА в одну из четырёх петель первого контура.',
+    specs: [
+      ['Условный проход', 'Ду-850'],
+      ['Количество петель', '4']
+    ],
+    showPin: false
+  },
+  eq_pipes: {
+    tag: 'ОБОРУДОВАНИЕ РУ',
+    title: 'Трубопроводы систем безопасности',
+    desc: 'Соединительные линии между гидроёмкостями и реактором.',
+    specs: [
+      ['Назначение', 'Подача раствора бора'],
+      ['Тип системы', 'Безопасность']
+    ],
+    showPin: false
   }
+};
+
+// Сопоставление узлов GLB (имена после санитизации GLTFLoader) с карточками VVER_SPECS.
+// Цвета — из THERMAL_COLOR_SCALE и палитры Slate (см. PROJECT_MAP.md, раздел 4.6).
+const EQUIPMENT_PARTS = [
+  { match: /^reactor/, id: 'eq_reactor', color: 0x64748b },
+  { match: /^D_02/, id: 'eq_sg', color: 0xcbd5e1 },
+  { match: /^D_03/, id: 'eq_rcp', color: 0x94a3b8 },
+  { match: /^D_04/, id: 'eq_pressurizer', color: 0xcbd5e1 },
+  { match: /^D_05/, id: 'eq_bubbler', color: 0x94a3b8 },
+  { match: /^D_07/, id: 'eq_passive', color: 0x94a3b8 },
+  { match: /^D_08/, id: 'eq_catcher', color: 0x64748b },
+  { match: /^Hydraulic_capacity_SAOZ/, id: 'eq_saoz', color: 0x0ea5e9 },
+  { match: /^Pipeline_0/, id: 'eq_loop', color: 0xef4444 },
+  { match: /^Pipeline/, id: 'eq_pipes', color: 0x06b6d4 }
+];
+
+const EQUIPMENT_NODE_LABELS = {
+  eq_reactor: 'Реактор',
+  eq_sg: 'Парогенератор',
+  eq_rcp: 'ГЦНА',
+  eq_pressurizer: 'Компенсатор давления',
+  eq_bubbler: 'Барботер',
+  eq_saoz: 'Гидроёмкости САОЗ',
+  eq_passive: 'Гидроёмкости 2-й ступени',
+  eq_catcher: 'УЛР',
+  eq_loop: 'ГЦТ',
+  eq_pipes: 'Трубопроводы безопасности'
+};
+
+const EQUIPMENT_SCALE = 4.19; // высота реактора 3.99 ед. в модели → 16.72 м в сцене
+const EQUIPMENT_VIEWS = {
+  iso: { pos: [44, 34, 53], look: [0, 15, 0] },
+  vessel: { pos: [18, 15, 20], look: [0, 8.36, 0] },
+  top: { pos: [0.01, 110, 0.01], look: [0, 15, 0] },
+  ulr: { pos: [18, -2, 20], look: [0, -2, 0] }
 };
 
 // ============================================================================
@@ -292,6 +441,11 @@ const threeCtrl = {
   // Модель и интерактивные коллекции
   rpvModel: null,
   vverModel: null,
+  envGroup: null,
+  equipmentModel: null,
+  equipmentMeshes: [],
+  equipmentMaterials: {},
+  detailMesh: null,
   interactableMeshes: [],
   interactiveMeshes: [],
   componentGroups: {},
@@ -329,7 +483,9 @@ const threeCtrl = {
     camTargetPos: null,
     camTargetLook: null,
     xray: false,
-    exploded: false
+    exploded: false,
+    equipmentMode: true,
+    detailId: null
   },
 
   // DOM оверлей
@@ -462,8 +618,9 @@ const threeCtrl = {
       // 7. Привязка интерактивных событий мыши/касания
       this.bindEvents();
 
-      this.selectComponent('rpv', false);
+      this.selectComponent('eq_overview', false);
       this.initialized = true;
+      this.startEquipmentOverview();
 
       if (typeof addLog === 'function') {
         addLog('3D Digital Twin ВВЭР-1200: PBR-сцена и GLB-модель реактора успешно инициализированы.', 'ok');
@@ -527,6 +684,8 @@ const threeCtrl = {
       .vver-card-desc { font-size: 11.5px; line-height: 1.45; color: #cad8ef; margin-bottom: 10px; }
       .vver-specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border-top: 1px solid rgba(148, 169, 201, 0.16); padding-top: 8px; }
       .vver-spec-item { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 5px 8px; }
+      .vver-node-btn { color: #FFFFFF; font-family: inherit; font-size: 11px; font-weight: 600; text-align: left; cursor: pointer; }
+      .vver-node-btn:hover { border-color: #0284C7; }
       .vver-spec-label { font-size: 9.5px; color: #94a9c9; text-transform: uppercase; letter-spacing: 0.03em; }
       .vver-spec-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #ffffff; margin-top: 2px; }
       #vver-hover-tooltip {
@@ -743,6 +902,184 @@ const threeCtrl = {
     envGroup.add(shadowMesh);
 
     this.scene.add(envGroup);
+    this.envGroup = envGroup;
+  },
+
+  // ==========================================================================
+  // РЕЖИМ «ОБОРУДОВАНИЕ РУ» (ОТДЕЛЬНАЯ МОДЕЛЬ, ЗАГРУЖАЕТСЯ ПО ЗАПРОСУ)
+  // ==========================================================================
+  loadEquipmentAsset() {
+    if (this.equipmentModel) return Promise.resolve(this.equipmentModel);
+    if (typeof THREE.GLTFLoader === 'undefined' || typeof THREE.DRACOLoader === 'undefined') {
+      return Promise.reject(new Error('GLTFLoader или DRACOLoader недоступны'));
+    }
+
+    const draco = new THREE.DRACOLoader();
+    draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/gltf/');
+    const loader = new THREE.GLTFLoader();
+    loader.setDRACOLoader(draco);
+
+    return new Promise((resolve, reject) => {
+      loader.load('./vver1200_primary_circuit.glb', (gltf) => {
+        const model = gltf.scene;
+        model.name = 'VVER1200_Primary_Circuit_GLB';
+        model.scale.setScalar(EQUIPMENT_SCALE);
+        model.position.y = 8.36; // центр реактора совпадает с центром корпуса основной сцены
+
+        model.traverse((child) => {
+          if (!child.isMesh) return;
+          const part = EQUIPMENT_PARTS.find((p) => p.match.test(child.name));
+          const id = part ? part.id : 'eq_pipes';
+          const color = part ? part.color : 0x94a3b8;
+
+          if (!this.equipmentMaterials[id]) {
+            this.equipmentMaterials[id] = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.42), roughness: 0.55, metalness: 0.2 });
+          }
+          child.material = this.equipmentMaterials[id];
+          child.userData.componentId = id;
+
+          const spec = VVER_SPECS[id];
+          child.userData.tooltipInfo = {
+            title: spec.title,
+            sub: spec.tag,
+            desc: spec.desc,
+            simple: spec.desc,
+            telemetry: () => `${spec.specs[0][0]}: ${spec.specs[0][1]} | ${spec.specs[1][0]}: ${spec.specs[1][1]}`
+          };
+          this.equipmentMeshes.push(child);
+        });
+
+        model.visible = false;
+        this.scene.add(model);
+        this.equipmentModel = model;
+        draco.dispose();
+        resolve(model);
+      }, undefined, (err) => {
+        draco.dispose();
+        reject(err);
+      });
+    });
+  },
+
+  async startEquipmentOverview() {
+    this.applyViewState();
+    try {
+      await this.loadEquipmentAsset();
+      this.showOverview();
+    } catch (err) {
+      // Без модели оборудования (например, file://) остаётся сцена корпуса реактора
+      console.warn('Не удалось загрузить модель оборудования РУ:', err);
+      if (typeof addLog === 'function') addLog('3D: не удалось загрузить модель оборудования РУ.', 'warn');
+      this.state.equipmentMode = false;
+      this.applyViewState();
+      this.selectComponent('rpv', false);
+    }
+  },
+
+  showOverview() {
+    if (!this.equipmentModel) return;
+    if (this.state.xray) this.setXRay(false);
+    if (this.explodedTarget > 0 || this.explodedProgress > 0) this.setExploded(0, true);
+
+    this.state.equipmentMode = true;
+    this.state.detailId = null;
+    this.equipmentMeshes.forEach((mesh) => { mesh.visible = true; });
+    this.applyViewState();
+    this.selectComponent('eq_overview', false);
+    this.setPreset('iso');
+  },
+
+  // Отдельный экран узла. Реактор открывает подробную сцену корпуса,
+  // остальные узлы показываются по одному экземпляру из группы.
+  showNode(componentId) {
+    if (!this.equipmentModel || !VVER_SPECS[componentId]) return;
+    this.state.detailId = componentId;
+
+    if (componentId === 'eq_reactor') {
+      this.state.equipmentMode = false;
+      this.applyViewState();
+      this.selectComponent('rpv', false);
+      this.setPreset('iso');
+    } else {
+      const node = this.equipmentMeshes.find((mesh) => mesh.userData.componentId === componentId);
+      if (!node) return;
+      this.state.equipmentMode = true;
+      this.detailMesh = node;
+      this.equipmentMeshes.forEach((mesh) => { mesh.visible = mesh === node; });
+      this.applyViewState();
+      this.selectComponent(componentId, false);
+      this.frameNode();
+    }
+    if (typeof sound !== 'undefined' && sound.click) sound.click(560);
+  },
+
+  frameNode() {
+    if (!this.detailMesh) return;
+    const box = new THREE.Box3().setFromObject(this.detailMesh);
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = box.getSize(new THREE.Vector3()).length() / 2;
+    const halfFovTan = Math.tan((this.camera.fov * Math.PI) / 360);
+    const distance = (radius / (halfFovTan * Math.min(1, this.camera.aspect))) * 1.15;
+
+    this.state.camTargetLook.copy(center);
+    this.state.camTargetPos.copy(center).add(new THREE.Vector3(0.6, 0.4, 0.7).normalize().multiplyScalar(distance));
+    this.state.camAnimating = true;
+    this.updateHudZoom();
+  },
+
+  applyViewState() {
+    const { equipmentMode, detailId } = this.state;
+    const isOverview = equipmentMode && !detailId;
+    const isReactor = !equipmentMode;
+
+    if (this.equipmentModel) this.equipmentModel.visible = equipmentMode;
+    if (this.rpvModel) this.rpvModel.visible = isReactor;
+    if (this.envGroup) this.envGroup.visible = isReactor;
+    if (this.scene) this.scene.fog = equipmentMode ? null : new THREE.FogExp2(0x070c14, 0.0085);
+    if (this.controls) this.controls.maxDistance = equipmentMode ? 130.0 : 85.0;
+
+    this.updateLabelsVisibility();
+    this.setEquipmentHighlight(null);
+    this.state.hoveredId = null;
+    if (this.canvas) this.canvas.style.cursor = 'grab';
+    if (this.hoverTooltip) this.hoverTooltip.classList.remove('visible');
+
+    const setShown = (el, shown) => { if (el) el.style.display = shown ? '' : 'none'; };
+    const camBtn = (cam) => document.querySelector('[data-cam="' + cam + '"]');
+    setShown(document.getElementById('btnThreeBack'), Boolean(detailId));
+    setShown(camBtn('iso'), isOverview || isReactor);
+    setShown(camBtn('top'), isOverview || isReactor);
+    setShown(camBtn('vessel'), isReactor);
+    setShown(camBtn('ulr'), isReactor);
+    setShown(document.getElementById('btnThreeXRay'), isReactor);
+    setShown(document.getElementById('btnThreeExploded'), isReactor);
+
+    const isoBtn = camBtn('iso');
+    if (isoBtn) isoBtn.textContent = detailId ? 'Корпус целиком' : 'Общий вид';
+    document.querySelectorAll('[data-cam]').forEach((b) => b.classList.toggle('active', b.dataset.cam === 'iso'));
+
+    const help = document.getElementById('threeHelpBadge');
+    if (help) {
+      help.textContent = 'ЛКМ: Вращение орбиты • ПКМ: Панорама • Колесо: Зум'
+        + (isOverview ? ' • Клик по узлу: отдельный экран' : isReactor ? ' • Наведение: Телеметрия и пояснение узла' : '');
+    }
+  },
+
+  setEquipmentHighlight(componentId) {
+    Object.entries(this.equipmentMaterials).forEach(([id, mat]) => {
+      mat.emissive.setHex(id === componentId ? 0x0284c7 : 0x000000);
+      mat.emissiveIntensity = id === componentId ? 0.45 : 0;
+    });
+  },
+
+  updateLabelsVisibility() {
+    if (!this.labelsLayer) return;
+    this.labelsLayer.classList.toggle('hidden', !this.state.labelsVisible || this.state.equipmentMode);
+  },
+
+  raycastMeshes() {
+    if (!this.state.equipmentMode) return this.interactableMeshes;
+    return this.state.detailId ? [] : this.equipmentMeshes;
   },
 
   loadReactorAsset() {
@@ -833,6 +1170,7 @@ const threeCtrl = {
         if (window.vverModel.bzt) this.componentGroups['bzt'] = [window.vverModel.bzt];
 
         this.rpvModel = model;
+        model.visible = !this.state.equipmentMode;
         this.scene.add(model);
 
         // Применение режимов X-Ray или взрыв-схемы, если запрошены до загрузки
@@ -1067,6 +1405,7 @@ const threeCtrl = {
     this.componentGroups['bzt'] = [bztGroup];
 
     this.rpvModel = model;
+    model.visible = !this.state.equipmentMode;
     this.scene.add(model);
 
     if (this.state.xray) {
@@ -1144,11 +1483,12 @@ const threeCtrl = {
       this.mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       this.raycaster.setFromCamera(this.mouseNDC, this.camera);
-      const hits = this.raycaster.intersectObjects(this.interactableMeshes, true);
+      const hits = this.raycaster.intersectObjects(this.raycastMeshes(), true);
 
       if (hits.length > 0) {
         const compId = hits[0].object.userData.componentId;
         if (compId && VVER_SPECS[compId]) {
+          if (this.state.equipmentMode && this.state.hoveredId !== compId) this.setEquipmentHighlight(compId);
           this.state.hoveredId = compId;
           this.canvas.style.cursor = 'pointer';
           if (this.hoverTooltip) {
@@ -1163,6 +1503,7 @@ const threeCtrl = {
 
       if (this.state.hoveredId !== null) {
         this.state.hoveredId = null;
+        if (this.state.equipmentMode) this.setEquipmentHighlight(null);
         this.canvas.style.cursor = 'grab';
         if (this.hoverTooltip) this.hoverTooltip.classList.remove('visible');
       }
@@ -1177,11 +1518,12 @@ const threeCtrl = {
       this.mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       this.raycaster.setFromCamera(this.mouseNDC, this.camera);
-      const hits = this.raycaster.intersectObjects(this.interactableMeshes, true);
+      const hits = this.raycaster.intersectObjects(this.raycastMeshes(), true);
       if (hits.length > 0) {
         const compId = hits[0].object.userData.componentId;
         if (compId) {
-          this.selectComponent(compId, true);
+          if (this.state.equipmentMode) this.showNode(compId);
+          else this.selectComponent(compId, true);
         }
       }
     };
@@ -1213,6 +1555,11 @@ const threeCtrl = {
     if (explBtn) {
       explBtn.addEventListener('click', () => this.toggleExploded());
     }
+
+    const backBtn = document.getElementById('btnThreeBack');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => this.showOverview());
+    }
   },
 
   updateInfoCard(componentId) {
@@ -1234,6 +1581,14 @@ const threeCtrl = {
           <div class="vver-spec-val">${val}</div>
         `;
         this.cardSpecsEl.appendChild(item);
+      });
+      (info.nodes || []).forEach((nodeId) => {
+        const nodeBtn = document.createElement('button');
+        nodeBtn.type = 'button';
+        nodeBtn.className = 'vver-spec-item vver-node-btn';
+        nodeBtn.textContent = EQUIPMENT_NODE_LABELS[nodeId];
+        nodeBtn.addEventListener('click', () => this.showNode(nodeId));
+        this.cardSpecsEl.appendChild(nodeBtn);
       });
     }
 
@@ -1270,7 +1625,7 @@ const threeCtrl = {
   toggleLabels(btn) {
     this.state.labelsVisible = !this.state.labelsVisible;
     if (btn) btn.classList.toggle('active', this.state.labelsVisible);
-    if (this.labelsLayer) this.labelsLayer.classList.toggle('hidden', !this.state.labelsVisible);
+    this.updateLabelsVisibility();
     if (typeof sound !== 'undefined' && sound.click) sound.click(520);
   },
 
@@ -1284,7 +1639,17 @@ const threeCtrl = {
 
   setPreset(preset) {
     if (!this.controls || !this.camera) return;
-    if (preset === 'iso' || preset === 'overview') {
+    if (this.state.equipmentMode && this.state.detailId) {
+      this.frameNode();
+      return;
+    }
+    const equipmentView = this.state.equipmentMode
+      ? EQUIPMENT_VIEWS[preset === 'overview' ? 'iso' : preset === 'bottom' ? 'ulr' : preset === 'core' ? 'vessel' : preset]
+      : null;
+    if (equipmentView) {
+      this.state.camTargetPos.set(...equipmentView.pos);
+      this.state.camTargetLook.set(...equipmentView.look);
+    } else if (preset === 'iso' || preset === 'overview') {
       this.state.camTargetPos.set(14.0, 16.0, 20.0);
       this.state.camTargetLook.set(0, 8.36, 0);
     } else if (preset === 'vessel' || preset === 'core') {
@@ -1473,6 +1838,8 @@ const threeCtrl = {
     if (this.state.camAnimating) {
       this.camera.position.lerp(this.state.camTargetPos, Math.min(1, dt * 5.2));
       this.controls.target.lerp(this.state.camTargetLook, Math.min(1, dt * 5.8));
+      // Иначе VVEROrbitControls.update() возвращает камеру на прежнюю орбиту
+      if (this.controls.syncFromCamera) this.controls.syncFromCamera();
       if (
         this.camera.position.distanceTo(this.state.camTargetPos) < 0.08 &&
         this.controls.target.distanceTo(this.state.camTargetLook) < 0.05
@@ -1483,7 +1850,7 @@ const threeCtrl = {
     }
 
     if (this.controls && this.controls.update) {
-      this.controls.update(isPaused ? 0.0 : dt);
+      this.controls.update(isPaused || this.state.camAnimating ? 0.0 : dt);
     }
 
     this.renderer.render(this.scene, this.camera);
@@ -1551,6 +1918,13 @@ const threeCtrl = {
     this.pinElements = [];
     window.vverModel = null;
     this.vverModel = null;
+    this.envGroup = null;
+    this.equipmentModel = null;
+    this.equipmentMeshes = [];
+    this.equipmentMaterials = {};
+    this.detailMesh = null;
+    this.state.equipmentMode = true;
+    this.state.detailId = null;
     this.explodedProgress = 0.0;
     this.explodedTarget = 0.0;
     this.initialized = false;
@@ -1560,7 +1934,7 @@ const threeCtrl = {
   checkRaycaster(mx, my, rect) {
     if (!this.raycaster || !this.camera) return;
     this.raycaster.setFromCamera(this.mouseNDC, this.camera);
-    const hits = this.raycaster.intersectObjects(this.interactiveMeshes, true);
+    const hits = this.raycaster.intersectObjects(this.state.equipmentMode ? this.raycastMeshes() : this.interactiveMeshes, true);
     if (hits.length > 0 && hits[0].object.userData.tooltipInfo) {
       const info = hits[0].object.userData.tooltipInfo;
       this.hoveredMesh = hits[0].object;

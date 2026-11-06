@@ -5,6 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReactorLab // Цифровой двойник ВВЭР-1200</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
   <script src="theory_data.js"></script>
   <script src="physics_engine.js"></script>
   <script src="view_3d.js"></script>
@@ -14,6 +20,7 @@
     onerror="window.__threeLoadError = true;"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"
     onerror="window.__threeLoadError = true;"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -25,12 +32,10 @@
       <div class="brand-block">
         <div class="atom-logo" title="ВВЭР-1200 // Цифровой двойник энергоблока Поколения III+">
           <svg width="22" height="22" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#38bdf8" stroke-width="1.5" opacity="0.9" />
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#38bdf8" stroke-width="1.5"
-              opacity="0.9" />
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(120 18 18)" stroke="#38bdf8"
-              stroke-width="1.5" opacity="0.9" />
-            <circle cx="18" cy="18" r="3.2" fill="#f97316" />
+            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#0284C7" stroke-width="1.5" />
+            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#0284C7" stroke-width="1.5" />
+            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(120 18 18)" stroke="#0284C7" stroke-width="1.5" />
+            <circle cx="18" cy="18" r="3.2" fill="#0F172A" />
           </svg>
         </div>
         <div>
@@ -62,11 +67,11 @@
         <div class="kpi-strip">
           <div class="kpi-box" title="Тепловая мощность активной зоны реактора (номинал 3200 МВт)">
             <span class="kpi-label">Nт</span>
-            <span class="kpi-val" id="kpiThermal" style="color:var(--hot-coolant);">3200.0 МВт (100.0%)</span>
+            <span class="kpi-val" id="kpiThermal">3200.0 МВт (100.0%)</span>
           </div>
           <div class="kpi-box" title="Электрическая мощность турбогенератора ТЗВ-1200-2 (номинал 1200 МВт)">
             <span class="kpi-label">Nэ</span>
-            <span class="kpi-val" id="kpiElec" style="color:var(--green);">1200.0 МВт</span>
+            <span class="kpi-val" id="kpiElec">1200.0 МВт</span>
           </div>
           <div class="kpi-box" title="Давление теплоносителя 1-го контура вверху реактора (номинал 16,2 МПа)">
             <span class="kpi-label">P₁</span>
@@ -74,21 +79,20 @@
           </div>
           <div class="kpi-box" title="Запас до температуры насыщения (кипения) в горячих нитках ГЦК">
             <span class="kpi-label">ΔTs</span>
-            <span class="kpi-val" id="kpiSubcool" style="color:var(--green);">19.5 °C</span>
+            <span class="kpi-val" id="kpiSubcool">19.5 °C</span>
           </div>
           <div class="kpi-box" title="Концентрация борной кислоты H₃BO₃ в теплоносителе 1-го контура">
             <span class="kpi-label">H₃BO₃</span>
-            <span class="kpi-val" id="kpiBoron" style="color:var(--amber);">6.20 г/кг</span>
+            <span class="kpi-val" id="kpiBoron">6.20 г/кг</span>
           </div>
           <div class="kpi-box" title="Суммарная реактивность активной зоны в pcm (10⁻⁵ Δk/k)">
             <span class="kpi-label">ρ</span>
-            <span class="kpi-val" id="kpiReactivity" style="color:var(--steam-silver);">0.0 pcm</span>
+            <span class="kpi-val" id="kpiReactivity">0.0 pcm</span>
           </div>
         </div>
 
         <div class="kpi-secondary">
-          <b id="kpiFreq" style="color:var(--green);">50.00 Гц</b> • P₂: <b id="kpiP2"
-            style="color:var(--steam-silver);">7.00 МПа</b>
+          <b id="kpiFreq">50.00 Гц</b> • P₂: <b id="kpiP2">7.00 МПа</b>
         </div>
       </div>
 
@@ -162,27 +166,27 @@
           <!-- Верхняя лента технологических этапов [01]–[06] (РУ В-491) -->
           <div class="stages-ribbon" id="stagesRibbon">
             <div class="stage-card">
-              <span class="stage-code" style="color:#ef4444;">[01]</span>
+              <span class="stage-code">[01]</span>
               <span class="stage-name" title="РЕАКТОР В-491 И САОЗ">РЕАКТОР В-491 И САОЗ</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:#38bdf8;">[02]</span>
+              <span class="stage-code">[02]</span>
               <span class="stage-name" title="4 ПЕТЛИ Ду-850 И ПГВ-1000МКП">4 ПЕТЛИ Ду-850 И ПГВ-1000МКП</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:#f59e0b;">[03]</span>
+              <span class="stage-code">[03]</span>
               <span class="stage-name" title="КД 79 м³ И БАРБОТЕР">КД 79 м³ И БАРБОТЕР</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:#94a3b8;">[04]</span>
+              <span class="stage-code">[04]</span>
               <span class="stage-name" title="ГПК 7.0 МПа И БРУ-К/А">ГПК 7.0 МПа И БРУ-К/А</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:#4ade80;">[05]</span>
+              <span class="stage-code">[05]</span>
               <span class="stage-name" title="ТУРБИНА К-1200 И ТЗВ-1200">ТУРБИНА К-1200 И ТЗВ-1200</span>
             </div>
             <div class="stage-card">
-              <span class="stage-code" style="color:#38bdf8;">[06]</span>
+              <span class="stage-code">[06]</span>
               <span class="stage-name" title="ДЕАЭРАТОР 0.871 МПа И ПЭН 225 °C">ДЕАЭРАТОР 0.871 МПа И ПЭН 225 °C</span>
             </div>
           </div>
@@ -191,6 +195,7 @@
           <div id="threeContainer" class="three-container"></div>
 
           <div id="threeToolbar" class="three-toolbar">
+            <button class="three-cam-btn" id="btnThreeBack" style="display:none">← Вся установка</button>
             <button class="three-cam-btn active" data-cam="iso">Общий вид</button>
             <button class="three-cam-btn" data-cam="vessel">Разрез реактора</button>
             <button class="three-cam-btn" data-cam="top">Вид сверху 4 петли</button>
@@ -226,15 +231,15 @@
           <div class="canvas-hud-bottom">
             <div class="hud-pill">
               <span class="lbl">БАЛАНС РЕАКТИВНОСТИ (pcm):</span>
-              <span>ρ_СУЗ: <b id="hudRhoRods" style="color:var(--cold-water);">0</b></span>
-              <span>ρ_Бор: <b id="hudRhoBoron" style="color:var(--amber);">0</b></span>
-              <span>ρ_Допплер(Tтвэл): <b id="hudRhoDoppler" style="color:var(--hot-coolant);">0</b></span>
-              <span>ρ_Модератор(Tвод): <b id="hudRhoMod" style="color:var(--cold-water);">0</b></span>
-              <span>ρ_Ксенон: <b id="hudRhoXe" style="color:var(--purple);">0</b></span>
+              <span>ρ_СУЗ: <b id="hudRhoRods">0</b></span>
+              <span>ρ_Бор: <b id="hudRhoBoron">0</b></span>
+              <span>ρ_Допплер(Tтвэл): <b id="hudRhoDoppler">0</b></span>
+              <span>ρ_Модератор(Tвод): <b id="hudRhoMod">0</b></span>
+              <span>ρ_Ксенон: <b id="hudRhoXe">0</b></span>
             </div>
             <div class="hud-pill">
-              <span class="lbl">Tтвэл сред: <b id="hudTfuel" style="color:var(--hot-coolant);">680 °C</b></span>
-              <span class="lbl">K_q макс: <b id="hudKqMax" style="color:var(--green);">1.32</b></span>
+              <span class="lbl">Tтвэл сред: <b id="hudTfuel">680 °C</b></span>
+              <span class="lbl">K_q макс: <b id="hudKqMax">1.32</b></span>
               <span class="lbl">Масштаб: <b id="hudZoom">100%</b></span>
             </div>
           </div>
@@ -282,36 +287,29 @@
   </div>
 
   <!-- ПОЛНОЭКРАННОЕ МОДАЛЬНОЕ ОКНО [ИНЖЕНЕРНЫЙ БАЗИС] (#theory) -->
-  <aside id="theoryDrawer" class="theory-drawer" role="dialog" aria-modal="true" aria-label="Инженерный базис ReactorLab">
-    <div class="theory-drawer-header">
-      <div class="theory-drawer-title-group">
-        <div class="theory-badge">ACADEMIC // SCADA (#theory)</div>
-        <h2 class="theory-drawer-title">ReactorLab // Инженерный базис</h2>
-        <div class="theory-drawer-subtitle">ВВЭР-1200 (Проект В-491, БелАЭС) • Математическая модель и нормативная база</div>
+  <aside id="modalTheory" class="theory-drawer modal-theory" role="dialog" aria-modal="true" aria-label="Инженерный базис ReactorLab">
+    <div class="theory-nav-bar">
+      <div class="theory-drawer-header">
+        <div class="theory-drawer-title-group">
+          <div class="theory-badge">ACADEMIC // SCADA (#theory)</div>
+          <h2 class="theory-drawer-title">ReactorLab // Инженерный базис</h2>
+          <div class="theory-drawer-subtitle">ВВЭР-1200 (Проект В-491, БелАЭС) • Математическая модель и нормативная база</div>
+        </div>
+        <button id="btnCloseTheory" class="theory-close-btn" title="Закрыть и вернуться к предыдущему экрану" aria-label="Закрыть">✕ Закрыть</button>
       </div>
-      <button id="btnCloseTheory" class="theory-close-btn" title="Закрыть и вернуться к предыдущему экрану" aria-label="Закрыть">✕ Закрыть</button>
-    </div>
 
-    <!-- Переключатель вкладок по 4 разделам физики + первоисточники -->
-    <div class="theory-tabs" role="tablist">
-      <button class="theory-tab active" data-theory-tab="kinetics">Кинетика</button>
-      <button class="theory-tab" data-theory-tab="feedbacks">Обратные связи</button>
-      <button class="theory-tab" data-theory-tab="poisoning">Отравление Xe</button>
-      <button class="theory-tab" data-theory-tab="thermohydraulics">Теплогидравлика</button>
-      <button id="tabTheorySources" class="theory-tab" data-theory-tab="sources">📚 Источники & Архивы</button>
+      <!-- Переключатель вкладок по 4 разделам физики + первоисточники -->
+      <div class="theory-tabs" role="tablist">
+        <button class="theory-tab active" data-theory-tab="kinetics">Кинетика</button>
+        <button class="theory-tab" data-theory-tab="feedbacks">Обратные связи</button>
+        <button class="theory-tab" data-theory-tab="poisoning">Отравление Xe</button>
+        <button class="theory-tab" data-theory-tab="thermohydraulics">Теплогидравлика</button>
+        <button id="tabTheorySources" class="theory-tab" data-theory-tab="sources">📚 Источники & Архивы</button>
+      </div>
     </div>
 
     <!-- Контейнер вывода формул с пояснениями -->
     <div class="theory-drawer-body" id="theoryDrawerContent"></div>
-
-    <!-- Список первоисточников и литературы -->
-    <div class="theory-drawer-footer">
-      <div class="theory-sources-header">
-        <span class="theory-sources-icon">📚</span>
-        <span>Первоисточники и нормативная база</span>
-      </div>
-      <div class="theory-sources-list" id="theorySourcesList"></div>
-    </div>
   </aside>
   <div id="theoryBackdrop" class="theory-backdrop" title="Закрыть справочник"></div>
 

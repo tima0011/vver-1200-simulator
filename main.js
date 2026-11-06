@@ -547,89 +547,86 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         .replace(/"/g, '&quot;');
     }
 
+    function renderMathInTheory() {
+      const el = document.getElementById('modalTheory') || document.getElementById('theoryDrawer');
+      if (typeof renderMathInElement === 'function' && el) {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\[', right: '\\]', display: true },
+            { left: '\\(', right: '\\)', display: false }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
     function renderTheorySection(tabKey) {
       const contentEl = document.getElementById('theoryDrawerContent');
       if (!contentEl) return;
 
       if (tabKey === 'sources') {
         let html = `
-          <div class="theory-section-lead" style="border-left-color:#15803d;">
-            <div style="font-size:10px; font-weight:700; color:#15803d; text-transform:uppercase; font-family:var(--font-mono); margin-bottom:3px;">
-              АКАДЕМИЧЕСКАЯ БАЗА & АРХИВЫ БЩУ
+          <div class="theory-section-lead">
+            <div style="font-size:10px; font-weight:700; color:#0284C7; text-transform:uppercase; margin-bottom:3px;">
+              НОРМАТИВНО-ТЕХНИЧЕСКАЯ БАЗА &amp; АКАДЕМИЧЕСКИЕ ИСТОЧНИКИ
             </div>
-            <div style="font-weight:700; color:#0f172a; margin-bottom:4px; font-size:12.5px;">
-              📚 Первоисточники, Нормативная База и Видеоматериалы БЩУ
+            <div style="font-weight:700; color:#0F172A; margin-bottom:4px; font-size:13px;">
+              📚 Проектная, нормативная и академическая литература РУ В-491 (ВВЭР-1200)
             </div>
-            <div>
-              Фундаментальные учебники МИФИ, технологический регламент серийного энергоблока Белорусской АЭС (В-491), стандарты безопасности МАГАТЭ и обучающие видеокурсы работы операторов на полномасштабном тренажере.
+            <div style="color:#64748B;">
+              Официальная проектно-конструкторская документация ОКБ «Гидропресс», отчеты по обоснованию безопасности АЭС-2006, стандарты безопасности МАГАТЭ и академические труды НИЯУ МИФИ.
             </div>
           </div>
 
-          <div style="font-size:10.5px; font-weight:700; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px; margin-top:6px;">
-            1. Обучающие видеоматериалы и видеоразбор работы БЩУ
-          </div>
-
-          <div class="theory-card" style="border-left:3px solid #dc2626; background:#ffffff;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span class="theory-badge" style="color:#dc2626;">ВИДЕОКУРС // ПОЛНОМАСШТАБНЫЙ ТРЕНАЖЕР БЩУ</span>
-              <span style="font-size:9.5px; background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:3px; font-weight:600;">ПМТ В-491</span>
+          <!-- Официальный обучающий видеоматериал по РУ ВВЭР-1200 -->
+          <div class="theory-card" style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:6px; padding:16px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <span class="theory-org-badge">[ВИДЕОМАТЕРИАЛ]</span>
+              <span style="font-size:10px; color:#64748B; font-weight:600;">ВВЭР-1200 / АЭС-2006</span>
             </div>
-            <div style="font-weight:700; color:#0f172a; font-size:12px; margin-top:2px;">
-              Видеоразбор работы оперативного персонала блочного щита управления (ВИУР, ВИУТ, НСБ)
+            <div style="font-weight:700; color:#0F172A; font-size:13.5px; line-height:1.4;">
+              «Конструкция и компоновка реакторной установки ВВЭР-1200»
             </div>
-            <div style="font-size:11px; line-height:1.45; color:#334155;">
-              Практический видеокурс учебно-тренировочного центра АЭС: разбор эргономики пультов операторов ВВЭР-1200, работы с мнемосхемой 4 петель ГЦК, процедур компенсации нестационарного ксенонового отравления при маневрировании мощностью и регламентов парирования нештатных ситуаций (малые течи 1-го контура, обесточивание с вводом пассивного расхолаживания СПОТ).
-            </div>
-            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:8px 10px; font-size:10.5px; color:#475569; display:flex; flex-direction:column; gap:4px;">
-              <div><b>Состав видеоразбора:</b></div>
-              <div>• <b>Пульт ВИУР:</b> управление 121 кластером ОР СУЗ, рабочей группой №10 (АРМ), контроль подкритичности и расчетного периода разгона T.</div>
-              <div>• <b>Пульт ВИУТ:</b> поддержание уровней в парогенераторах ПГВ-1000МКП, ведение турбоагрегата К-1200-6,8/50 и питательных насосов ПЭН.</div>
-              <div>• <b>Мнемосхема систем безопасности:</b> контроль гидроемкостей САОЗ, шиберов СПОТ и охлаждения шахты ловушки расплава УЛР.</div>
+            <div style="font-size:12px; color:#334155; line-height:1.5;">
+              3D-визуализация оборудования реакторного отделения, корпуса реактора, парогенераторов ПГВ-1000МКП и систем пассивной безопасности.
             </div>
             <div style="margin-top:6px;">
-              <a href="https://www.rosatom.ru/about-nuclear-industry/" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; background:#dc2626; color:#ffffff; padding:7px 14px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:600;">
-                ▶ Смотреть видеоразбор и медиаархив тренажера
+              <a href="https://www.youtube.com/watch?v=xbFMs2_Ek3o" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:8px; background:#0284C7; color:#FFFFFF; padding:8px 16px; border-radius:6px; text-decoration:none; font-size:11.5px; font-weight:700; transition:background-color 0.15s ease;">
+                ▶ Смотреть видеоматериал (YouTube) ↗
               </a>
             </div>
           </div>
 
-          <div style="font-size:10.5px; font-weight:700; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px; margin-top:6px;">
-            2. Академические учебники и регламентная литература
+          <div style="font-size:11px; font-weight:700; color:#0F172A; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">
+            Проектная и нормативная документация
           </div>
+
+          <div class="theory-sources-grid">
         `;
 
-        if (window.REACTOR_THEORY && window.REACTOR_THEORY.primarySources) {
-          window.REACTOR_THEORY.primarySources.filter(s => s.type !== 'video_archive').forEach((src, idx) => {
-            const author = src.authors || src.author || '';
-            const details = src.details || (src.publisher ? (src.publisher + (src.year ? ', ' + src.year : '')) : (src.year ? String(src.year) : ''));
-            const scope = src.note || src.scope || '';
-            let badgeText = 'ПЕРВОИСТОЧНИК В-491';
-            if (src.badge) badgeText = src.badge;
-            else if (src.id.includes('mephi') || src.id === 'dementiev') badgeText = 'НИЯУ МИФИ';
-            else if (src.id === 'oob_belaes_v491') badgeText = 'ОБОСНОВАНИЕ БЕЗОПАСНОСТИ РУ В-491';
-            else if (src.id === 'np_082_07') badgeText = 'ПРАВИЛА РОСТЕХНАДЗОРА (НП-082-07)';
-            else if (src.id === 'sevsu_turbine_2023') badgeText = 'СЕВАСТОПОЛЬСКИЙ ГОСУНИВЕРСИТЕТ';
-            else if (src.id === 'asmolov_vver1200_2017') badgeText = 'ИЗВЕСТИЯ ВУЗОВ // ЯДЕРНАЯ ЭНЕРГЕТИКА';
-
-            html += `
-              <div class="theory-card" style="border-left:3px solid #1d4ed8;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <span class="theory-badge">${escapeHtml(badgeText)}</span>
-                  <span style="font-size:9.5px; color:#64748b; font-family:var(--font-mono);">№0${idx + 1}</span>
-                </div>
-                <div style="font-weight:700; color:#0f172a; font-size:11.5px; margin-top:2px;">
-                  ${author ? escapeHtml(author) + ' ' : ''}«${escapeHtml(src.title)}»
-                </div>
-                ${details ? `<div style="font-size:10.5px; color:#475569;">${escapeHtml(details)}</div>` : ''}
-                ${scope ? `<div style="font-size:10.5px; background:#f1f5f9; padding:6px 8px; border-radius:3px; color:#1e40af; border:1px solid #cbd5e1; margin-top:3px;">
-                  <b>Область применения в ReactorLab:</b> ${escapeHtml(scope)}
-                </div>` : ''}
-                ${src.url ? `<div style="margin-top:4px;"><a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer" style="font-size:10px; color:#1d4ed8; text-decoration:none;">🔗 Открыть публикацию</a></div>` : ''}
+        const sources = (window.REACTOR_THEORY && window.REACTOR_THEORY.primarySources) || [];
+        sources.forEach((src) => {
+          html += `
+            <div class="theory-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="theory-org-badge">[${escapeHtml(src.badge)}]</span>
               </div>
-            `;
-          });
-        }
+              <div style="font-weight:700; color:#0F172A; font-size:13px; line-height:1.45;">
+                «${escapeHtml(src.title)}»
+              </div>
+              <div style="font-size:11.5px; color:#64748B; line-height:1.4;">
+                <b style="color:#0F172A;">${escapeHtml(src.orgLabel || 'Организация')}:</b> ${escapeHtml(src.organization || src.authors || '')}
+              </div>
+              <div style="font-size:11.5px; background:#F1F5F9; padding:10px 12px; border-radius:6px; color:#0F172A; border:1px solid #E2E8F0; line-height:1.45;">
+                <b style="color:#0284C7;">Применение в модели:</b> ${escapeHtml(src.application || src.note || '')}
+              </div>
+            </div>
+          `;
+        });
 
+        html += `</div>`;
         contentEl.innerHTML = html;
         contentEl.scrollTop = 0;
         return;
@@ -641,16 +638,16 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
 
       let html = `
         <div class="theory-section-lead">
-          <div style="font-size:10px; font-weight:700; color:#1d4ed8; text-transform:uppercase; font-family:var(--font-mono); margin-bottom:3px;">
+          <div style="font-size:10px; font-weight:700; color:#0284C7; text-transform:uppercase; margin-bottom:3px;">
             ${escapeHtml(section.badge || 'ТЕОРЕТИЧЕСКИЙ БАЗИС')}
           </div>
-          <div style="font-weight:700; color:#0f172a; margin-bottom:4px; font-size:12.5px;">${escapeHtml(section.title)}</div>
-          <div>${escapeHtml(section.summary)}</div>
+          <div style="font-weight:700; color:#0F172A; margin-bottom:4px; font-size:13.5px;">${escapeHtml(section.title)}</div>
+          <div style="color:#64748B;">${escapeHtml(section.summary)}</div>
         </div>
       `;
 
       if (section.equations && section.equations.length > 0) {
-        html += `<div style="font-size:10.5px; font-weight:700; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Математические уравнения модели</div>`;
+        html += `<div style="font-size:11px; font-weight:700; color:#0F172A; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">Математические уравнения модели</div>`;
         section.equations.forEach(eq => {
           html += `
             <div class="theory-card">
@@ -662,285 +659,48 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         });
       }
 
-      // Живая расчетная плашка параметров реактора для текущего раздела
-      if (tabKey === 'kinetics') {
-        html += `
-          <div class="theory-live-panel">
-            <div class="theory-live-header">
-              <span class="theory-live-indicator"></span>
-              <span>ТЕКУЩИЕ ПАРАМЕТРЫ РЕАКТОРА (LIVE SCADA)</span>
-            </div>
-            <div class="theory-live-grid">
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Суммарная реактивность ρ</span>
-                <span id="liveRhoTotal" class="theory-live-val">0.0 pcm</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Эффективная доля β_эфф</span>
-                <span id="liveBetaEff" class="theory-live-val">0.0065 (650 pcm)</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Период разгона T</span>
-                <span id="livePeriodT" class="theory-live-val">∞ (Стационар)</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Относительный поток Φ</span>
-                <span id="liveNeutronFlux" class="theory-live-val">100.0%</span>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (tabKey === 'feedbacks') {
-        html += `
-          <div class="theory-live-panel">
-            <div class="theory-live-header">
-              <span class="theory-live-indicator"></span>
-              <span>ТЕКУЩИЕ ПАРАМЕТРЫ РЕАКТОРА (LIVE SCADA)</span>
-            </div>
-            <div class="theory-live-grid">
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Доплер топлива (ρ_dop)</span>
-                <span id="liveRhoDoppler" class="theory-live-val">0.0 pcm</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Температура топлива T_f</span>
-                <span id="liveFuelTemp" class="theory-live-val">680.0 °C</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Замедлитель (ρ_mod)</span>
-                <span id="liveRhoModerator" class="theory-live-val">0.0 pcm</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Ср. температура воды T_m</span>
-                <span id="liveModTemp" class="theory-live-val">313.6 °C</span>
-              </div>
-              <div class="theory-live-item full-width">
-                <span class="theory-live-lbl">Суммарный температурный дефект (ρ_dop + ρ_mod)</span>
-                <span id="liveRhoFeedbackTotal" class="theory-live-val">0.0 pcm (Отрицательный демпфер)</span>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (tabKey === 'poisoning') {
-        html += `
-          <div class="theory-live-panel">
-            <div class="theory-live-header">
-              <span class="theory-live-indicator"></span>
-              <span>ТЕКУЩИЕ ПАРАМЕТРЫ РЕАКТОРА (LIVE SCADA)</span>
-            </div>
-            <div class="theory-live-grid">
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Отравление Xe-135 (ρ_xe)</span>
-                <span id="liveRhoXenon" class="theory-live-val">0.0 pcm</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Концентрация Xe-135</span>
-                <span id="liveXeConc" class="theory-live-val">1.000 отн. ед.</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Концентрация I-135</span>
-                <span id="liveIConc" class="theory-live-val">1.000 отн. ед.</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Потенциал ямы при останове</span>
-                <span id="livePitDepth" class="theory-live-val">-1650 pcm</span>
-              </div>
-              <div class="theory-live-item full-width">
-                <span class="theory-live-lbl">Запас до дна йодной ямы (ОЗР)</span>
-                <span id="liveXenonMargin" class="theory-live-val">+5800 pcm (ОЗР стабилен)</span>
-              </div>
-            </div>
-          </div>
-        `;
-      } else if (tabKey === 'thermohydraulics') {
-        html += `
-          <div class="theory-live-panel">
-            <div class="theory-live-header">
-              <span class="theory-live-indicator"></span>
-              <span>ТЕКУЩИЕ ПАРАМЕТРЫ РЕАКТОРА (LIVE SCADA)</span>
-            </div>
-            <div class="theory-live-grid">
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Тепловая мощность 1 контура Q₁</span>
-                <span id="liveThermalQ1" class="theory-live-val">3200.0 МВт</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Паропроизводительность 2 контура</span>
-                <span id="liveSteamFlow" class="theory-live-val">6400 т/ч</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Давление контуров P₁ / P₂</span>
-                <span id="livePressures" class="theory-live-val">16.20 / 7.00 МПа</span>
-              </div>
-              <div class="theory-live-item">
-                <span class="theory-live-lbl">Запас до кипения (Subcooling)</span>
-                <span id="liveSubcooling" class="theory-live-val">19.5 °C</span>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
       if (section.parameters && section.parameters.length > 0) {
-        html += `<div style="font-size:10.5px; font-weight:700; color:#0f172a; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">Ключевые физические параметры и константы</div>`;
+        html += `<div style="font-size:11px; font-weight:700; color:#0F172A; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">Ключевые физические параметры и константы</div>`;
         html += `
-          <table class="theory-params-table">
-            <thead>
-              <tr>
-                <th style="width:80px;">Символ</th>
-                <th style="width:130px;">Значение</th>
-                <th>Физический смысл</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div class="theory-table-card">
+            <table class="theory-params-table">
+              <thead>
+                <tr>
+                  <th style="width:160px;">Символ</th>
+                  <th style="width:240px;">Значение</th>
+                  <th>Физический смысл и размерность</th>
+                </tr>
+              </thead>
+              <tbody>
         `;
         section.parameters.forEach(p => {
           html += `
             <tr>
               <td class="theory-param-sym">${escapeHtml(p.symbol)}</td>
               <td class="theory-param-val">${escapeHtml(p.value)}</td>
-              <td>${escapeHtml(p.desc)}</td>
+              <td class="theory-param-desc">${escapeHtml(p.desc)}</td>
             </tr>
           `;
         });
         html += `
-            </tbody>
-          </table>
-        `;
-      }
-
-      if (section.description) {
-        html += `
-          <div style="font-size:11px; line-height:1.45; color:#334155; background:#f1f5f9; border-radius:4px; padding:10px; border:1px solid #cbd5e1;">
-            <b style="color:#0f172a;">Инженерное примечание:</b> ${escapeHtml(section.description)}
+              </tbody>
+            </table>
           </div>
         `;
       }
 
       contentEl.innerHTML = html;
       contentEl.scrollTop = 0;
-      updateTheoryDrawerLiveTelemetry();
+      renderMathInTheory();
     }
 
-    // Функция обновления живых расчетных значений в открытой шторке теории
+    // Функция обновления живых расчетных значений в открытой шторке теории (LIVE SCADA блок удален)
     function updateTheoryDrawerLiveTelemetry() {
-      const drawer = document.getElementById('theoryDrawer');
-      if (!drawer || !drawer.classList.contains('open')) return;
-
-      if (currentTheoryTab === 'kinetics') {
-        const elRho = document.getElementById('liveRhoTotal');
-        const elBeta = document.getElementById('liveBetaEff');
-        const elPeriod = document.getElementById('livePeriodT');
-        const elFlux = document.getElementById('liveNeutronFlux');
-
-        if (elRho) {
-          const rhoVal = sim.rhoTotal;
-          elRho.textContent = (rhoVal >= 0 ? '+' : '') + rhoVal.toFixed(1) + ' pcm';
-          elRho.style.color = Math.abs(rhoVal) < 2 ? '#15803d' : (rhoVal > 0 ? '#b91c1c' : '#1d4ed8');
-        }
-        if (elBeta) elBeta.textContent = '0.0065 (650 pcm)';
-        if (elPeriod) {
-          if (Math.abs(sim.rhoTotal) < 0.2) {
-            elPeriod.textContent = '∞ (Стационар)';
-            elPeriod.style.color = '#15803d';
-          } else if (sim.rhoTotal > 0) {
-            const rhoFrac = sim.rhoTotal * 1e-5;
-            const p = (0.0065 - rhoFrac) / (0.085 * rhoFrac + 3.5e-5);
-            elPeriod.textContent = p > 9999 ? '> 9999 с' : (p.toFixed(1) + ' с');
-            elPeriod.style.color = p < 20 ? '#b91c1c' : '#b45309';
-          } else {
-            const rhoFrac = sim.rhoTotal * 1e-5;
-            const p = (0.0065 - rhoFrac) / (0.085 * rhoFrac - 3.5e-5);
-            elPeriod.textContent = p < -9999 ? '< -9999 с' : (p.toFixed(1) + ' с');
-            elPeriod.style.color = '#1d4ed8';
-          }
-        }
-        if (elFlux) elFlux.textContent = (sim.neutronFlux * 100).toFixed(1) + ' %';
-      } else if (currentTheoryTab === 'feedbacks') {
-        const elDop = document.getElementById('liveRhoDoppler');
-        const elFuelT = document.getElementById('liveFuelTemp');
-        const elMod = document.getElementById('liveRhoModerator');
-        const elModT = document.getElementById('liveModTemp');
-        const elFbTot = document.getElementById('liveRhoFeedbackTotal');
-
-        if (elDop) {
-          elDop.textContent = (sim.rhoDoppler >= 0 ? '+' : '') + sim.rhoDoppler.toFixed(1) + ' pcm';
-          elDop.style.color = sim.rhoDoppler <= 0 ? '#15803d' : '#b45309';
-        }
-        if (elFuelT) elFuelT.textContent = sim.fuelTempC.toFixed(1) + ' °C';
-        if (elMod) {
-          elMod.textContent = (sim.rhoModerator >= 0 ? '+' : '') + sim.rhoModerator.toFixed(1) + ' pcm';
-          elMod.style.color = sim.rhoModerator <= 0 ? '#15803d' : '#b45309';
-        }
-        if (elModT) {
-          const avgT = 0.5 * (sim.coreInletTempC + sim.coreOutletTempC);
-          elModT.textContent = avgT.toFixed(1) + ' °C';
-        }
-        if (elFbTot) {
-          const fbTot = sim.rhoDoppler + sim.rhoModerator;
-          elFbTot.textContent = (fbTot >= 0 ? '+' : '') + fbTot.toFixed(1) + ' pcm';
-          elFbTot.style.color = fbTot <= 0 ? '#15803d' : '#b45309';
-        }
-      } else if (currentTheoryTab === 'poisoning') {
-        const elRhoXe = document.getElementById('liveRhoXenon');
-        const elXe = document.getElementById('liveXeConc');
-        const elI = document.getElementById('liveIConc');
-        const elPit = document.getElementById('livePitDepth');
-        const elMargin = document.getElementById('liveXenonMargin');
-
-        if (elRhoXe) {
-          elRhoXe.textContent = (sim.rhoXenon >= 0 ? '+' : '') + sim.rhoXenon.toFixed(1) + ' pcm';
-          elRhoXe.style.color = sim.rhoXenon < -500 ? '#b91c1c' : '#0f172a';
-        }
-        if (elXe) elXe.textContent = sim.xenon135.toFixed(3) + ' отн. ед.';
-        if (elI) elI.textContent = sim.iodine135.toFixed(3) + ' отн. ед.';
-        const pitDepthPcm = Math.round(1650 * sim.iodine135);
-        if (elPit) elPit.textContent = `-${pitDepthPcm} pcm`;
-        if (elMargin) {
-          const marginPcm = Math.round(6500 + (sim.group10Pos / 100) * 950 - pitDepthPcm);
-          elMargin.textContent = `${marginPcm > 0 ? '+' : ''}${marginPcm} pcm (${marginPcm > 0 ? 'ОЗР достаточен' : 'СТОЯНКА В ЯМЕ!'})`;
-          elMargin.style.color = marginPcm > 0 ? '#15803d' : '#b91c1c';
-        }
-      } else if (currentTheoryTab === 'thermohydraulics') {
-        const elQ1 = document.getElementById('liveThermalQ1');
-        const elSteam = document.getElementById('liveSteamFlow');
-        const elPress = document.getElementById('livePressures');
-        const elSub = document.getElementById('liveSubcooling');
-
-        if (elQ1) elQ1.textContent = `${sim.thermalPowerMW.toFixed(1)} МВт (${((sim.thermalPowerMW / 3200) * 100).toFixed(1)}%)`;
-        if (elSteam) {
-          const steamTh = (sim.thermalPowerMW / 3200.0) * 6400.0;
-          elSteam.textContent = `${Math.round(steamTh)} т/ч (${Math.round(steamTh / 3.6)} кг/с)`;
-        }
-        if (elPress) {
-          elPress.textContent = `P₁: ${sim.primaryPressureMPa.toFixed(2)} МПа / P₂: ${sim.steamHeaderPressMPa.toFixed(2)} МПа`;
-        }
-        if (elSub) {
-          elSub.textContent = `ΔTs = ${sim.subcoolingMarginC.toFixed(1)} °C (${sim.subcoolingMarginC > 10 ? 'DNBR > 1.30' : 'КРИЗИС!'})`;
-          elSub.style.color = sim.subcoolingMarginC > 10 ? '#15803d' : '#b91c1c';
-        }
-      }
+      // Блок LIVE SCADA удален из теоретического окна в пользу строгого академического справочника
     }
 
     function renderTheorySources() {
-      if (!window.REACTOR_THEORY || !window.REACTOR_THEORY.primarySources) return;
-      const listEl = document.getElementById('theorySourcesList');
-      if (!listEl) return;
-
-      let html = '';
-      window.REACTOR_THEORY.primarySources.forEach((src, idx) => {
-        const author = src.authors || src.author || '';
-        const details = src.details || (src.publisher ? (src.publisher + (src.year ? ', ' + src.year : '')) : (src.year ? String(src.year) : ''));
-        const scope = src.note || src.scope || '';
-        html += `
-          <div class="theory-source-item">
-            <div class="theory-source-title">${idx + 1}. ${author ? escapeHtml(author) + ' ' : ''}«${escapeHtml(src.title)}»</div>
-            ${details ? `<div style="font-size:10px; color:#475569; margin-top:2px;">${escapeHtml(details)}</div>` : ''}
-            ${scope ? `<div style="font-size:9.5px; color:#1d4ed8; margin-top:2px; font-family:var(--font-mono);">Применение: ${escapeHtml(scope)}</div>` : ''}
-          </div>
-        `;
-      });
-      listEl.innerHTML = html;
+      // Нижний паразитный блок первоисточников удален — первоисточники доступны во вкладке «Источники & Архивы»
     }
 
     function switchTheoryTab(tabKey) {
@@ -949,12 +709,16 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         btn.classList.toggle('active', btn.getAttribute('data-theory-tab') === tabKey);
       });
       renderTheorySection(tabKey);
+      renderMathInTheory();
       sound.click(580);
     }
 
     // Инициализация справочника ReactorLab
     renderTheorySection('kinetics');
-    renderTheorySources();
+    renderMathInTheory();
+    window.addEventListener('load', () => {
+      renderMathInTheory();
+    });
 
     // Обработчики кликов по вкладкам боковой шторки
     document.querySelectorAll('.theory-tab').forEach(btn => {
@@ -964,7 +728,7 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       });
     });
 
-    const theoryDrawerEl = document.getElementById('theoryDrawer');
+    const theoryDrawerEl = document.getElementById('modalTheory') || document.getElementById('theoryDrawer');
     const theoryBackdropEl = document.getElementById('theoryBackdrop');
     const btnOpenTheoryEl = document.getElementById('btnOpenTheory');
     const btnCloseTheoryEl = document.getElementById('btnCloseTheory');
@@ -1008,9 +772,10 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
     }
 
     function openTheoryDrawer(updateHash = true) {
-      if (theoryDrawerEl) theoryDrawerEl.classList.add('open');
+      const modalTheory = document.getElementById('modalTheory') || theoryDrawerEl;
+      if (modalTheory) modalTheory.classList.add('open');
       if (theoryBackdropEl) theoryBackdropEl.classList.add('open');
-      updateTheoryDrawerLiveTelemetry();
+      renderMathInTheory();
       if (updateHash) {
         updateUrlHash('#theory');
       }
@@ -1018,7 +783,8 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
     }
 
     function closeTheoryDrawer(restoreHash = true) {
-      if (theoryDrawerEl) theoryDrawerEl.classList.remove('open');
+      const modalTheory = document.getElementById('modalTheory') || theoryDrawerEl;
+      if (modalTheory) modalTheory.classList.remove('open');
       if (theoryBackdropEl) theoryBackdropEl.classList.remove('open');
       if (restoreHash && (window.location.hash || '').toLowerCase() === '#theory') {
         updateUrlHash(lastActiveViewHash || '#systems');

@@ -1,7 +1,7 @@
 // ============================================================================
 // core_cartogram.js — ReactorLab // Цифровой двойник ВВЭР-1200 (Проект В-491)
 // Точная картограмма активной зоны (163 ТВС-2М) и групп ОР СУЗ (Bank 1–12)
-// Эталонная схема: Figure 2 — VVER-1200 Reactor core with control rod banks
+// Эталонная схема групп ОР СУЗ: Figure 2 (VVER-1200 reactor core with control rod banks)
 // ============================================================================
 
 // 1. ЭТАЛОННАЯ БАЗА ПРИНАДЛЕЖНОСТИ 163 ТВС-2М К ГРУППАМ ОР СУЗ (BANK 1..12)
@@ -43,22 +43,74 @@ const EXACT_FA_BANK_MAP = {
   158: null, 159: null, 160: null, 161: null, 162: null, 163: null
 };
 
+// Стационарная 4-годичная топливная загрузка (по картограмме проекта, перенесена вручную).
+// Запись ячейки: год, тип, выгорание МВт·сут/кг. Типы: a Z49, A Z49A2, B Z49B6, D Z40D2.
+// Ряды r = -7..0 слева направо; нижняя половина получается поворотом на 180°.
+const FUEL_LOADING_ROWS = {
+  '-7': '4B50.69 4B50.61 1a 1a 4A49.29 4A51.57',
+  '-6': '4A51.57 4a46.83 1B 1A 4a46.72 1A 1B 4a46.83 4B50.69',
+  '-5': '4A49.29 1B 2a13.83 3B35.39 3a31.85 3a31.76 3B35.27 2a13.83 1B 4B50.61',
+  '-4': '1a 1A 3B35.27 2A18.66 2B17.20 2a13.81 2B17.21 2A18.66 3B35.39 1A 1a',
+  '-3': '1a 4a46.72 3a31.76 2B17.21 2D18.29 3A36.94 3D34.51 2D18.29 2B17.20 3a31.85 4a46.72 1a',
+  '-2': '4B50.61 1A 3a31.85 2a13.81 3D34.51 2A18.67 1D 2A18.67 3A36.94 2a13.81 3a31.76 1A 4A49.29',
+  '-1': '4B50.69 1B 3B35.39 2B17.20 3A36.94 1D 3A36.07 3A36.07 1D 3D34.51 2B17.21 3B35.27 1B 4A51.57',
+  '0': '4a46.83 2a13.83 2A18.66 2D18.29 2A18.67 3A36.07 4D48.22 3A36.07 2A18.67 2D18.29 2A18.66 2a13.83 4a46.83'
+};
+const FUEL_TYPES = {
+  a: { name: 'Z49', enrichment: 4.9, reactivity: 1.0 },
+  A: { name: 'Z49A2', enrichment: 4.9, reactivity: 0.97 },
+  B: { name: 'Z49B6', enrichment: 4.9, reactivity: 0.94 },
+  D: { name: 'Z40D2', enrichment: 4.0, reactivity: 0.90 }
+};
+const FUEL_YEAR_STYLE = {
+  1: { fill: '#FFFFFF', text: '#0F172A', stroke: '#64748B', label: 'ТВС 1 года' },
+  2: { fill: '#FDE68A', text: '#0F172A', stroke: '#B45309', label: 'ТВС 2 года' },
+  3: { fill: '#7DD3FC', text: '#0F172A', stroke: '#0284C7', label: 'ТВС 3 года' },
+  4: { fill: '#86EFAC', text: '#0F172A', stroke: '#16A34A', label: 'ТВС 4 года' }
+};
+// Относительная размножающая способность кассеты по году работы (инженерная оценка)
+const FUEL_YEAR_REACTIVITY = { 1: 1.25, 2: 1.14, 3: 0.93, 4: 0.70 };
+
+function buildFuelLoadingMap() {
+  const map = new Map();
+  Object.entries(FUEL_LOADING_ROWS).forEach(([rowKey, rowText]) => {
+    const r = Number(rowKey);
+    const rowQ = [];
+    for (let q = -7; q <= 7; q++) {
+      if (q * q + r * r + q * r <= 43) rowQ.push(q);
+    }
+    rowText.split(' ').forEach((entry, idx) => {
+      const cell = {
+        year: Number(entry[0]),
+        type: FUEL_TYPES[entry[1]],
+        burnup: Number(entry.slice(2) || 0)
+      };
+      map.set(rowQ[idx] + ',' + r, cell);
+      map.set((-rowQ[idx]) + ',' + (-r), cell);
+    });
+  });
+  return map;
+}
+
 // Цветовая палитра групп ОР СУЗ 1..12 (Стандарт Slate Light SCADA — высокий контраст)
 const BANK_PALETTE = {
   0:  { fill: '#F1F5F9', text: '#0F172A', stroke: '#CBD5E1', name: 'Без ПС СУЗ' },
-  1:  { fill: '#BAE6FD', text: '#0F172A', stroke: '#0284C7', name: 'Группа 1 (АЗ / КГ)' },
-  2:  { fill: '#E2E8F0', text: '#0F172A', stroke: '#64748B', name: 'Группа 2 (АЗ / КГ)' },
-  3:  { fill: '#FED7AA', text: '#0F172A', stroke: '#EA580C', name: 'Группа 3 (АЗ / КГ)' },
-  4:  { fill: '#99F6E4', text: '#0F172A', stroke: '#0D9488', name: 'Группа 4 (АЗ / КГ)' },
-  5:  { fill: '#FEF08A', text: '#0F172A', stroke: '#CA8A04', name: 'Группа 5 (АЗ / КГ)' },
-  6:  { fill: '#FDBA74', text: '#0F172A', stroke: '#C2410C', name: 'Группа 6 (АЗ / КГ)' },
-  7:  { fill: '#C7D2FE', text: '#0F172A', stroke: '#4F46E5', name: 'Группа 7 (АЗ / КГ)' },
-  8:  { fill: '#A7F3D0', text: '#0F172A', stroke: '#059669', name: 'Группа 8 (АЗ / КГ)' },
-  9:  { fill: '#3B82F6', text: '#FFFFFF', stroke: '#1D4ED8', name: 'Группа 9 (АЗ / КГ)' },
-  10: { fill: '#E11D48', text: '#FFFFFF', stroke: '#9F1239', name: 'Группа 10 (Рабочая АРМ)' },
-  11: { fill: '#10B981', text: '#FFFFFF', stroke: '#047857', name: 'Группа 11 (АЗ / РГ)' },
-  12: { fill: '#7C3AED', text: '#FFFFFF', stroke: '#5B21B6', name: 'Группа 12 (АЗ / РГ)' }
+  1:  { fill: '#BAE6FD', text: '#0F172A', stroke: '#0284C7', name: 'Группа 1 (АЗ)' },
+  2:  { fill: '#E2E8F0', text: '#0F172A', stroke: '#64748B', name: 'Группа 2 (АЗ)' },
+  3:  { fill: '#FED7AA', text: '#0F172A', stroke: '#EA580C', name: 'Группа 3 (АЗ)' },
+  4:  { fill: '#99F6E4', text: '#0F172A', stroke: '#0D9488', name: 'Группа 4 (АЗ)' },
+  5:  { fill: '#FEF08A', text: '#0F172A', stroke: '#CA8A04', name: 'Группа 5 (АЗ)' },
+  6:  { fill: '#FDBA74', text: '#0F172A', stroke: '#C2410C', name: 'Группа 6 (АЗ)' },
+  7:  { fill: '#C7D2FE', text: '#0F172A', stroke: '#4F46E5', name: 'Группа 7 (АЗ)' },
+  8:  { fill: '#A7F3D0', text: '#0F172A', stroke: '#059669', name: 'Группа 8 (АЗ)' },
+  9:  { fill: '#3B82F6', text: '#FFFFFF', stroke: '#1D4ED8', name: 'Группа 9 (АЗ)' },
+  10: { fill: '#E11D48', text: '#FFFFFF', stroke: '#9F1239', name: 'Группа 10 (АЗ)' },
+  11: { fill: '#10B981', text: '#FFFFFF', stroke: '#047857', name: 'Группа 11 (АЗ)' },
+  12: { fill: '#7C3AED', text: '#FFFFFF', stroke: '#5B21B6', name: 'Группа 12 (Рабочая АРМ)' }
 };
+
+// Рабочая регулирующая группа; её положение хранится в sim.group10Pos
+const WORKING_BANK = 12;
 
 // Геометрические константы картограммы (базовый холст 1160 x 720)
 const CORE_GRID_LAYOUT = {
@@ -69,15 +121,53 @@ const CORE_GRID_LAYOUT = {
 
 // Текущий слой отображения картограммы:
 // 'banks'     — [Группы СУЗ 1-12] (активен по умолчанию)
+// 'fuel'      — [Загрузка] годы работы и выгорание ТВС
 // 'kq'        — [Тепловая карта Kq]
 // 'insertion' — [Погружение стержней]
 var coreLayerMode = 'banks';
+var selectedBank = null; // Селективно выбранная группа СУЗ (1..12 или null)
+
 if (typeof window !== 'undefined') {
   window.coreLayerMode = coreLayerMode;
+  window.selectedBank = selectedBank;
+}
+
+function toggleBankSelection(bankId) {
+  if (selectedBank === bankId) {
+    selectedBank = null;
+  } else {
+    selectedBank = bankId;
+  }
+  if (typeof window !== 'undefined') {
+    window.selectedBank = selectedBank;
+  }
+  syncCoreLegendDOM();
+  if (typeof window !== 'undefined' && window.sound && typeof window.sound.click === 'function') {
+    window.sound.click(640);
+  }
+  if (typeof window !== 'undefined' && typeof window.renderCanvas === 'function') {
+    window.renderCanvas(0.016);
+  }
+}
+
+function syncCoreLegendDOM() {
+  if (typeof document === 'undefined') return;
+  const bar = document.getElementById('coreLegendBar');
+  if (!bar) return;
+  const buttons = bar.querySelectorAll('[data-bank]');
+  buttons.forEach(btn => {
+    const b = parseInt(btn.getAttribute('data-bank'), 10);
+    btn.classList.toggle('active', selectedBank === b);
+  });
 }
 
 // Массив 163 ТВС-2М
 var coreAssemblies = [];
+
+// Форма поля Kq
+const KQ_REFLECTOR = 0.35;
+const KQ_SELF_WEIGHT = 0.62;
+const KQ_SPREAD = 0.90;
 
 function initCoreCartogram() {
   coreAssemblies.length = 0;
@@ -86,6 +176,7 @@ function initCoreCartogram() {
   // Условие гексагональной решетки ВВЭР-1200: q^2 + r^2 + q*r <= 43 -> ровно 163 ячейки
   let faId = 1;
   let rowNumber = 1;
+  const fuelMap = buildFuelLoadingMap();
 
   for (let r = 7; r >= -7; r--) {
     const rowQ = [];
@@ -105,30 +196,9 @@ function initCoreCartogram() {
       const hasRod = bank !== null;
       const rodGroup = bank !== null ? bank : 0;
 
-      // Профилирование обогащения и базового коэффициента неравномерности Kq
-      let enrichment = 4.40;
-      let burnup = '1-й год (Свежая)';
-      let gadoliniumPins = 6;
-      if (dist < 2.6) {
-        enrichment = 3.60;
-        burnup = '3-й год (28.4 МВт·сут/кг)';
-        gadoliniumPins = 0;
-      } else if (dist < 5.1) {
-        enrichment = 4.20;
-        burnup = '2-й год (16.2 МВт·сут/кг)';
-        gadoliniumPins = 6;
-      } else {
-        enrichment = 4.95;
-        burnup = '1-й год (Свежая + Gd₂O₃)';
-        gadoliniumPins = 12;
-      }
-
-      // Базовый профиль энерговыделения Kq (в центре и среднем кольце 1.08..1.29, на периферии 0.72..0.92)
-      const radialShape = dist > 5.8
-        ? 0.74 + (6.6 - dist) * 0.16
-        : 1.24 - 0.032 * dist + 0.045 * Math.cos(dist * 0.95);
-      const deterministicMod = ((id * 17 + rowNumber * 7) % 11 - 5) * 0.006;
-      const baseKq = Math.max(0.68, Math.min(1.31, radialShape + deterministicMod));
+      const fuel = fuelMap.get(q + ',' + r);
+      const enrichment = fuel.type.enrichment;
+      const burnup = `${fuel.year}-й год (${fuel.burnup.toFixed(1)} МВт·сут/кг)`;
 
       const colInRow = colIdx + 1;
       const rowStr = String(rowNumber).padStart(2, '0');
@@ -147,12 +217,15 @@ function initCoreCartogram() {
         rodGroup: rodGroup,
         enrichment: enrichment,
         burnup: burnup,
-        gadoliniumPins: gadoliniumPins,
-        baseKq: baseKq,
-        currentKq: baseKq,
-        powerMW: 19.63 * baseKq,
-        outletTemp: 298.2 + 30.7 * baseKq,
-        deltaT: 30.7 * baseKq,
+        fuelType: fuel.type.name,
+        fuelTypeFactor: fuel.type.reactivity,
+        campaignYear: fuel.year,
+        burnupMWd: fuel.burnup,
+        baseKq: 1.0,
+        currentKq: 1.0,
+        powerMW: 19.63,
+        outletTemp: 328.9,
+        deltaT: 30.7,
         dnbr: 2.15,
         cladTempC: 342.0,
         insertionPct: 0.0,
@@ -161,6 +234,32 @@ function initCoreCartogram() {
     }
     rowNumber++;
   }
+
+  // Поле Kq из загрузки: кассета × утечка к выгородке, затем сглаживание по 6 соседям
+  const assemblyAt = new Map(coreAssemblies.map(a => [a.q + ',' + a.r, a]));
+  coreAssemblies.forEach(a => {
+    const leakage = 1.0 - 0.42 * Math.pow(a.dist / Math.sqrt(43), 3);
+    a.localKq = FUEL_YEAR_REACTIVITY[a.campaignYear] * a.fuelTypeFactor * leakage;
+  });
+  const neighbours = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]];
+  coreAssemblies.forEach(a => {
+    const neighbourSum = neighbours.reduce((acc, [dq, dr]) => {
+      const n = assemblyAt.get((a.q + dq) + ',' + (a.r + dr));
+      return acc + (n ? n.localKq : KQ_REFLECTOR);
+    }, 0);
+    a.smoothKq = KQ_SELF_WEIGHT * a.localKq + (1.0 - KQ_SELF_WEIGHT) * neighbourSum / 6.0;
+  });
+  // Нормировка на среднее 1.000; сжатие размаха держит пик в пределах 1.24–1.30
+  const meanKq = coreAssemblies.reduce((acc, a) => acc + a.smoothKq, 0) / coreAssemblies.length;
+
+  coreAssemblies.forEach(a => {
+    const exactKq = Number((1.0 + (a.smoothKq / meanKq - 1.0) * KQ_SPREAD).toFixed(3));
+    a.baseKq = exactKq;
+    a.currentKq = exactKq;
+    a.powerMW = (3200.0 / 163.0) * exactKq;
+    a.deltaT = 30.7 * exactKq;
+    a.outletTemp = 298.2 + a.deltaT;
+  });
 
   // По умолчанию выбираем центральную ТВС №82 (q=0, r=0, Bank 11)
   if (typeof sim !== 'undefined' && (!sim.selectedAssemblyId || sim.selectedAssemblyId < 1 || sim.selectedAssemblyId > 163)) {
@@ -175,7 +274,8 @@ initCoreCartogram();
 // ============================================================================
 
 // Физическое погружение стержня СУЗ для конкретной ТВС (0% = полностью извлечен на ВВЭР БЩУ? Внимание:
-// В физическом ядре sim.group10Pos = 80% означает высоту от низа активной зоны (80% извлечено, 20% погружено).
+// В физическом ядре sim.group10Pos — положение рабочей группы №12 от низа активной зоны (72.4% ≈ 270 см).
+// 
 // Возвращает { heightPct: 0..100 (от низа), depthPct: 0..100 (погружение сверху), depthCm: 0..373 })
 function getAssemblyRodState(assembly, simState) {
   const s = simState || (typeof window !== 'undefined' ? window.sim : null);
@@ -198,13 +298,10 @@ function getAssemblyRodState(assembly, simState) {
   if (s) {
     if (s.az1Tripped) {
       heightPct = 0.0;
-    } else if (assembly.bank === 10) {
-      heightPct = typeof s.group10Pos === 'number' ? s.group10Pos : 80.0;
-    } else if (assembly.bank >= 1 && assembly.bank <= 9) {
-      heightPct = typeof s.groups1to9Pos === 'number' ? s.groups1to9Pos : 100.0;
+    } else if (assembly.bank === WORKING_BANK) {
+      heightPct = typeof s.group10Pos === 'number' ? s.group10Pos : 72.4;
     } else {
-      // Группы 11 и 12 на мощности находятся на верхнем концевике (100% от низа = 0% погружения),
-      // при срабатывании АЗ-1 или глубоком вводе — синхронно с группами 1-9
+      // Группы АЗ на мощности находятся на верхнем концевике (100% от низа = 0% погружения)
       heightPct = typeof s.groups1to9Pos === 'number' ? s.groups1to9Pos : 100.0;
     }
   }
@@ -250,7 +347,7 @@ function updateAssemblyTelemetry(assembly, simState) {
 
   // Температура оболочки твэла (сплав Э110, наружная стенка): T_вх + ΔT + пленочный перепад ΔT_пл
   const powerFrac = Math.max(0.01, thermalMW / 3200.0);
-  const filmDropC = (14.8 * powerFrac * kq) / Math.pow(flowFrac, 0.65);
+  const filmDropC = (7.8 * powerFrac * kq) / Math.pow(flowFrac, 0.65);
   const cladTempC = Math.min(650.0, faOutletT + filmDropC);
 
   // Запас до кризиса теплообмена (DNBR, в номинале ~1.85..2.45, предел безопасности > 1.30)
@@ -267,23 +364,22 @@ function updateAssemblyTelemetry(assembly, simState) {
   return rodState;
 }
 
-// Спектральная цветовая карта Kq по новой инженерной температурной шкале (Slate Light SCADA):
-// - Низкое Kq (< 0.85): ледяной лазурный #0EA5E9
-// - Номинал Kq (0.85 - 1.10): глубокий циан #06B6D4
-// - Повышенное Kq (1.10 - 1.25): янтарный #F59E0B
-// - Пиковое Kq (> 1.25): сигнальный коралловый #EF4444
-// - Локальный перегрев (> 1.35 или Tобол > 350°C): глубокий кармин #DC2626
-function getKqLayerStyle(kq, cladTempC = 0) {
-  if (kq >= 1.35 || cladTempC > 350.0) {
-    return { fill: '#DC2626', text: '#FFFFFF', stroke: '#991B1B' }; // Локальный перегрев (#DC2626)
-  } else if (kq > 1.25) {
-    return { fill: '#EF4444', text: '#FFFFFF', stroke: '#B91C1C' }; // Пиковое Kq (> 1.25, #EF4444)
-  } else if (kq >= 1.10) {
-    return { fill: '#F59E0B', text: '#0F172A', stroke: '#B45309' }; // Повышенное Kq (1.10 - 1.25, #F59E0B)
-  } else if (kq >= 0.85) {
-    return { fill: '#06B6D4', text: '#0F172A', stroke: '#0E7490' }; // Номинал Kq (0.85 - 1.10, #06B6D4)
+// Цветовая шкала Kq (среднее Kq = 1.000)
+function getKqLayerStyle(kq) {
+  if (kq >= 1.24) {
+    return { fill: '#E11D48', text: '#FFFFFF', stroke: '#9F1239' }; // Пиковые ТВС
+  } else if (kq >= 1.15) {
+    return { fill: '#F59E0B', text: '#0F172A', stroke: '#B45309' }; // Повышенное энерговыделение
+  } else if (kq >= 0.86) {
+    return { fill: '#0284C7', text: '#FFFFFF', stroke: '#0369A1' }; // Основная зона
   }
-  return { fill: '#0EA5E9', text: '#FFFFFF', stroke: '#0369A1' };   // Низкое Kq (< 0.85, #0EA5E9)
+  return { fill: '#38BDF8', text: '#0F172A', stroke: '#0284C7' };   // Выгоревшие и краевые ТВС
+}
+
+// Температура оболочки: красный цвет только при кризисе теплообмена
+function getCladStatusColor(assembly) {
+  if (assembly.dnbr < 1.30) return '#DC2626';
+  return assembly.cladTempC > 350 ? '#D97706' : '#16A34A';
 }
 
 // Цветовая карта физического погружения стержней СУЗ (0..100%, стандарт Slate Light SCADA)
@@ -292,22 +388,17 @@ function getInsertionLayerStyle(assembly, rodState) {
     return { fill: '#F1F5F9', text: '#64748B', stroke: '#CBD5E1' };
   }
   const depth = rodState.depthPct; // 0..100% погружения сверху
-  if (assembly.bank === 10) {
-    // Особый акцент на рабочей группе №10 (АРМ)
-    if (depth > 60) {
-      return { fill: '#DC2626', text: '#FFFFFF', stroke: '#991B1B' };
-    } else if (depth > 5) {
-      return { fill: '#E11D48', text: '#FFFFFF', stroke: '#9F1239' };
-    }
-    return { fill: '#FDA4AF', text: '#0F172A', stroke: '#E11D48' };
-  }
-  // Группы 1..9, 11, 12
-  if (depth >= 85) {
+  // Пороги и цвета совпадают с легендой слоя (раздел 4.6)
+  if (depth >= 99) {
     return { fill: '#EF4444', text: '#FFFFFF', stroke: '#B91C1C' }; // Полное погружение (АЗ-1)
-  } else if (depth >= 25) {
-    return { fill: '#F59E0B', text: '#0F172A', stroke: '#B45309' }; // Частичное погружение
   }
-  return { fill: '#0EA5E9', text: '#FFFFFF', stroke: '#0284C7' };   // На верхнем концевике (0% погружения)
+  if (depth < 1) {
+    return { fill: '#0EA5E9', text: '#FFFFFF', stroke: '#0284C7' }; // На верхнем концевике
+  }
+  if (assembly.bank === WORKING_BANK) {
+    return { fill: '#E11D48', text: '#FFFFFF', stroke: '#9F1239' }; // Рабочая группа в зоне
+  }
+  return { fill: '#F59E0B', text: '#0F172A', stroke: '#B45309' };   // Частичное погружение
 }
 
 // HiDPI / Retina фикс для холста картограммы активной зоны
@@ -371,10 +462,14 @@ function selectCoreAssembly(assemblyId) {
 }
 
 function setCoreLayerMode(mode) {
-  if (mode === 'banks' || mode === 'kq' || mode === 'insertion') {
+  if (mode === 'banks' || mode === 'fuel' || mode === 'kq' || mode === 'insertion') {
     coreLayerMode = mode;
     if (typeof window !== 'undefined') {
       window.coreLayerMode = mode;
+      const coreLegend = document.getElementById('coreLegendBar');
+      if (coreLegend) {
+        coreLegend.style.display = (window.sim && window.sim.viewMode === 'core' && mode === 'banks') ? 'flex' : 'none';
+      }
     }
   }
 }
@@ -394,28 +489,46 @@ function syncCoreInfoPanelDOM(activeAssembly, rodState) {
   }
 
   const bankStr = activeAssembly.bank
-    ? `Группа №${activeAssembly.bank}${activeAssembly.bank === 10 ? ' (Рабочая АРМ)' : ''}`
+    ? `Группа №${activeAssembly.bank}${activeAssembly.bank === WORKING_BANK ? ' (Рабочая АРМ)' : ''}`
     : 'Без привода СУЗ (bank: null)';
   const rodDepthStr = activeAssembly.bank
-    ? `${rodState.depthCm.toFixed(1)} см (${rodState.depthPct.toFixed(1)}% погруж. / Н=${rodState.heightPct.toFixed(1)}%)`
+    ? `${rodState.depthCm.toFixed(1)} см (${rodState.depthPct.toFixed(1)}% / Н=${rodState.heightPct.toFixed(1)}%)`
     : '0.0 см (ПС СУЗ отсутствует)';
 
-  const kqCol = activeAssembly.currentKq > 1.25 ? '#DC2626' : (activeAssembly.currentKq >= 1.10 ? '#D97706' : '#16A34A');
-  const dnbrCol = activeAssembly.dnbr < 1.35 ? '#DC2626' : (activeAssembly.dnbr < 1.65 ? '#D97706' : '#16A34A');
-  const cladCol = activeAssembly.cladTempC > 350 ? '#DC2626' : (activeAssembly.cladTempC > 340 ? '#D97706' : '#16A34A');
+  const kqCol = activeAssembly.currentKq >= 1.24 ? '#E11D48' : (activeAssembly.currentKq >= 1.15 ? '#D97706' : '#0284C7');
+  const dnbrCol = activeAssembly.dnbr >= 1.30 ? '#16A34A' : '#DC2626';
+  const cladCol = getCladStatusColor(activeAssembly);
+  const badgeLabel = activeAssembly.bank ? `ГРУППА СУЗ №${activeAssembly.bank}` : 'БЕЗ ПРИВОДА СУЗ';
 
   panel.dataset.assemblyId = String(activeAssembly.id);
   panel.dataset.bank = activeAssembly.bank !== null ? String(activeAssembly.bank) : 'null';
   panel.innerHTML =
-    `<div class="cip-title">ТВС-2М №${activeAssembly.id}</div>` +
-    `<div class="cip-row"><span>Координата в решетке:</span><b>Ряд ${activeAssembly.coordLabel}</b></div>` +
-    `<div class="cip-row"><span>Группа СУЗ:</span><b>${bankStr}</b></div>` +
-    `<div class="cip-row"><span>Положение стержня:</span><b>${rodDepthStr}</b></div>` +
-    `<div class="cip-row"><span>Коэффициент Kq:</span><b style="color:${kqCol}">${activeAssembly.currentKq.toFixed(3)}</b></div>` +
-    `<div class="cip-row"><span>Тепловая мощность:</span><b>${activeAssembly.powerMW.toFixed(2)} МВт</b></div>` +
-    `<div class="cip-row"><span>Перепад температур ΔT:</span><b>+${activeAssembly.deltaT.toFixed(1)} °C (выход ${activeAssembly.outletTemp.toFixed(1)} °C)</b></div>` +
-    `<div class="cip-row"><span>Запас до кризиса кипения (DNBR):</span><b style="color:${dnbrCol}">${activeAssembly.dnbr.toFixed(2)}</b></div>` +
-    `<div class="cip-row"><span>Температура оболочки твэлов:</span><b style="color:${cladCol}">${activeAssembly.cladTempC.toFixed(1)} °C</b></div>`;
+    `<div class="cip-header">` +
+      `<div class="cip-title">ТВС-2М №${activeAssembly.id}</div>` +
+      `<div class="cip-badge">${badgeLabel}</div>` +
+    `</div>` +
+    `<div class="cip-section">` +
+      `<div class="cip-section-title">[ПОЛОЖЕНИЕ В РЕШЕТКЕ]</div>` +
+      `<div class="cip-row"><span>Загрузка:</span><b>${activeAssembly.fuelType} • ${activeAssembly.burnup}</b></div>` +
+      `<div class="cip-row"><span>Координаты в решетке:</span><b>Ряд ${activeAssembly.coordLabel}</b></div>` +
+      `<div class="cip-row"><span>Радиус R от оси:</span><b>${(activeAssembly.dist * 236).toFixed(0)} мм</b></div>` +
+    `</div>` +
+    `<div class="cip-section">` +
+      `<div class="cip-section-title">[ПРИВОД ШЭМ-3]</div>` +
+      `<div class="cip-row"><span>Номер группы СУЗ:</span><b>${bankStr}</b></div>` +
+      `<div class="cip-row"><span>Статус погружения:</span><b>${rodDepthStr}</b></div>` +
+    `</div>` +
+    `<div class="cip-section">` +
+      `<div class="cip-section-title">[НЕЙТРОННО-ТЕПЛОВАЯ ФИЗИКА]</div>` +
+      `<div class="cip-row"><span>Коэффициент Kq:</span><b style="color:${kqCol}">${activeAssembly.currentKq.toFixed(3)}</b></div>` +
+      `<div class="cip-row"><span>Тепловая мощность ТВС:</span><b>${activeAssembly.powerMW.toFixed(2)} МВт</b></div>` +
+      `<div class="cip-row"><span>Подогрев ΔT:</span><b>+${activeAssembly.deltaT.toFixed(1)} °C</b></div>` +
+    `</div>` +
+    `<div class="cip-section">` +
+      `<div class="cip-section-title">[ПРЕДЕЛЫ БЕЗОПАСНОСТИ]</div>` +
+      `<div class="cip-row"><span>Запас DNBR:</span><b style="color:${dnbrCol}">${activeAssembly.dnbr.toFixed(2)}</b></div>` +
+      `<div class="cip-row"><span>Температура оболочки ТВЭЛ:</span><b style="color:${cladCol}">${activeAssembly.cladTempC.toFixed(1)} °C</b></div>` +
+    `</div>`;
 }
 
 // ============================================================================
@@ -470,16 +583,17 @@ function renderCoreCartogramView() {
   ctx.fillStyle = '#0F172A';
   ctx.font = '700 12.5px "Inter", "Segoe UI", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('КАРТОГРАММА АКТИВНОЙ ЗОНЫ ВВЭР-1200 (163 ТВС-2М)', 30, 31);
+  ctx.fillText('КАРТОГРАММА АКТИВНОЙ ЗОНЫ ВВЭР-1200', 30, 31);
   ctx.fillStyle = '#64748B';
   ctx.font = '500 10px "JetBrains Mono", monospace';
-  ctx.fillText('Figure 2: Reactor core with control rod banks (Bank 1–12 • 121 ПС СУЗ)', 30, 47);
+  ctx.fillText('163 ТВС-2М • 121 ПС СУЗ • 12 групп', 30, 47);
 
   // 3 кнопки-тумблера слоев картограммы
   const layerButtons = [
-    { id: 'banks', label: '[Группы СУЗ 1-12]', x: 382, w: 124 },
-    { id: 'kq', label: '[Тепловая карта Kq]', x: 512, w: 124 },
-    { id: 'insertion', label: '[Погружение стержней]', x: 642, w: 116 }
+    { id: 'banks', label: '[Группы СУЗ]', x: 402, w: 90 },
+    { id: 'fuel', label: '[Загрузка]', x: 496, w: 76 },
+    { id: 'kq', label: '[Карта Kq]', x: 576, w: 76 },
+    { id: 'insertion', label: '[Погружение]', x: 656, w: 100 }
   ];
 
   layerButtons.forEach(btn => {
@@ -514,15 +628,17 @@ function renderCoreCartogramView() {
   });
 
   // --------------------------------------------------------------------------
-  // 4.3. КОНТУР КОРПУСА РЕАКТОРА, ВЫГОРОДКИ, ОСИ I-III / II-IV И ПЕТЛИ RCP-1..4
+  // 4.3. КОНТУР КОРПУСА РЕАКТОРА, ВЫГОРОДКИ, ОСИ I-III / II-IV И ПЕТЛИ ГЦНА-1..4
   // --------------------------------------------------------------------------
-  const outerBarrelR = hexR * 13.75; // ~278 px
+  // Угловые ТВС заканчиваются на ~250 px от центра; оба кольца помещаются над легендой (y = 662)
+  const outerBarrelR = hexR * 12.67; // ~256 px
+  const barrelGap = 8;
 
   // Внешнее кольцо корпуса реактора и внутреннее кольцо шахты/выгородки (#475569 / #334155)
   ctx.strokeStyle = '#94A3B8';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(cx, cy, outerBarrelR + 14, 0, Math.PI * 2);
+  ctx.arc(cx, cy, outerBarrelR + barrelGap, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.fillStyle = '#FFFFFF';
@@ -551,7 +667,7 @@ function renderCoreCartogramView() {
   ctx.moveTo(cx, cy - outerBarrelR - 38);
   ctx.lineTo(cx, cy - outerBarrelR + 10);
   ctx.moveTo(cx, cy + outerBarrelR - 10);
-  ctx.lineTo(cx, cy + outerBarrelR + 38);
+  ctx.lineTo(cx, 660);
   ctx.stroke();
 
   // Римские цифры осей I, II, III, IV (#0F172A)
@@ -559,17 +675,17 @@ function renderCoreCartogramView() {
   ctx.font = '700 14px "Times New Roman", Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('I', cx - outerBarrelR - 38, cy + 16);
-  ctx.fillText('III', cx + outerBarrelR + 38, cy - 14);
-  ctx.fillText('IV', cx - 16, cy - outerBarrelR - 24);
-  ctx.fillText('II', cx + 16, cy + outerBarrelR + 24);
+  ctx.fillText('I', cx - outerBarrelR - 72, cy);
+  ctx.fillText('III', cx + outerBarrelR + 76, cy);
+  ctx.fillText('IV', cx - 16, cy - outerBarrelR - 26);
+  ctx.fillText('II', cx + 14, 654);
   ctx.restore();
 
-  // Отрисовка 4 направлений петель ГЦК (RCP-1, RCP-2, RCP-3, RCP-4) и угловых секторов 20°30' и 34°30'
+  // Отрисовка 4 направлений петель ГЦК (ГЦНА-1, ГЦНА-2, ГЦНА-3, ГЦНА-4) и угловых секторов 20°30' и 34°30'
   const loopsGeometry = [
-    // RCP-4: верхняя левая петля (20°30' выше оси I)
+    // ГЦНА-4: верхняя левая петля (20°30' выше оси I)
     {
-      label: 'RCP-4',
+      label: 'ГЦНА-4',
       sub: 'Петля №4 (20°30\')',
       angleDeg: 180 + 20.5,
       arcStartDeg: 180,
@@ -577,9 +693,9 @@ function renderCoreCartogramView() {
       angleText: "20°30'",
       loopIdx: 3
     },
-    // RCP-1: нижняя левая петля (34°30' ниже оси I)
+    // ГЦНА-1: нижняя левая петля (34°30' ниже оси I)
     {
-      label: 'RCP-1',
+      label: 'ГЦНА-1',
       sub: 'Петля №1 (34°30\')',
       angleDeg: 180 - 34.5,
       arcStartDeg: 145.5,
@@ -587,9 +703,9 @@ function renderCoreCartogramView() {
       angleText: "34°30'",
       loopIdx: 0
     },
-    // RCP-3: верхняя правая петля (34°30' выше оси III)
+    // ГЦНА-3: верхняя правая петля (34°30' выше оси III)
     {
-      label: 'RCP-3',
+      label: 'ГЦНА-3',
       sub: 'Петля №3 (34°30\')',
       angleDeg: -34.5,
       arcStartDeg: -34.5,
@@ -597,9 +713,9 @@ function renderCoreCartogramView() {
       angleText: "34°30'",
       loopIdx: 2
     },
-    // RCP-2: нижняя правая петля (20°30' ниже оси III)
+    // ГЦНА-2: нижняя правая петля (20°30' ниже оси III)
     {
-      label: 'RCP-2',
+      label: 'ГЦНА-2',
       sub: 'Петля №2 (20°30\')',
       angleDeg: 20.5,
       arcStartDeg: 0,
@@ -612,7 +728,7 @@ function renderCoreCartogramView() {
   loopsGeometry.forEach(lp => {
     const rad = (lp.angleDeg * Math.PI) / 180;
     const rOuter = outerBarrelR + 56;
-    const rInner = outerBarrelR + 4;
+    const rInner = outerBarrelR + barrelGap + 2;
     const x1 = cx + rOuter * Math.cos(rad);
     const y1 = cy + rOuter * Math.sin(rad);
     const x2 = cx + rInner * Math.cos(rad);
@@ -622,7 +738,7 @@ function renderCoreCartogramView() {
     const arrowColor = loopObj.pumpOn ? '#0284C7' : '#64748B';
 
     ctx.save();
-    // Стрелка направления входа петли RCP (#0284C7 / #475569)
+    // Стрелка направления входа петли (#0284C7 / #475569)
     ctx.strokeStyle = arrowColor;
     ctx.lineWidth = 2.0;
     ctx.beginPath();
@@ -660,7 +776,7 @@ function renderCoreCartogramView() {
     ctx.textBaseline = 'middle';
     ctx.fillText(lp.angleText, txAngle, tyAngle);
 
-    // Подпись RCP-1..4 (#0F172A)
+    // Подпись ГЦНА-1..4 (#0F172A)
     const lblX = cx + (rOuter + 14) * Math.cos(rad);
     const lblY = cy + (rOuter + 14) * Math.sin(rad) + (lp.angleDeg > 0 && lp.angleDeg < 180 ? 10 : -10);
     ctx.fillStyle = '#0F172A';
@@ -677,9 +793,9 @@ function renderCoreCartogramView() {
   const keyY = 98;
   const keyR = 22;
   drawPointyHexPath(ctx, keyX, keyY, keyR);
-  ctx.fillStyle = '#F1F5F9';
+  ctx.fillStyle = '#E2E8F0';
   ctx.fill();
-  ctx.strokeStyle = '#CBD5E1';
+  ctx.strokeStyle = '#64748B';
   ctx.lineWidth = 1.4;
   ctx.stroke();
 
@@ -688,7 +804,17 @@ function renderCoreCartogramView() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('9', keyX, keyY - 6);
-  ctx.font = '700 10px "JetBrains Mono", monospace';
+
+  ctx.beginPath();
+  ctx.arc(keyX, keyY + 7, 6.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.strokeStyle = '#64748B';
+  ctx.lineWidth = 1.0;
+  ctx.stroke();
+
+  ctx.fillStyle = '#0F172A';
+  ctx.font = '700 9px "JetBrains Mono", monospace';
   ctx.fillText('2', keyX, keyY + 7);
 
   // Линии-выноски и подписи (#0F172A / #475569)
@@ -711,60 +837,146 @@ function renderCoreCartogramView() {
     const rodState = updateAssemblyTelemetry(a, s);
     const pos = getAssemblyScreenCoords(a);
 
-    // Выбор цветовой схемы и текста в зависимости от активного слоя
-    let cellStyle;
-    let bottomText = '';
-
-    if (coreLayerMode === 'banks') {
-      const bankKey = a.bank !== null ? a.bank : 0;
-      cellStyle = BANK_PALETTE[bankKey] || BANK_PALETTE[0];
-      bottomText = a.bank !== null ? String(a.bank) : '';
-    } else if (coreLayerMode === 'kq') {
-      cellStyle = getKqLayerStyle(a.currentKq, a.cladTempC);
-      // В режиме [Тепловая карта Kq] выводим ТОЛЬКО номер кассеты
-      bottomText = '';
-    } else {
-      cellStyle = getInsertionLayerStyle(a, rodState);
-      // В режиме [Погружение стержней] процент погружения выводим ТОЛЬКО для реально погруженных групп (>0%)
-      const roundedDepth = Math.round(rodState.depthPct);
-      bottomText = (a.bank !== null && roundedDepth > 0) ? `${roundedDepth}%` : '';
-    }
-
     const isSelected = a.id === selectedId;
     const isHovered = a.id === hoveredId;
 
     ctx.save();
-    drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
-    ctx.fillStyle = cellStyle.fill;
-    ctx.fill();
 
-    if (isSelected || isHovered) {
-      ctx.strokeStyle = isSelected ? '#0284C7' : '#0F172A';
-      ctx.lineWidth = isSelected ? 2.4 : 1.8;
-    } else {
-      ctx.strokeStyle = cellStyle.stroke || '#CBD5E1';
-      ctx.lineWidth = 1.0;
-    }
-    ctx.stroke();
+    if (coreLayerMode === 'banks') {
+      const isSelectedGroup = (selectedBank !== null && a.bank === selectedBank);
+      const isDimmed = (selectedBank !== null && !isSelectedGroup);
 
-    // Чистая контрастная типографика внутри гексагона:
-    ctx.fillStyle = cellStyle.text;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+      if (isDimmed) {
+        ctx.globalAlpha = 0.35;
+      }
 
-    if (coreLayerMode === 'kq') {
-      ctx.font = '600 10px "JetBrains Mono", "Segoe UI", monospace';
-      ctx.fillText(String(a.id), pos.x, pos.y);
-    } else if (bottomText !== '') {
-      ctx.font = '700 10px "JetBrains Mono", "Segoe UI", monospace';
+      if (isSelectedGroup) {
+        // Подсвеченные кассеты выбранной группы: акцентный синий #0284C7, белый текст #FFFFFF
+        drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
+        ctx.fillStyle = '#0284C7';
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? '#0F172A' : (isHovered ? '#0284C7' : '#0369A1');
+        ctx.lineWidth = (isSelected || isHovered) ? 2.4 : 1.2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(a.id), pos.x, pos.y - 5.0);
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y + 6.0, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = '#0369A1';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        ctx.fillStyle = '#0284C7';
+        ctx.font = '700 8.5px "JetBrains Mono", monospace';
+        ctx.fillText(String(a.bank), pos.x, pos.y + 6.0);
+      } else if (a.hasRod) {
+        // ТВС с СУЗ (по умолчанию): фон #E2E8F0, тонкая контрастная окантовка #64748B, темная цифра группы внутри круга (#0F172A)
+        drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
+        ctx.fillStyle = '#E2E8F0';
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? '#0284C7' : (isHovered ? '#0F172A' : '#64748B');
+        ctx.lineWidth = (isSelected || isHovered) ? 2.4 : 1.0;
+        ctx.stroke();
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(a.id), pos.x, pos.y - 5.0);
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y + 6.0, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = '#64748B';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = '700 8.5px "JetBrains Mono", monospace';
+        ctx.fillText(String(a.bank), pos.x, pos.y + 6.0);
+      } else {
+        // ТВС без СУЗ: фон #F8FAFC, граница #CBD5E1, номер кассеты #475569
+        drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
+        ctx.fillStyle = '#F8FAFC';
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? '#0284C7' : (isHovered ? '#0F172A' : '#CBD5E1');
+        ctx.lineWidth = (isSelected || isHovered) ? 2.2 : 1.0;
+        ctx.stroke();
+
+        ctx.fillStyle = '#475569';
+        ctx.font = '600 10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(a.id), pos.x, pos.y);
+      }
+    } else if (coreLayerMode === 'fuel') {
+      const cellStyle = FUEL_YEAR_STYLE[a.campaignYear];
+      drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
+      ctx.fillStyle = cellStyle.fill;
+      ctx.fill();
+      ctx.strokeStyle = (isSelected || isHovered) ? '#0F172A' : cellStyle.stroke;
+      ctx.lineWidth = (isSelected || isHovered) ? 2.4 : 1.0;
+      ctx.stroke();
+
+      // Номер кассеты и выгорание под ним
+      ctx.fillStyle = cellStyle.text;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 9.5px "JetBrains Mono", monospace';
       ctx.fillText(String(a.id), pos.x, pos.y - 5.0);
+      ctx.font = '600 8.5px "JetBrains Mono", monospace';
+      ctx.fillText(a.burnupMWd.toFixed(1), pos.x, pos.y + 6.0);
+    } else if (coreLayerMode === 'kq') {
+      const cellStyle = getKqLayerStyle(a.currentKq, a.cladTempC);
+      drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
+      ctx.fillStyle = cellStyle.fill;
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? '#0F172A' : (isHovered ? '#0F172A' : (cellStyle.stroke || '#CBD5E1'));
+      ctx.lineWidth = (isSelected || isHovered) ? 2.4 : 1.0;
+      ctx.stroke();
 
-      ctx.font = '700 9px "JetBrains Mono", "Segoe UI", monospace';
-      ctx.fillText(bottomText, pos.x, pos.y + 6.0);
+      // Номер кассеты и значение Kq под ним
+      ctx.fillStyle = cellStyle.text;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 9.5px "JetBrains Mono", monospace';
+      ctx.fillText(String(a.id), pos.x, pos.y - 5.0);
+      ctx.font = '600 8.5px "JetBrains Mono", monospace';
+      ctx.fillText(a.currentKq.toFixed(2), pos.x, pos.y + 6.0);
     } else {
-      ctx.font = '700 10px "JetBrains Mono", "Segoe UI", monospace';
-      ctx.fillText(String(a.id), pos.x, pos.y);
+      // Режим [Погружение стержней]
+      const cellStyle = getInsertionLayerStyle(a, rodState);
+      drawPointyHexPath(ctx, pos.x, pos.y, hexR - 0.6);
+      ctx.fillStyle = cellStyle.fill;
+      ctx.fill();
+      ctx.strokeStyle = isSelected ? '#0284C7' : (isHovered ? '#0F172A' : (cellStyle.stroke || '#CBD5E1'));
+      ctx.lineWidth = (isSelected || isHovered) ? 2.4 : 1.0;
+      ctx.stroke();
+
+      ctx.fillStyle = cellStyle.text;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const roundedDepth = Math.round(rodState.depthPct);
+      const bottomText = (a.bank !== null && roundedDepth > 0) ? `${roundedDepth}%` : '';
+      if (bottomText !== '') {
+        ctx.font = '700 9.5px "JetBrains Mono", monospace';
+        ctx.fillText(String(a.id), pos.x, pos.y - 5.0);
+        ctx.font = '700 9px "JetBrains Mono", monospace';
+        ctx.fillText(bottomText, pos.x, pos.y + 6.0);
+      } else {
+        ctx.font = '700 10px "JetBrains Mono", monospace';
+        ctx.fillText(String(a.id), pos.x, pos.y);
+      }
     }
+
     ctx.restore();
 
     // Регистрация хитбокса ТВС для наведения и клика
@@ -779,7 +991,7 @@ function renderCoreCartogramView() {
         sub: `Координата: Ряд ${a.coordLabel} • Топливо ${a.enrichment.toFixed(2)}% U-235`,
         desc: a.bank
           ? `Тепловыделяющая сборка оснащена 18 направляющими каналами ПС СУЗ (Группа №${a.bank}). Погружение стержня: ${rodState.depthCm.toFixed(1)} см (${rodState.depthPct.toFixed(1)}%).`
-          : 'Периферийная/промежуточная тепловыделяющая сборка ТВС-2М без привода ОР СУЗ.',
+          : 'Тепловыделяющая сборка ТВС-2М без привода ОР СУЗ.',
         simple: 'Каждая шестигранная кассета ТВС-2М содержит 312 твэлов с таблетками диоксида урана UO₂.',
         telemetry: () =>
           `Kq: ${a.currentKq.toFixed(3)} | ΔT: +${a.deltaT.toFixed(1)} °C | DNBR: ${a.dnbr.toFixed(2)} | Tобол: ${a.cladTempC.toFixed(1)} °C`
@@ -806,38 +1018,78 @@ function renderCoreCartogramView() {
     ctx.textBaseline = 'middle';
     ctx.fillText('ГРУППЫ СУЗ:', 28, 684);
 
-    for (let b = 0; b <= 12; b++) {
-      const pal = BANK_PALETTE[b];
-      const bx = 112 + b * 49;
+    let curX = 114;
+    for (let b = 1; b <= 12; b++) {
+      const isWorking = (b === WORKING_BANK);
+      const bw = isWorking ? 136 : 43;
+      const bx = curX;
       const by = 672;
-      ctx.fillStyle = pal.fill;
-      ctx.strokeStyle = pal.stroke;
-      ctx.lineWidth = 1.1;
+      curX += bw + 3.5;
+
+      const isBankSelected = (selectedBank === b);
+      ctx.fillStyle = isBankSelected ? '#0284C7' : '#FFFFFF';
+      ctx.strokeStyle = isBankSelected ? '#0369A1' : (isWorking ? '#64748B' : '#CBD5E1');
+      ctx.lineWidth = isBankSelected ? 1.5 : 1.0;
       ctx.beginPath();
-      ctx.roundRect(bx, by, 43, 24, 4);
+      ctx.roundRect(bx, by, bw, 24, 4);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = pal.text;
-      ctx.font = '700 9.5px "JetBrains Mono", monospace';
+      ctx.fillStyle = isBankSelected ? '#FFFFFF' : '#0F172A';
+      ctx.font = (isWorking ? '700 9px ' : '700 9.5px ') + '"JetBrains Mono", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(b === 0 ? 'Б/СУЗ' : `Гр.${b}`, bx + 21.5, by + 12.5);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isWorking ? `Гр. ${b} (РАБОЧАЯ)` : `Гр.${b}`, bx + bw / 2, by + 12.5);
+
+      if (typeof activeHotspots !== 'undefined' && Array.isArray(activeHotspots)) {
+        activeHotspots.push({
+          x: bx,
+          y: by,
+          w: bw,
+          h: 24,
+          bankId: b,
+          title: isWorking ? `Группа СУЗ №${b} [РАБОЧАЯ]` : `Группа СУЗ №${b}`,
+          sub: isWorking ? 'Рабочая регулирующая группа (АРМ)' : 'Стержни аварийной защиты (верхний концевик)',
+          desc: isBankSelected ? 'Повторный клик — сброс селекции' : `Нажмите для подсветки кассет Группы №${b}`,
+          simple: 'Селективная подсветка кассет выбранной группы на картограмме.',
+          telemetry: () => (selectedBank === b ? 'ВЫБРАНА' : 'НЕ АКТИВНА'),
+          onClick: () => toggleBankSelection(b)
+        });
+      }
     }
+  } else if (coreLayerMode === 'fuel') {
+    [1, 2, 3, 4].forEach((year, idx) => {
+      const style = FUEL_YEAR_STYLE[year];
+      const count = coreAssemblies.filter(a => a.campaignYear === year).length;
+      const sx = 28 + idx * 180;
+      ctx.fillStyle = style.fill;
+      ctx.strokeStyle = style.stroke;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(sx, 672, 172, 24, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = style.text;
+      ctx.font = '700 9px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${style.label}: ${count} шт.`, sx + 86, 684);
+    });
   } else if (coreLayerMode === 'kq') {
     const kqStops = [
-      { lbl: '< 0.85 (Низкое)', col: '#0EA5E9', txt: '#FFFFFF' },
-      { lbl: '0.85–1.10 (Номинал)', col: '#06B6D4', txt: '#0F172A' },
-      { lbl: '1.10–1.25 (Повыш.)', col: '#F59E0B', txt: '#0F172A' },
-      { lbl: '> 1.25 (Пик Kq)', col: '#EF4444', txt: '#FFFFFF' },
-      { lbl: 'Перегрев (>1.35)', col: '#DC2626', txt: '#FFFFFF' }
+      { lbl: '< 0.86 (Выгоревшие, край)', col: '#38BDF8', txt: '#0F172A' },
+      { lbl: '0.86–1.14 (Основная зона)', col: '#0284C7', txt: '#FFFFFF' },
+      { lbl: '1.15–1.23 (Повышенный Kq)', col: '#F59E0B', txt: '#0F172A' },
+      { lbl: '1.24–1.30 (Пиковые ТВС)', col: '#E11D48', txt: '#FFFFFF' }
     ];
     kqStops.forEach((st, idx) => {
-      const sx = 28 + idx * 145;
+      const sx = 28 + idx * 180;
       ctx.fillStyle = st.col;
       ctx.strokeStyle = '#CBD5E1';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(sx, 672, 136, 24, 4);
+      ctx.roundRect(sx, 672, 172, 24, 4);
       ctx.fill();
       ctx.stroke();
 
@@ -845,11 +1097,11 @@ function renderCoreCartogramView() {
       ctx.font = '700 9px "JetBrains Mono", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(st.lbl, sx + 68, 684);
+      ctx.fillText(st.lbl, sx + 86, 684);
     });
   } else {
     const insStops = [
-      { lbl: 'Гр.10 АРМ (В работе)', col: '#E11D48', txt: '#FFFFFF' },
+      { lbl: 'Гр.12 АРМ (В работе)', col: '#E11D48', txt: '#FFFFFF' },
       { lbl: '0% погруж. (Вверх)', col: '#0EA5E9', txt: '#FFFFFF' },
       { lbl: 'Частичное погружение', col: '#F59E0B', txt: '#0F172A' },
       { lbl: '100% погружение (АЗ-1)', col: '#EF4444', txt: '#FFFFFF' },
@@ -877,7 +1129,6 @@ function renderCoreCartogramView() {
   // --------------------------------------------------------------------------
   // 4.7. БОКОВАЯ ИНФО-ПАНЕЛЬ ТЕЛЕМЕТРИИ ТВС (#coreInfoPanel) СПРАВА
   // --------------------------------------------------------------------------
-  // Карточка #FFFFFF с границей 1px solid #E2E8F0 и скруглением 8px
   const activeId = hoveredId !== null ? hoveredId : selectedId;
   const activeFA = coreAssemblies.find(item => item.id === activeId) || coreAssemblies[81] || coreAssemblies[0];
   const activeRod = getAssemblyRodState(activeFA, s);
@@ -898,10 +1149,8 @@ function renderCoreCartogramView() {
   ctx.fill();
   ctx.stroke();
 
-  // Верхняя акцентная полоса панели
-  const headerBankKey = activeFA.bank !== null ? activeFA.bank : 0;
-  const headerPal = BANK_PALETTE[headerBankKey] || BANK_PALETTE[0];
-  ctx.fillStyle = activeFA.bank === 10 ? '#E11D48' : '#0284C7';
+  // Верхняя акцентная синяя полоска
+  ctx.fillStyle = '#0284C7';
   ctx.beginPath();
   ctx.roundRect(px, py, pw, 4, [8, 8, 0, 0]);
   ctx.fill();
@@ -910,38 +1159,43 @@ function renderCoreCartogramView() {
   ctx.fillStyle = '#64748B';
   ctx.font = '700 10px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('ИНФО-ПАНЕЛЬ КАССЕТЫ // #coreInfoPanel', px + 16, py + 24);
+  ctx.fillText('ИНФО-ПАНЕЛЬ КАССЕТЫ // #coreInfoPanel', px + 16, py + 22);
 
   ctx.fillStyle = '#0F172A';
   ctx.font = '700 18px "Inter", "Segoe UI", sans-serif';
-  ctx.fillText(`ТВС-2М №${activeFA.id}`, px + 16, py + 48);
+  ctx.fillText(`ТВС-2М №${activeFA.id}`, px + 16, py + 46);
 
-  // Бейдж группы СУЗ справа в шапке
-  ctx.fillStyle = headerPal.fill;
-  ctx.strokeStyle = headerPal.stroke;
-  ctx.lineWidth = 1.2;
+  // Строгий монохромный SCADA-бейдж (#1E293B, белый текст, шрифт Inter tabular-nums)
+  const badgeW = 140;
+  const badgeH = 26;
+  const badgeX = px + pw - badgeW - 16;
+  const badgeY = py + 26;
+  ctx.fillStyle = '#1E293B';
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1.0;
   ctx.beginPath();
-  ctx.roundRect(px + pw - 144, py + 28, 128, 26, 5);
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = headerPal.text;
-  ctx.font = '700 10.5px "JetBrains Mono", monospace';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '700 10px "Inter", sans-serif';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
   ctx.fillText(
     activeFA.bank !== null ? `ГРУППА СУЗ №${activeFA.bank}` : 'БЕЗ ПРИВОДА СУЗ',
-    px + pw - 80,
-    py + 45
+    badgeX + badgeW / 2,
+    badgeY + badgeH / 2
   );
 
-  // Статус выбора (Клик / Наведение курсора)
+  // Статус выбора
   ctx.textAlign = 'left';
   ctx.fillStyle = hoveredId !== null ? '#0284C7' : '#64748B';
   ctx.font = '500 10px "JetBrains Mono", monospace';
   ctx.fillText(
     hoveredId !== null
       ? `● Режим обзора курсором (Клик фиксирует ТВС №${activeFA.id})`
-      : `● Зафиксирована ТВС №${activeFA.id} (Наведите курсор на любую ячейку)`,
+      : `● Зафиксирована ТВС №${activeFA.id} (Кликните по любой кассете)`,
     px + 16,
     py + 68
   );
@@ -954,102 +1208,92 @@ function renderCoreCartogramView() {
   ctx.lineTo(px + pw - 16, py + 78);
   ctx.stroke();
 
-  // 6 ОБЯЗАТЕЛЬНЫХ КАРТОЧЕК ТЕЛЕМЕТРИИ ТВС (норма — #16A34A, предупреждение — #D97706, авария — #DC2626)
-  const dnbrStatusColor = activeFA.dnbr < 1.35 ? '#DC2626' : (activeFA.dnbr < 1.65 ? '#D97706' : '#16A34A');
-  const kqStatusColor = activeFA.currentKq > 1.25 ? '#DC2626' : (activeFA.currentKq >= 1.10 ? '#D97706' : '#16A34A');
-  const cladStatusColor = activeFA.cladTempC > 350 ? '#DC2626' : (activeFA.cladTempC > 340 ? '#D97706' : '#16A34A');
+  // 4 ЧЕТКИХ БЛОКА С КОМПАКТНОЙ СЕТКОЙ КЛЮЧ-ЗНАЧЕНИЕ (БЕЗ НУМЕРАЦИИ "1.", "2.", "3."):
+  const kqColor = activeFA.currentKq >= 1.24 ? '#E11D48' : (activeFA.currentKq >= 1.15 ? '#D97706' : '#0284C7');
+  const dnbrColor = activeFA.dnbr >= 1.30 ? '#16A34A' : '#DC2626';
+  const cladColor = getCladStatusColor(activeFA);
 
-  const telemetryRows = [
+  const sections = [
     {
-      label: '1. НОМЕР ТВС И КООРДИНАТА В РЕШЕТКЕ',
-      val: `ТВС №${activeFA.id} • Ряд ${activeFA.coordLabel}`,
-      sub: `Радиус от оси зоны: R = ${(activeFA.dist * 23.6).toFixed(0)} мм (шаг 236 мм)`,
-      accent: '#0284C7',
-      valColor: '#0F172A'
+      title: '[ПОЛОЖЕНИЕ В РЕШЕТКЕ]',
+      rows: [
+        { k: 'Загрузка:', v: `${activeFA.fuelType} • ${activeFA.burnup}`, col: '#0F172A' },
+        { k: 'Координаты в решетке:', v: `Ряд ${activeFA.coordLabel}`, col: '#0F172A' },
+        { k: 'Радиус R от оси зоны:', v: `R = ${(activeFA.dist * 236).toFixed(0)} мм (R/R₀ = ${(activeFA.dist / Math.sqrt(43)).toFixed(2)})`, col: '#0F172A' }
+      ]
     },
     {
-      label: '2. ГРУППА СУЗ И ПОГРУЖЕНИЕ СТЕРЖНЯ',
-      val: activeFA.bank !== null
-        ? `Группа №${activeFA.bank} • Погружение: ${activeRod.depthCm.toFixed(1)} см (${activeRod.depthPct.toFixed(1)}%)`
-        : 'Без ОР СУЗ (bank: null) • Погружение: 0.0 см',
-      sub: activeFA.bank !== null
-        ? `Высота от низа АЗ: ${activeRod.heightCm.toFixed(1)} см из 373.0 см (${activeRod.heightPct.toFixed(1)}%)`
-        : 'В направляющих каналах размещены имитаторы / СВП',
-      accent: activeFA.bank === 10 ? '#E11D48' : '#0284C7',
-      valColor: '#0F172A'
+      title: '[ПРИВОД ШЭМ-3]',
+      rows: [
+        { k: 'Номер группы СУЗ:', v: activeFA.bank !== null ? `Группа №${activeFA.bank}${activeFA.bank === WORKING_BANK ? ' (Рабочая АРМ)' : ''}` : 'Без привода СУЗ (bank: null)', col: '#0F172A' },
+        { k: 'Статус погружения:', v: activeFA.bank !== null ? `${activeRod.depthCm.toFixed(1)} см (${activeRod.depthPct.toFixed(1)}%)` : '0.0 см (ПС СУЗ отсутствует)', col: '#0F172A' },
+        { k: 'Высота от низа зоны:', v: activeFA.bank !== null ? `${activeRod.heightCm.toFixed(1)} см (Н=${activeRod.heightPct.toFixed(1)}%)` : '373.0 см (100%)', col: '#0F172A' }
+      ]
     },
     {
-      label: '3. КОЭФФИЦИЕНТ НЕРАВНОМЕРНОСТИ (Kq)',
-      val: `Kq = ${activeFA.currentKq.toFixed(3)} отн. ед.`,
-      sub: `Тепловая мощность кассеты: ${activeFA.powerMW.toFixed(2)} МВт (Макс по зоне: ${(s.kqMax || 1.31).toFixed(2)})`,
-      accent: kqStatusColor,
-      valColor: kqStatusColor
+      title: '[НЕЙТРОННО-ТЕПЛОВАЯ ФИЗИКА]',
+      rows: [
+        { k: 'Коэффициент Kq:', v: `${activeFA.currentKq.toFixed(3)} отн. ед.`, col: kqColor },
+        { k: 'Тепловая мощность ТВС:', v: `${activeFA.powerMW.toFixed(2)} МВт`, col: '#0F172A' },
+        { k: 'Подогрев теплоносителя ΔT:', v: `+${activeFA.deltaT.toFixed(1)} °C (вых. ${activeFA.outletTemp.toFixed(1)} °C)`, col: '#0F172A' }
+      ]
     },
     {
-      label: '4. ПОДОГРЕВ ТЕПЛОНОСИТЕЛЯ В ТВС (ΔT)',
-      val: `ΔT = +${activeFA.deltaT.toFixed(1)} °C`,
-      sub: `Вход: ${(s.coreInletTempC || 298.2).toFixed(1)} °C → Выход из ТВС: ${activeFA.outletTemp.toFixed(1)} °C`,
-      accent: '#D97706',
-      valColor: '#0F172A'
-    },
-    {
-      label: '5. ЗАПАС ДО КРИЗИСА КИПЕНИЯ (DNBR)',
-      val: `DNBR = ${activeFA.dnbr.toFixed(2)}`,
-      sub: activeFA.dnbr >= 1.30
-        ? 'Норма безопасности (Проектный предел DNBR > 1.30)'
-        : 'ВНИМАНИЕ! Снижение запаса до кризиса теплообмена!',
-      accent: dnbrStatusColor,
-      valColor: dnbrStatusColor
-    },
-    {
-      label: '6. ТЕМПЕРАТУРА ОБОЛОЧКИ ТВЭЛОВ (Э110)',
-      val: `Tобол = ${activeFA.cladTempC.toFixed(1)} °C`,
-      sub: `Топливный сердечник UO₂ (средн.): ${Math.round(s.fuelTempC || 680)} °C • Обогащение ${activeFA.enrichment.toFixed(2)}%`,
-      accent: cladStatusColor,
-      valColor: cladStatusColor
+      title: '[ПРЕДЕЛЫ БЕЗОПАСНОСТИ]',
+      rows: [
+        { k: 'Запас до кризиса DNBR:', v: `${activeFA.dnbr.toFixed(2)}`, col: dnbrColor },
+        { k: 'Статус запаса DNBR:', v: activeFA.dnbr >= 1.30 ? 'В норме (DNBR ≥ 1.30)' : 'ВНИМАНИЕ! DNBR < 1.30', col: dnbrColor },
+        { k: 'Температура оболочки Tоб:', v: `${activeFA.cladTempC.toFixed(1)} °C (Э110)`, col: cladColor }
+      ]
     }
   ];
 
-  let ry = py + 88;
-  const cardH = 66;
-  const cardGap = 7;
+  let sy = py + 86;
+  const secH = 96;
+  const secGap = 7;
 
-  telemetryRows.forEach(item => {
+  sections.forEach(sec => {
     ctx.fillStyle = '#F8FAFC';
     ctx.strokeStyle = '#E2E8F0';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(px + 16, ry, pw - 32, cardH, 6);
+    ctx.roundRect(px + 16, sy, pw - 32, secH, 6);
     ctx.fill();
     ctx.stroke();
 
-    // Левый цветовой маркер статуса
-    ctx.fillStyle = item.accent;
-    ctx.fillRect(px + 16, ry, 3.5, cardH);
+    // Левый акцентный синий штрих
+    ctx.fillStyle = '#0284C7';
+    ctx.fillRect(px + 16, sy, 3, secH);
 
-    // Заголовок блока: глубокий сланец #0F172A
-    ctx.fillStyle = '#0F172A';
-    ctx.font = '700 9.5px "JetBrains Mono", monospace';
+    // Заголовок секции: чистый синий #0284C7
+    ctx.fillStyle = '#0284C7';
+    ctx.font = '700 10px "JetBrains Mono", monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(item.label, px + 26, ry + 16);
+    ctx.fillText(sec.title, px + 26, sy + 17);
 
-    // Значение телеметрии: четкий моноширинный шрифт #0F172A с цветовой маркировкой статуса
-    ctx.fillStyle = item.valColor || '#0F172A';
-    ctx.font = '700 12.5px "JetBrains Mono", monospace';
-    ctx.fillText(item.val, px + 26, ry + 36);
+    // 3 строки данных:
+    let ry = sy + 35;
+    sec.rows.forEach(r => {
+      ctx.fillStyle = '#64748B';
+      ctx.font = '500 10.5px "Inter", "Segoe UI", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(r.k, px + 26, ry);
 
-    // Вторичные параметры, формулы, размерности: нейтральный серый #64748B
-    ctx.fillStyle = '#64748B';
-    ctx.font = '500 10px "Inter", "Segoe UI", sans-serif';
-    ctx.fillText(item.sub, px + 26, ry + 54);
+      ctx.fillStyle = r.col;
+      ctx.font = '700 10.5px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(r.v, px + pw - 26, ry);
 
-    ry += cardH + cardGap;
+      ry += 20;
+    });
+
+    sy += secH + secGap;
   });
 
   // --------------------------------------------------------------------------
   // 4.8. ВИЗУАЛЬНАЯ ШКАЛА ПОГРУЖЕНИЯ СТЕРЖНЯ СУЗ В АКТИВНУЮ ЗОНУ (ВНИЗУ ПАНЕЛИ)
   // --------------------------------------------------------------------------
-  const barBoxY = ry + 4;
+  const barBoxY = sy + 3;
   const barBoxH = py + ph - barBoxY - 12;
 
   ctx.fillStyle = '#F8FAFC';
@@ -1080,7 +1324,7 @@ function renderCoreCartogramView() {
 
   if (activeFA.bank !== null && activeRod.depthPct > 0.1) {
     const fillW = Math.max(4, (activeRod.depthPct / 100.0) * trackW);
-    ctx.fillStyle = activeFA.bank === 10 ? 'rgba(225, 29, 72, 0.25)' : 'rgba(2, 132, 199, 0.25)';
+    ctx.fillStyle = activeFA.bank === WORKING_BANK ? 'rgba(2, 132, 199, 0.35)' : 'rgba(2, 132, 199, 0.25)';
     ctx.beginPath();
     ctx.roundRect(trackX, trackY, fillW, trackH, 4);
     ctx.fill();
@@ -1101,13 +1345,15 @@ function renderCoreCartogramView() {
   ctx.fillStyle = '#64748B';
   ctx.font = '500 9.5px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
-  const g10Val = typeof s.group10Pos === 'number' ? s.group10Pos : 80.0;
+  const workingPos = typeof s.group10Pos === 'number' ? s.group10Pos : 72.4;
   const g19Val = typeof s.groups1to9Pos === 'number' ? s.groups1to9Pos : 100.0;
-  ctx.fillText(
-    `Реактор В-491: Раб. группа №10 Н=${g10Val.toFixed(1)}% (${((100 - g10Val) * 3.73).toFixed(0)} см) • Группы АЗ №1–9 Н=${g19Val.toFixed(1)}%`,
-    px + 26,
-    trackY + 34
-  );
+  [
+    'СВОДКА ПО РЕАКТОРУ В-491:',
+    `Рабочая группа №${WORKING_BANK}: Н=${workingPos.toFixed(1)}% (${(workingPos * 3.73).toFixed(0)} см от низа АЗ)`,
+    `Группы АЗ №1–11: Н=${g19Val.toFixed(1)}%`
+  ].forEach((line, idx) => {
+    ctx.fillText(line, px + 26, trackY + 36 + idx * 18);
+  });
 
   ctx.restore();
   ctx.restore();
@@ -1126,4 +1372,6 @@ if (typeof window !== 'undefined') {
   window.hitTestCoreAssembly = hitTestCoreAssembly;
   window.selectCoreAssembly = selectCoreAssembly;
   window.setCoreLayerMode = setCoreLayerMode;
+  window.selectedBank = selectedBank;
+  window.toggleBankSelection = toggleBankSelection;
 }

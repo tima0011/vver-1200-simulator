@@ -22,47 +22,52 @@
     onerror="window.__threeLoadError = true;"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="controls_panel.css">
 </head>
 
 <body>
 
   <div class="iaea-shell">
-    <!-- 1. ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (ЛОГОТИП + ВКЛАДКИ + ТЕЛЕМЕТРИЯ + УПРАВЛЕНИЕ + ИКОНКА БАЗИСА) -->
-    <header class="topbar">
-      <div class="brand-block">
-        <div class="atom-logo" title="ВВЭР-1200 // Цифровой двойник энергоблока Поколения III+">
-          <svg width="22" height="22" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#0284C7" stroke-width="1.5" />
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#0284C7" stroke-width="1.5" />
-            <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(120 18 18)" stroke="#0284C7" stroke-width="1.5" />
-            <circle cx="18" cy="18" r="3.2" fill="#0F172A" />
-          </svg>
+    <!-- 1. ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (ДВУХСТОРОННЯЯ ВЕРСТКА: ЛОГОТИП + ВКЛАДКИ СЛЕВА | УПРАВЛЕНИЕ СПРАВА) -->
+    <header class="topbar top-header navbar">
+      <!-- СЛЕВА: Логотип "ReactorLab В-491 SCADA" + 4 навигационные вкладки -->
+      <div class="header-left">
+        <div class="brand-block">
+          <div class="atom-logo" title="ВВЭР-1200 // Цифровой двойник энергоблока Поколения III+">
+            <svg width="22" height="22" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#0284C7" stroke-width="1.5" />
+              <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#0284C7" stroke-width="1.5" />
+              <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(120 18 18)" stroke="#0284C7" stroke-width="1.5" />
+              <circle cx="18" cy="18" r="3.2" fill="#0F172A" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-title">ReactorLab</div>
+            <div class="brand-sub">В-491 SCADA</div>
+          </div>
         </div>
-        <div>
-          <div class="brand-title">ReactorLab</div>
-          <div class="brand-sub">В-491 SCADA</div>
-        </div>
+
+        <!-- ПЕРЕКЛЮЧАТЕЛИ 4 ПОЛНОЭКРАННЫХ РЕЖИМОВ В ШАПКЕ -->
+        <nav class="mode-tabs" aria-label="Режимы симулятора">
+          <button class="view-tab active" data-view="systems" id="tabSystems">
+            <span class="tab-code">[СИСТЕМЫ]</span>
+          </button>
+          <button class="view-tab" data-view="controls" id="btnTabControls">
+            <span class="tab-code">[УПРАВЛЕНИЕ]</span>
+          </button>
+          <button class="view-tab" data-view="core" id="tabCore">
+            <span class="tab-code">[АКТИВНАЯ ЗОНА]</span>
+          </button>
+          <button class="view-tab" data-view="3d" id="tab3D">
+            <span class="tab-code">[3D МОДЕЛЬ]</span>
+          </button>
+        </nav>
       </div>
 
-      <!-- ПЕРЕКЛЮЧАТЕЛИ 4 ПОЛНОЭКРАННЫХ РЕЖИМОВ В ШАПКЕ -->
-      <nav class="mode-tabs" aria-label="Режимы симулятора">
-        <button class="view-tab active" data-view="systems" id="tabSystems">
-          <span class="tab-code">[СИСТЕМЫ]</span>
-        </button>
-        <button class="view-tab" data-view="controls" id="btnTabControls">
-          <span class="tab-code">[УПРАВЛЕНИЕ]</span>
-        </button>
-        <button class="view-tab" data-view="core" id="tabCore">
-          <span class="tab-code">[АКТИВНАЯ ЗОНА]</span>
-        </button>
-        <button class="view-tab" data-view="3d" id="tab3D">
-          <span class="tab-code">[3D МОДЕЛЬ]</span>
-        </button>
-      </nav>
-
-      <!-- ВСТРОЕННАЯ СТРОКА ОПЕРАТИВНОЙ ТЕЛЕМЕТРИИ БЛОКА В ЕДИНОЙ ШАПКЕ -->
-      <div class="telemetry-bar">
+      <!-- ВСТРОЕННАЯ СТРОКА ОПЕРАТИВНОЙ ТЕЛЕМЕТРИИ БЛОКА В ЕДИНОЙ ШАПКЕ (ЖЕСТКО СКРЫТА В ОБЩИЙ КОНТЕЙНЕР, СОХРАНЕНА В DOM) -->
+      <div id="hidden-telemetry-container" class="telemetry-bar" style="display: none !important;">
         <div id="modeBadge" class="mode-badge">НОМИНАЛ 100%</div>
+        <button id="btnResetNominal" class="btn-reset-nominal" style="display:none;" title="Восстановить проектный номинал 100% (3200 МВт)">ВОССТАНОВИТЬ 100% НОМИНАЛ</button>
 
         <div class="kpi-strip">
           <div class="kpi-box" title="Тепловая мощность активной зоны реактора (номинал 3200 МВт)">
@@ -96,8 +101,8 @@
         </div>
       </div>
 
-      <!-- СЦЕНАРИИ, СКОРОСТЬ, ЗВУК И ИКОНКА ИНЖЕНЕРНОГО БАЗИСА В ПРАВОМ УГЛУ -->
-      <div class="top-controls">
+      <!-- СПРАВА: СЦЕНАРИИ, СКОРОСТЬ, ЗВУК И ИКОНКА ИНЖЕНЕРНОГО БАЗИСА В ПРАВОМ УГЛУ -->
+      <div class="top-controls header-right">
         <select id="scenarioSelect" class="scenario-select" title="Выбор сценария или эксплуатационного режима">
           <option value="nominal">1. Номинальный режим (100% Nном — 3200 МВт)</option>
           <option value="startup">2. Выход на МКУ и подъем мощности</option>
@@ -138,6 +143,21 @@
           <canvas id="simCanvas"></canvas>
           <aside id="coreInfoPanel" class="core-info-panel" aria-live="polite"
             style="position:absolute;right:12px;top:52px;width:320px;pointer-events:none;opacity:0;z-index:-1;"></aside>
+          <div id="coreLegendBar" class="core-legend-bar" style="display:none;" aria-label="Селектор групп СУЗ">
+            <span class="core-legend-title">ГРУППЫ СУЗ:</span>
+            <button type="button" class="core-legend-btn" data-bank="1">Гр.1</button>
+            <button type="button" class="core-legend-btn" data-bank="2">Гр.2</button>
+            <button type="button" class="core-legend-btn" data-bank="3">Гр.3</button>
+            <button type="button" class="core-legend-btn" data-bank="4">Гр.4</button>
+            <button type="button" class="core-legend-btn" data-bank="5">Гр.5</button>
+            <button type="button" class="core-legend-btn" data-bank="6">Гр.6</button>
+            <button type="button" class="core-legend-btn" data-bank="7">Гр.7</button>
+            <button type="button" class="core-legend-btn" data-bank="8">Гр.8</button>
+            <button type="button" class="core-legend-btn" data-bank="9">Гр.9</button>
+            <button type="button" class="core-legend-btn" data-bank="10">Гр.10</button>
+            <button type="button" class="core-legend-btn" data-bank="11">Гр.11</button>
+            <button type="button" class="core-legend-btn working" data-bank="12">Гр. 12 (РАБОЧАЯ)</button>
+          </div>
 
           <!-- Верхняя панель управления холстом (видна в [SYSTEMS] и [CORE]) -->
           <div class="canvas-overlay-top" id="canvasOverlayTop">
@@ -195,14 +215,9 @@
           <div id="threeContainer" class="three-container"></div>
 
           <div id="threeToolbar" class="three-toolbar">
-            <button class="three-cam-btn" id="btnThreeBack" style="display:none">← Вся установка</button>
-            <button class="three-cam-btn active" data-cam="iso">Общий вид</button>
-            <button class="three-cam-btn" data-cam="vessel">Разрез реактора</button>
-            <button class="three-cam-btn" data-cam="top">Вид сверху 4 петли</button>
-            <button class="three-cam-btn" data-cam="ulr">УЛР и днище</button>
+            <button class="three-cam-btn" id="btnThreeOverview">Вся установка</button>
+            <button class="three-cam-btn active" id="btnThreeReactor">Корпус реактора</button>
             <button class="three-cam-btn active" id="btnThreeAutoRotate">Автовращение</button>
-            <button class="three-cam-btn" id="btnThreeXRay" title="Включить рентген корпуса для просмотра внутренних узлов ВКУ и ТВС">РЕНТГЕН / X-RAY</button>
-            <button class="three-cam-btn" id="btnThreeExploded" title="Послойная взрыв-схема активной зоны и внутрикорпусных устройств">ВЗРЫВ-СХЕМА</button>
           </div>
 
           <div id="threeHelpBadge" class="three-help-badge">
@@ -239,7 +254,7 @@
             </div>
             <div class="hud-pill">
               <span class="lbl">Tтвэл сред: <b id="hudTfuel">680 °C</b></span>
-              <span class="lbl">K_q макс: <b id="hudKqMax">1.32</b></span>
+              <span class="lbl">K_q макс: <b id="hudKqMax">1.27</b></span>
               <span class="lbl">Масштаб: <b id="hudZoom">100%</b></span>
             </div>
           </div>
@@ -256,7 +271,6 @@
               <span class="bshu-panel-badge">БЩУ В-491</span>
             </div>
             <div class="bshu-panel-content">
-              <!-- Каркас подготовлен под 121 привод СУЗ, борное регулирование и АЗ-1 -->
             </div>
           </div>
 
@@ -267,7 +281,6 @@
               <span class="bshu-panel-badge">БЩУ В-491</span>
             </div>
             <div class="bshu-panel-content">
-              <!-- Каркас подготовлен под турбину К-1200, 4 ПГ, ПЭН и БРУ-К -->
             </div>
           </div>
 
@@ -314,6 +327,7 @@
   <div id="theoryBackdrop" class="theory-backdrop" title="Закрыть справочник"></div>
 
   <script src="main.js"></script>
+  <script src="controls_panel.js"></script>
 </body>
 
 </html>

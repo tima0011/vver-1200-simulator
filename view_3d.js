@@ -149,7 +149,7 @@ const VVER_SPECS = {
     desc: 'Сферическая штампованная крышка корпуса и металлоконструкция верхнего блока с 121 шаговым электромагнитным приводом СУЗ ШЭМ-3 для аварийного останова и регулирования реактивности.',
     specs: [
       ['Количество приводов', '121 ШЭМ-3'],
-      ['Время сброса АЗ', '< 2,5 сек'],
+      ['Время сброса АЗ', '3,5–4 с'],
       ['Ход поглотителя', '3,53 м'],
       ['Отметка оголовка', '+16,72 м']
     ],
@@ -173,7 +173,7 @@ const VVER_SPECS = {
   },
   nozzles: {
     tag: 'ПЕРВЫЙ КОНТУР ТЕПЛОНОСИТЕЛЯ',
-    title: 'Патрубки Ду-850 ГЦТ (4 горячих / 4 холодных)',
+    title: 'Патрубки Ду-850 ГЦТ',
     desc: 'Двухъярусная зона врезки 8 патрубков главного циркуляционного трубопровода (4 горячие нитки DN850 верхнего яруса и 4 холодные нитки DN850 нижнего яруса).',
     specs: [
       ['Количество патрубков', '8 шт. (4 гор. + 4 хол.)'],
@@ -184,34 +184,6 @@ const VVER_SPECS = {
     camOffset: [9.0, 11.0, 9.0],
     labelPos: [2.85, 9.8, 1.6],
     hot: true
-  },
-  bottom: {
-    tag: 'НИЖНЯЯ ЧАСТЬ РЕАКТОРА',
-    title: 'Глухое эллиптическое днище',
-    desc: 'Цельноштампованное эллиптическое днище корпуса без врезок и отверстий, обеспечивающее высокую прочность и надежность удержания активной зоны при экстремальных нагрузках.',
-    specs: [
-      ['Толщина стенки днища', '197 мм'],
-      ['Конструкция', 'Глухое цельнокованое'],
-      ['Опорный бурт', 'Отметка +0,0 м'],
-      ['Материал', 'Сталь 15Х2НМФА-А']
-    ],
-    camOffset: [9.0, 3.5, 9.0],
-    labelPos: [0, 1.2, 2.6],
-    hot: false
-  },
-  shaft: {
-    tag: 'БИОЛОГИЧЕСКАЯ ЗАЩИТА',
-    title: 'Бетонная шахта реактора',
-    desc: 'Монолитная шахта биологической защиты из тяжелого серпентинитового бетона, окружающая корпус реактора и снижающая флюенс быстрых нейтронов.',
-    specs: [
-      ['Внутренний радиус', 'R ≈ 3,4 м'],
-      ['Плотность бетона', '3,6 т/м³'],
-      ['Опорное кольцо', 'Кованая легированная сталь'],
-      ['Вентиляция', 'Кольцевой зазор']
-    ],
-    camOffset: [12.0, 5.0, 12.0],
-    labelPos: [3.4, 2.4, 0.0],
-    hot: false
   },
   barrel: {
     tag: 'ВНУТРИКОРПУСНЫЕ УСТРОЙСТВА',
@@ -283,7 +255,7 @@ const VVER_SPECS = {
       ['Петли ГЦК', '4'],
       ['Источник 3D-модели', 'АЭМ-технологии, aemtech.ru']
     ],
-    nodes: ['eq_reactor', 'eq_sg', 'eq_rcp', 'eq_pressurizer', 'eq_bubbler', 'eq_saoz', 'eq_passive', 'eq_catcher', 'eq_loop', 'eq_pipes'],
+    nodes: ['eq_reactor', 'eq_sg', 'eq_rcp', 'eq_pressurizer', 'eq_bubbler', 'eq_saoz', 'eq_catcher', 'eq_loop', 'eq_pipes'],
     showPin: false
   },
   eq_reactor: {
@@ -346,16 +318,6 @@ const VVER_SPECS = {
     ],
     showPin: false
   },
-  eq_passive: {
-    tag: 'ОБОРУДОВАНИЕ РУ',
-    title: 'Гидроёмкости второй ступени',
-    desc: 'Группа из восьми ёмкостей на верхнем ярусе компоновки, относящаяся к пассивным системам аварийного охлаждения.',
-    specs: [
-      ['Количество', '8 шт.'],
-      ['Тип системы', 'Пассивная']
-    ],
-    showPin: false
-  },
   eq_catcher: {
     tag: 'ОБОРУДОВАНИЕ РУ',
     title: 'Устройство локализации расплава',
@@ -396,7 +358,6 @@ const EQUIPMENT_PARTS = [
   { match: /^D_03/, id: 'eq_rcp' },
   { match: /^D_04/, id: 'eq_pressurizer' },
   { match: /^D_05/, id: 'eq_bubbler' },
-  { match: /^D_07/, id: 'eq_passive' },
   { match: /^D_08/, id: 'eq_catcher' },
   { match: /^Hydraulic_capacity_SAOZ/, id: 'eq_saoz' },
   { match: /^Pipeline_(Hot|Cold)/, id: 'eq_loop' },
@@ -410,7 +371,6 @@ const EQUIPMENT_NODE_LABELS = {
   eq_pressurizer: 'Компенсатор давления',
   eq_bubbler: 'Барботер',
   eq_saoz: 'Гидроёмкости САОЗ',
-  eq_passive: 'Гидроёмкости 2-й ступени',
   eq_catcher: 'УЛР',
   eq_loop: 'ГЦТ',
   eq_pipes: 'Трубопроводы безопасности'
@@ -485,7 +445,7 @@ const threeCtrl = {
     camTargetLook: null,
     xray: false,
     exploded: false,
-    equipmentMode: true,
+    equipmentMode: false,
     detailId: null
   },
 
@@ -619,9 +579,8 @@ const threeCtrl = {
       // 7. Привязка интерактивных событий мыши/касания
       this.bindEvents();
 
-      this.selectComponent('eq_overview', false);
       this.initialized = true;
-      this.startEquipmentOverview();
+      this.showReactor();
 
       if (typeof addLog === 'function') {
         addLog('3D Digital Twin ВВЭР-1200: PBR-сцена и GLB-модель реактора успешно инициализированы.', 'ok');
@@ -820,19 +779,11 @@ const threeCtrl = {
     const envGroup = new THREE.Group();
     envGroup.name = 'Containment_Environment';
 
-    // 1. Фундаментная плита контейнмента (радиус 18 м, отметка Y = -0.5, верхняя плоскость на Y = 0)
-    const floorGeo = new THREE.CylinderGeometry(18.0, 18.5, 1.0, 72);
-    const floorMesh = new THREE.Mesh(floorGeo, this.MATS.concreteSolid);
-    floorMesh.position.y = -0.5;
-    floorMesh.receiveShadow = true;
-    floorMesh.castShadow = true;
-    envGroup.add(floorMesh);
-
-    // Сетка технологической разметки на плите
+    // Сетка технологической разметки на нулевой отметке
     const gridHelper = new THREE.GridHelper(48, 48, 0x1e3a5f, 0x102136);
-    gridHelper.position.y = 0.01;
+    gridHelper.position.y = 0.0;
     gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.4;
+    gridHelper.material.opacity = 0.35;
     envGroup.add(gridHelper);
 
     // Концентрические окружности гермооболочки
@@ -847,60 +798,9 @@ const threeCtrl = {
         side: THREE.DoubleSide
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.y = 0.02;
+      ring.position.y = 0.01;
       envGroup.add(ring);
     });
-
-    // 2. Монолитная бетонная шахта вокруг реактора под реальный радиус (R ≈ 3.4 м, высота 2.4 м)
-    // Шахта окружает основание реактора, обеспечивая биологическую защиту и опору
-    const shaftInnerR = 3.4;
-    const shaftOuterR = 4.8;
-    const shaftProfile = [
-      new THREE.Vector2(shaftInnerR, 0.0),
-      new THREE.Vector2(shaftOuterR, 0.0),
-      new THREE.Vector2(shaftOuterR, 2.4),
-      new THREE.Vector2(3.15, 2.4),
-      new THREE.Vector2(3.15, 2.15),
-      new THREE.Vector2(shaftInnerR, 2.15),
-      new THREE.Vector2(shaftInnerR, 0.0)
-    ];
-    const bioShieldShaftGeo = new THREE.LatheGeometry(shaftProfile, 64);
-    bioShieldShaftGeo.computeVertexNormals();
-    const bioShieldShaft = new THREE.Mesh(bioShieldShaftGeo, this.MATS.bioShieldMat);
-    bioShieldShaft.receiveShadow = true;
-    bioShieldShaft.castShadow = true;
-    bioShieldShaft.userData.componentId = 'shaft';
-    bioShieldShaft.userData.tooltipInfo = {
-      title: VVER_SPECS.shaft.title,
-      sub: VVER_SPECS.shaft.tag,
-      desc: VVER_SPECS.shaft.desc,
-      simple: VVER_SPECS.shaft.desc,
-      telemetry: () => `${VVER_SPECS.shaft.specs[0][0]}: ${VVER_SPECS.shaft.specs[0][1]} | ${VVER_SPECS.shaft.specs[1][0]}: ${VVER_SPECS.shaft.specs[1][1]}`
-    };
-    this.interactableMeshes.push(bioShieldShaft);
-    this.interactiveMeshes.push(bioShieldShaft);
-    this.componentGroups['shaft'] = [bioShieldShaft];
-    envGroup.add(bioShieldShaft);
-
-    // Стальное опорное кольцо шахты под опорный бурт корпуса реактора
-    const bearingRingGeo = new THREE.CylinderGeometry(3.42, 3.42, 0.25, 64, 1, true);
-    const bearingRing = new THREE.Mesh(bearingRingGeo, this.MATS.supportSteelMat);
-    bearingRing.position.y = 2.25;
-    bearingRing.receiveShadow = true;
-    envGroup.add(bearingRing);
-
-    // Теневая плоскость
-    const shadowGeo = new THREE.CircleGeometry(32, 64);
-    shadowGeo.rotateX(-Math.PI / 2);
-    const shadowMat = new THREE.MeshStandardMaterial({
-      color: 0x070c14,
-      roughness: 0.94,
-      metalness: 0.06
-    });
-    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
-    shadowMesh.position.y = -0.01;
-    shadowMesh.receiveShadow = true;
-    envGroup.add(shadowMesh);
 
     this.scene.add(envGroup);
     this.envGroup = envGroup;
@@ -981,17 +881,47 @@ const threeCtrl = {
     }
   },
 
-  showOverview() {
-    if (!this.equipmentModel) return;
+  async showOverview() {
     if (this.state.xray) this.setXRay(false);
     if (this.explodedTarget > 0 || this.explodedProgress > 0) this.setExploded(0, true);
 
+    if (!this.equipmentModel) {
+      try {
+        await this.loadEquipmentAsset();
+      } catch (err) {
+        console.warn('Не удалось загрузить модель оборудования РУ:', err);
+        if (typeof addLog === 'function') addLog('3D: не удалось загрузить модель оборудования РУ.', 'warn');
+        this.showReactor();
+        return;
+      }
+    }
+
     this.state.equipmentMode = true;
     this.state.detailId = null;
-    this.equipmentMeshes.forEach((mesh) => { mesh.visible = true; });
+    if (this.equipmentMeshes) {
+      this.equipmentMeshes.forEach((mesh) => { mesh.visible = true; });
+    }
     this.applyViewState();
     this.selectComponent('eq_overview', false);
     this.setPreset('iso');
+  },
+
+  showReactor() {
+    this.state.equipmentMode = false;
+    this.state.detailId = null;
+    this.applyViewState();
+    this.selectComponent('rpv', false);
+    this.setPreset('iso');
+  },
+
+  updateToolbarButtons() {
+    const isReactor = !this.state.equipmentMode;
+    const btnReactor = document.getElementById('btnThreeReactor');
+    const btnOverview = document.getElementById('btnThreeOverview');
+    if (btnReactor) btnReactor.classList.toggle('active', isReactor);
+    if (btnOverview) btnOverview.classList.toggle('active', !isReactor);
+    const arBtn = document.getElementById('btnThreeAutoRotate');
+    if (arBtn && this.controls) arBtn.classList.toggle('active', Boolean(this.controls.autoRotate));
   },
 
   // Отдельный экран узла. Реактор открывает подробную сцену корпуса,
@@ -1001,10 +931,7 @@ const threeCtrl = {
     this.state.detailId = componentId;
 
     if (componentId === 'eq_reactor') {
-      this.state.equipmentMode = false;
-      this.applyViewState();
-      this.selectComponent('rpv', false);
-      this.setPreset('iso');
+      this.showReactor();
     } else {
       const node = this.equipmentMeshes.find((mesh) => mesh.userData.componentId === componentId);
       if (!node) return;
@@ -1056,7 +983,7 @@ const threeCtrl = {
     panel(0x0f172a, -6, 14);
 
     const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.equipmentEnvironment = pmrem.fromScene(envScene, 0.05).texture;
+    this.equipmentEnvironment = pmrem.fromScene(envScene, 0.04).texture;
     pmrem.dispose();
     return this.equipmentEnvironment;
   },
@@ -1082,19 +1009,7 @@ const threeCtrl = {
     if (this.canvas) this.canvas.style.cursor = 'grab';
     if (this.hoverTooltip) this.hoverTooltip.classList.remove('visible');
 
-    const setShown = (el, shown) => { if (el) el.style.display = shown ? '' : 'none'; };
-    const camBtn = (cam) => document.querySelector('[data-cam="' + cam + '"]');
-    setShown(document.getElementById('btnThreeBack'), Boolean(detailId));
-    setShown(camBtn('iso'), isOverview || isReactor);
-    setShown(camBtn('top'), isOverview || isReactor);
-    setShown(camBtn('vessel'), isReactor);
-    setShown(camBtn('ulr'), isReactor);
-    setShown(document.getElementById('btnThreeXRay'), isReactor);
-    setShown(document.getElementById('btnThreeExploded'), isReactor);
-
-    const isoBtn = camBtn('iso');
-    if (isoBtn) isoBtn.textContent = detailId ? 'Корпус целиком' : 'Общий вид';
-    document.querySelectorAll('[data-cam]').forEach((b) => b.classList.toggle('active', b.dataset.cam === 'iso'));
+    this.updateToolbarButtons();
 
     const help = document.getElementById('threeHelpBadge');
     if (help) {
@@ -1254,15 +1169,6 @@ const threeCtrl = {
     bodyMesh.castShadow = true;
     bodyMesh.receiveShadow = true;
     vesselGroup.add(bodyMesh);
-
-    // Нижнее эллиптическое днище корпуса
-    const bottomGeo = new THREE.SphereGeometry(2.313, 64, 32, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5);
-    const bottomMesh = new THREE.Mesh(bottomGeo, steelMat);
-    bottomMesh.position.y = 0.95;
-    bottomMesh.scale.set(1, 0.42, 1);
-    bottomMesh.castShadow = true;
-    bottomMesh.receiveShadow = true;
-    vesselGroup.add(bottomMesh);
 
     // Главный упорный фланец корпуса (радиус 2.70 м, отметка Y=11.45 м)
     const flangeGeo = new THREE.CylinderGeometry(2.70, 2.70, 0.95, 64);
@@ -1571,33 +1477,25 @@ const threeCtrl = {
     this.canvas.addEventListener('pointermove', this._boundPointerMove);
     this.canvas.addEventListener('pointerup', this._boundPointerUp);
 
-    document.querySelectorAll('[data-cam]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-cam]').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.setViewPreset(btn.dataset.cam);
-        if (typeof sound !== 'undefined' && sound.click) sound.click(620);
+    const btnOverview = document.getElementById('btnThreeOverview');
+    if (btnOverview) {
+      btnOverview.addEventListener('click', () => {
+        this.showOverview();
+        if (typeof sound !== 'undefined' && sound.click) sound.click(580);
       });
-    });
+    }
+
+    const btnReactor = document.getElementById('btnThreeReactor');
+    if (btnReactor) {
+      btnReactor.addEventListener('click', () => {
+        this.showReactor();
+        if (typeof sound !== 'undefined' && sound.click) sound.click(580);
+      });
+    }
 
     const autoRotBtn = document.getElementById('btnThreeAutoRotate');
     if (autoRotBtn) {
       autoRotBtn.addEventListener('click', () => this.toggleAutoRotate());
-    }
-
-    const xrayBtn = document.getElementById('btnThreeXRay');
-    if (xrayBtn) {
-      xrayBtn.addEventListener('click', () => this.toggleXRay());
-    }
-
-    const explBtn = document.getElementById('btnThreeExploded');
-    if (explBtn) {
-      explBtn.addEventListener('click', () => this.toggleExploded());
-    }
-
-    const backBtn = document.getElementById('btnThreeBack');
-    if (backBtn) {
-      backBtn.addEventListener('click', () => this.showOverview());
     }
   },
 

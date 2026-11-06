@@ -125,19 +125,30 @@ body {
 }
 
 /* ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (44px) */
-.topbar {
+.topbar,
+.top-header,
+.navbar {
   background: #FFFFFF;
   border-bottom: 1px solid #E2E8F0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 0 16px;
   height: 44px;
   max-height: 44px;
   min-width: 0;
   overflow: hidden;
-  gap: 8px;
+  gap: 16px;
   z-index: 30;
+}
+
+.header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px;
+  min-width: 0;
+  flex-shrink: 0 !important;
 }
 
 .brand-block {
@@ -227,12 +238,13 @@ body {
 }
 
 /* ПРАВЫЙ БЛОК ШАПКИ (СЦЕНАРИИ, ВРЕМЯ, ЗВУК, ИКОНКА БАЗИСА) */
-.top-controls {
-  display: flex;
-  align-items: center;
+.top-controls,
+.header-right {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
   min-width: 0;
-  gap: 6px;
-  flex-shrink: 0;
 }
 
 .scenario-select {
@@ -240,13 +252,15 @@ body {
   color: #0F172A;
   border: 1px solid #E2E8F0;
   border-radius: 6px;
-  padding: 4px 6px;
+  padding: 4px 8px;
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   outline: none;
-  max-width: 128px;
+  max-width: none !important;
+  width: auto !important;
   min-width: 0;
+  flex-shrink: 0 !important;
   transition: border-color 0.15s;
 }
 
@@ -334,6 +348,31 @@ body {
   to {
     opacity: 0.65;
   }
+}
+
+.btn-reset-nominal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid #15803D;
+  background: #16A34A;
+  color: #FFFFFF;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-reset-nominal:hover {
+  background: #15803D;
+  border-color: #166534;
 }
 
 .kpi-strip {
@@ -654,9 +693,20 @@ body {
 .core-info-panel {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 12px 14px;
   color: #0F172A;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.07);
+}
+
+#coreInfoPanel .cip-header,
+.core-info-panel .cip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #E2E8F0;
 }
 
 #coreInfoPanel .cip-title,
@@ -664,9 +714,44 @@ body {
   font-weight: 700;
   font-size: 13px;
   color: #0F172A;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.cip-badge {
+  background: #1E293B;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cip-section {
   margin-bottom: 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid #E2E8F0;
+}
+
+.cip-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.cip-section-title {
+  font-family: 'JetBrains Mono', 'Segoe UI', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0284C7;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
 }
 
 #coreInfoPanel .cip-row,
@@ -675,8 +760,8 @@ body {
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid #E2E8F0;
+  padding: 3px 0;
+  border-bottom: none;
   font-size: 11px;
 }
 
@@ -690,16 +775,77 @@ body {
 .core-info-panel .cip-row b {
   color: #0F172A;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .core-legend-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.core-legend-bar button {
+  pointer-events: auto;
+}
+
+.core-legend-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.core-legend-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.core-legend-btn:hover {
+  border-color: #0284C7;
+  color: #0284C7;
+}
+
+.core-legend-btn.active {
+  background: #0284C7;
+  border-color: #0369A1;
+  color: #FFFFFF;
+}
+
+.core-legend-btn.working {
+  border-color: #64748B;
+  font-weight: 700;
+}
+
+.core-legend-btn.working.active {
+  background: #0284C7;
+  border-color: #0369A1;
+  color: #FFFFFF;
 }
 
 .bank-badge {
@@ -1306,3 +1452,8 @@ body {
 .theory-btn {
   padding: 5px 8px;
 }
+
+#hidden-telemetry-container, .top-telemetry, .header-telemetry-badge {
+  display: none !important;
+}
+

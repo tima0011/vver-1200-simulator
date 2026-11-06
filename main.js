@@ -157,12 +157,6 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
     document.getElementById('btnAudio').addEventListener('click', () => sound.toggle());
 
 
-    // Дополняем каждую из 163 кассет данными кампании и глубины выгорания для паспорта ТВС
-    const activeAssemblies = (typeof coreAssemblies !== 'undefined') ? coreAssemblies : (window.coreAssemblies || []);
-    activeAssemblies.forEach(a => {
-      if (!a.campaignYear) a.campaignYear = a.enrichment < 4.1 ? 3 : (a.enrichment < 4.6 ? 2 : 1);
-      a.burnupMWd = +((a.campaignYear * 14.2 - a.normR * 4.5 + Math.sin(a.id) * 1.2).toFixed(1));
-    });
 
     // Словарь понятных объяснений «Простыми словами» для всех узлов (включая 3D-сцену)
     const plainExplanations = {
@@ -226,13 +220,13 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       chartHistory.powerTh.push(3200);
       chartHistory.powerEl.push(1200);
       chartHistory.armSet.push(3200);
-      chartHistory.rodG10.push(80);
+      chartHistory.rodG10.push(72.4);
       chartHistory.xenon.push(1.0);
       chartHistory.turbValve.push(100);
       chartHistory.gridFreq.push(50.0);
       chartHistory.p1.push(16.2);
       chartHistory.p2.push(7.0);
-      chartHistory.subcool.push(19.5);
+      chartHistory.subcool.push(19.46);
     }
 
     let lastChartSampleTime = 0;
@@ -294,7 +288,7 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       const h = c.height;
       ctxC.clearRect(0, 0, w, h);
 
-      ctxC.strokeStyle = 'rgba(30, 41, 59, 0.7)';
+      ctxC.strokeStyle = '#E2E8F0';
       ctxC.lineWidth = 1;
       ctxC.beginPath();
       for (let y = 22; y < h; y += 22) {
@@ -882,6 +876,8 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       if (viewCtrlEl) viewCtrlEl.style.display = isCore ? 'none' : '';
       const hudBottomEl = document.querySelector('.canvas-hud-bottom');
       if (hudBottomEl) hudBottomEl.style.display = isCore ? 'none' : 'flex';
+      const coreLegend = document.getElementById('coreLegendBar');
+      if (coreLegend) coreLegend.style.display = (isCore && (window.coreLayerMode || 'banks') === 'banks') ? 'flex' : 'none';
 
       document.getElementById('threeContainer').style.display = is3D ? 'block' : 'none';
       document.getElementById('threeToolbar').style.display = is3D ? 'flex' : 'none';
@@ -929,6 +925,59 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       btn.addEventListener('click', () => {
         activateViewMode(btn.dataset.view, { updateHash: true });
         sound.click(620);
+      });
+    });
+
+    // Кнопка оперативного восстановления номинала 100% при сработавшем АЗ-1
+    const btnResetNominal = document.getElementById('btnResetNominal');
+    if (btnResetNominal) {
+      btnResetNominal.addEventListener('click', () => {
+        if (typeof resetPhysicsToNominal === 'function') {
+          resetPhysicsToNominal(sim);
+        }
+        sim.az1Tripped = false;
+        sim.group10Pos = 72.4;
+        sim.groups1to9Pos = 100.0;
+        sim.thermalPowerMW = 3200.0;
+        sim.nominalPowerMW = 3200.0;
+        sim.targetThermalPowerMW = 3200.0;
+        sim.armTargetMW = 3200.0;
+        sim.armEnabled = true;
+        sim.withdrawing1to9 = false;
+        sim.primaryPressureMPa = 16.20;
+        sim.coreInletTempC = 298.2;
+        sim.coreOutletTempC = 328.9;
+        sim.decayHeatMW = 215.0;
+        sim.electricalPowerMW = 1200.0;
+        sim.boronConc = 6.20;
+        sim.subcoolingMarginC = 19.46;
+        sim.steamHeaderPressMPa = 7.00;
+        if (Array.isArray(sim.loops)) {
+          sim.loops.forEach(l => {
+            l.pumpOn = true;
+            l.rpm = 1000;
+            l.flowPct = 100;
+            l.tHot = 328.9;
+            l.tCold = 298.2;
+            l.sgLevelM = 2.10;
+            l.sgPressMPa = 7.00;
+          });
+        }
+        addLog('ОПЕРАТИВНОЕ ВОССТАНОВЛЕНИЕ: Сброс АЗ-1, возврат реактора в стационарный номинал 100% (3200 МВт, Гр.12 = 72.4%, Гр.1-11 = 100%).', 'ok');
+        sound.click(650);
+        renderCanvas(0.016);
+      });
+    }
+
+    // Обработчики кнопок легенды групп СУЗ (#coreLegendBar)
+    document.querySelectorAll('#coreLegendBar [data-bank]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const bankId = parseInt(btn.dataset.bank, 10);
+        if (typeof toggleBankSelection === 'function') {
+          toggleBankSelection(bankId);
+        } else if (typeof window.toggleBankSelection === 'function') {
+          window.toggleBankSelection(bankId);
+        }
       });
     });
 
@@ -1115,6 +1164,11 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         }
       }
 
+      const btnReset = document.getElementById('btnResetNominal');
+      if (btnReset) {
+        btnReset.style.display = sim.az1Tripped ? 'inline-flex' : 'none';
+      }
+
       // Нижний HUD баланса реактивности (на холсте СИСТЕМЫ)
       const fmtSigned = v => (v >= 0 ? '+' : '') + Math.round(v);
       const hudRhoRods = document.getElementById('hudRhoRods');
@@ -1168,8 +1222,8 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         sim.thermalPowerMW = 3200.0;
         sim.neutronFlux = 1.0;
         sim.precursors = 1.0;
-        sim.decayHeatMW = 195.0;
-        sim.group10Pos = 80.0;
+        sim.decayHeatMW = 215.0;
+        sim.group10Pos = 72.4;
         sim.groups1to9Pos = 100.0;
         sim.armEnabled = true;
         sim.armTargetMW = 3200.0;
@@ -1190,15 +1244,15 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         });
         addLog('СЦЕНАРИЙ 1: Загружен стационарный номинальный режим энергоблока ВВЭР-1200 (100% Nном — 3200 МВт тепл. / 1200 МВт электр.).', 'ok');
       } else if (scenarioKey === 'startup') {
-        sim.thermalPowerMW = 96.0; // 3% МКУ
-        sim.neutronFlux = 0.025;
-        sim.precursors = 0.025;
+        sim.thermalPowerMW = 96.0; // 3% Nном
+        sim.neutronFlux = 0.0268;
+        sim.precursors = 0.0268;
         sim.decayHeatMW = 16.0;
         sim.group10Pos = 48.0;
         sim.groups1to9Pos = 100.0;
         sim.armEnabled = true;
         sim.armTargetMW = 1600.0; // Подъем до 50% мощности
-        sim.boronConc = 7.35;
+        sim.boronConc = 9.29; // Критичность при пусковых температурах и низком ксеноне
         sim.iodine135 = 0.08;
         sim.xenon135 = 0.08;
         sim.fuelTempC = 315.0;
@@ -1208,8 +1262,8 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         sim.pressurizerLevelM = 7.20;
         sim.steamHeaderPressMPa = 6.75;
         sim.feedwaterFlowPct = 50;
-        sim.turbineValvePct = 50;
-        sim.electricalPowerMW = 35.0;
+        sim.turbineValvePct = 3;
+        sim.electricalPowerMW = 36.0;
         sim.boronMode = -1; // Ввод чистого дистиллята для подъема мощности
         sim.loops.forEach(l => {
           l.pumpOn = true; l.rpm = 1000; l.flowPct = 100; l.tHot = 288.0; l.tCold = 286.0; l.sgLevelM = 2.05; l.sgPressMPa = 6.75;
@@ -1217,14 +1271,14 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
         addLog('СЦЕНАРИЙ 2: Выход на МКУ и подъем мощности до 1600 МВт (50% Nном). Включен ввод чистого дистиллята и АРМ.', 'info');
       } else if (scenarioKey === 'xenon') {
         sim.thermalPowerMW = 1100.0;
-        sim.neutronFlux = 0.30;
-        sim.precursors = 0.30;
+        sim.neutronFlux = 0.332;
+        sim.precursors = 0.332;
         sim.decayHeatMW = 110.0;
         sim.group10Pos = 86.0;
         sim.groups1to9Pos = 100.0;
         sim.armEnabled = true;
         sim.armTargetMW = 960.0; // 30% Nном
-        sim.boronConc = 5.45;
+        sim.boronConc = 6.17; // Компенсирует избыток ксенона на 30% мощности
         sim.iodine135 = 1.25; // Высокий запас I-135 после сброса нагрузки со 100% до 30%
         sim.xenon135 = 1.48;  // Растущий пик Ксенона-135 (йодная яма)
         sim.fuelTempC = 435.0;
@@ -1325,7 +1379,7 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       applyHashRoute();
       resizeSimCanvas();
       addLog('Система верхнего блочного уровня БЩУ ВВЭР-1200 (проект В-491, БелАЭС) успешно инициализирована.', 'ok');
-      addLog('Энергоблок работает в стационарном номинальном режиме: Nтепл = 3200 МВт, Nэлектр = 1200 МВт, P₁ = 16,2 МПа, Гр.10 ОР СУЗ = 80%.', 'info');
+      addLog('Энергоблок работает в стационарном номинальном режиме: Nтепл = 3200 МВт, Nэлектр = 1200 МВт, P₁ = 16,2 МПа, Гр.12 ОР СУЗ = 72.4% (~270 см).', 'info');
       requestAnimationFrame(mainLoop);
     };
 

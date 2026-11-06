@@ -1,0 +1,258 @@
+/* ==========================================================================
+   БЛОЧНЫЙ ЩИТ УПРАВЛЕНИЯ (controls_panel.js)
+   ========================================================================== */
+#panelViur .bshu-panel-content,
+#panelViut .bshu-panel-content {
+  display: block;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+#panelTelemetry .bshu-panel-content {
+  gap: 8px;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.ctl-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ctl-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+}
+
+.ctl-section.wide {
+  grid-column: 1 / -1;
+}
+
+.ctl-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.ctl-reads {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ctl-read {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ctl-read-label {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.ctl-read-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ctl-read-value[data-state='warn'] {
+  color: #D97706;
+}
+
+.ctl-read-value[data-state='danger'] {
+  color: #DC2626;
+}
+
+.ctl-row,
+.ctl-segment {
+  display: flex;
+  gap: 6px;
+}
+
+.ctl-row > .ctl-btn,
+.ctl-segment > .ctl-btn {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ctl-pumps,
+.ctl-sg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+}
+
+.ctl-btn {
+  min-height: 32px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.ctl-btn:hover:not(:disabled) {
+  border-color: #0284C7;
+}
+
+.ctl-btn.on {
+  color: #FFFFFF;
+  background: #0284C7;
+  border-color: #0284C7;
+}
+
+.ctl-btn.alert.on {
+  background: #D97706;
+  border-color: #D97706;
+}
+
+.ctl-btn.trip {
+  color: #FFFFFF;
+  font-weight: 700;
+  background: #DC2626;
+  border-color: #DC2626;
+}
+
+.ctl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ctl-slider,
+.ctl-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ctl-slider-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #64748B;
+}
+
+.ctl-slider-head b {
+  color: #0F172A;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ctl-slider input[type='range'] {
+  width: 100%;
+  margin: 0;
+  accent-color: #0284C7;
+}
+
+.ctl-bar-track {
+  height: 8px;
+  overflow: hidden;
+  background: #E2E8F0;
+  border-radius: 4px;
+}
+
+.ctl-bar-fill {
+  height: 100%;
+  background: #0284C7;
+}
+
+.ctl-bar-fill[data-state='warn'] {
+  background: #D97706;
+}
+
+.ctl-bar-fill[data-state='danger'] {
+  background: #DC2626;
+}
+
+.ctl-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #64748B;
+}
+
+.ctl-annunciator {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.ctl-alarm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 3px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+}
+
+.ctl-alarm[data-state='warn'] {
+  color: #FFFFFF;
+  background: #D97706;
+  border-color: #D97706;
+}
+
+.ctl-alarm[data-state='danger'] {
+  color: #FFFFFF;
+  background: #DC2626;
+  border-color: #DC2626;
+}
+
+.ctl-charts {
+  display: grid;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.ctl-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ctl-chart-title {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.ctl-chart canvas {
+  display: block;
+  width: 100%;
+  height: 76px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+}
+
+.ctl-segment > .ctl-btn {
+  padding: 6px 3px;
+  font-size: 11px;
+}

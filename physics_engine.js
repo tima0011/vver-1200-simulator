@@ -8,7 +8,7 @@
  *  - Динамику точечной кинетики нейтронов с учетом предшественников;
  *  - Температурные и мощностные обратные связи (Доплер, плотность теплоносителя, бор);
  *  - Нестационарное отравление ксеноном-135 и кинетику йодной ямы;
- *  - Теплогидравлику 4 петель ГЦК и парогенераторов ПГВ-1000МКП по стандарту IAPWS-IF97;
+ *  - Теплогидравлику 4 петель ГЦК и парогенераторов ПГВ-1000МКП (T_нас по IAPWS-IF97);
  *  - Модель компенсатора давления (КД) и систем пассивной безопасности (САОЗ, СПОТ);
  *  - Пошаговое численное интегрирование stepPhysics(dtReal) при 60 FPS.
  */
@@ -36,8 +36,9 @@ const NUCLEAR_CONSTANTS = {
     SIGMA_XE: 2.65e6,            // Микросечение радиационного захвата Xe-135 (барн)
     YIELD_IODINE: 0.061,         // γ_I = 6.1% — кумулятивный выход I-135 при делении U-235
     YIELD_XENON: 0.0028,         // γ_Xe = 0.28% — прямой выход Xe-135 при делении
-    LAMBDA_IODINE: 2.87e-5,      // λ_I = 2.87e-5 с^-1 (T_1/2 = 6.57 ч)
-    LAMBDA_XENON: 2.09e-5,       // λ_Xe = 2.09e-5 с^-1 (T_1/2 = 9.14 ч)
+    LAMBDA_IODINE: 2.93e-5,      // λ_I = ln2 / T_1/2, T_1/2 = 6.57 ч
+    LAMBDA_XENON: 2.11e-5,       // λ_Xe = ln2 / T_1/2, T_1/2 = 9.14 ч
+    BURNUP_RATIO: 2.57,          // σ_Xe·Φ₀ / λ_Xe на номинале (Φ₀ ≈ 2·10¹³ н/см²·с)
     NOMINAL_POISONING_PCM: 2850  // Стационарное отравление на 100% мощности (pcm)
   },
 
@@ -45,10 +46,10 @@ const NUCLEAR_CONSTANTS = {
   FEEDBACKS: {
     ALPHA_DOPPLER: -2.8,         // α_D = -2.8 pcm/°C (температурный коэффициент топлива)
     ALPHA_MODERATOR: -34.0,      // α_mod = -34.0 pcm/°C (температурный коэффициент теплоносителя)
-    ALPHA_BORON: -85.0,          // α_B = -85.0 pcm / (г/кг H3BO3)
-    ROD_WORTH_G10: 9.5,          // Дифференциальная эффективность рабочей группы №10 (pcm/%)
-    ROD_WORTH_G19: 65.0,         // Дифференциальная эффективность аварийных групп №1-9 (pcm/%)
-    XENON_WORTH_FACTOR: 397.5    // Коэффициент пересчета относительного ксенона в pcm (2650 * 0.15)
+    ALPHA_BORON: -1400.0,        // α_B ≈ -8 pcm/ppm B (1 г/кг H3BO3 = 175 ppm B); инженерная оценка
+    ROD_WORTH_G10: 9.5,          // Дифференциальная эффективность рабочей группы №12 (pcm/%)
+    ROD_WORTH_G19: 65.0,         // Дифференциальная эффективность аварийных групп №1-11 (pcm/%)
+    XENON_WORTH_FACTOR: 2850.0   // Вес равновесного ксенона, pcm (ρ_Xe = -2850 pcm при Xe/Xe₀ = 1)
   },
 
   // Номинальные параметры энергоблока ВВЭР-1200 (В-491)
@@ -61,9 +62,31 @@ const NUCLEAR_CONSTANTS = {
     FUEL_TEMP_C: 680.0,
     STEAM_HEADER_PRESSURE_MPA: 7.00,
     BORON_CONC_G_KG: 6.20,
-    GROUP10_POS_PCT: 80.0,
+    GROUP10_POS_PCT: 72.4,
     GROUPS1TO9_POS_PCT: 100.0
-  }
+  },
+
+  // Остаточное тепловыделение: подгонка кривой Вэя-Вигнера суммой экспонент
+  DECAY_HEAT: {
+    NOMINAL_MW: 215.0,           // 6.7% Nном на установившейся мощности
+    FISSION_NOMINAL_MW: 2985.0,  // Мгновенная часть мощности при Φ = 1
+    FRACTIONS: [0.39621, 0.24574, 0.13167, 0.11105, 0.03148, 0.08385],
+    LAMBDAS: [0.35, 0.03, 0.003, 0.0003, 0.00003, 0.000002]
+  },
+
+  // Парогенератор: ε₀ задаёт T_хол = 298.2 °C при T_гор = 328.9 °C и P₂ = 7.0 МПа
+  STEAM_GEN: {
+    TSAT_NOMINAL_C: 285.83,
+    NTU_NOMINAL: 1.2476,
+    AUTO_RELIEF_PRESS_MPA: 7.35, // Уставка автоматического сброса пара (БРУ-К)
+    AUTO_RELIEF_MW_PER_MPA: 8000.0,
+    THERMAL_CAPACITY_MJ_PER_K: 5000.0 // Теплоноситель, вода ПГ и металл контуров, оценка
+  },
+
+  // Водообмен СВО при вводе бора / дистиллята: 40 т/ч на ~290 т теплоносителя
+  ROD_SPEED_PCT_PER_S: 0.54,     // Привод ШЭМ-3: 20 мм/с при высоте зоны 373 см
+  BORON_EXCHANGE_PER_S: 3.8e-5,
+  BORON_CONCENTRATE_G_KG: 40.0
 };
 
 // ============================================================================
@@ -84,19 +107,20 @@ var sim = {
   nominalPowerMW: 3200.0,
   neutronFlux: 1.0,           // Относительный поток нейтронов (1.0 = 100%)
   precursors: 1.0,            // Концентрация запаздывающих нейтронов
-  decayHeatMW: 195.0,         // Остаточное тепловыделение продуктов деления (~6.1% Nном)
+  decayHeatMW: 215.0,         // Остаточное тепловыделение продуктов деления (6.7% Nном)
 
   // ОР СУЗ и АРМ (ШЭМ-3)
-  group10Pos: 80.0,           // Рабочая группа №10 (0% = внизу, 100% = вверху)
-  groups1to9Pos: 100.0,       // Группы №1-9 (0%..100%)
-  withdrawing1to9: false,     // Идет ли подъем групп 1-9
+  group10Pos: 72.4,           // Рабочая группа №12 (0% = внизу, 100% = вверху; 72.4% ≈ 270 см)
+  groups1to9Pos: 100.0,       // Группы АЗ №1-11 (0%..100%)
+  withdrawing1to9: false,     // Идет ли подъем групп АЗ
   armEnabled: true,           // Автоматический регулятор мощности
   armTargetMW: 3200.0,        // Уставка АРМ (МВт)
   az1Tripped: false,          // Сигнал аварийной защиты АЗ-1
   az1CoverOpen: false,        // Откинута ли крышка кнопки АЗ-1
+  rodCommand: 0,              // Ручное управление группой №12: +1 вверх, -1 вниз
 
   // Борное регулирование (СБР) и Ксенон-135
-  boronConc: 6.20,            // г/кг H3BO3 (при 6.20 г/кг и Гр10=80% реактор критичен)
+  boronConc: 6.20,            // г/кг H3BO3 (при 6.20 г/кг и Гр12=72.4% реактор критичен)
   boronMode: 0,               // 0 = нейтрально, +1 = ввод бора, -1 = ввод дистиллята
   iodine135: 1.0,             // Относительная концентрация I-135 (1.0 = равновесие на 100%)
   xenon135: 1.0,              // Относительная концентрация Xe-135 (1.0 = равновесие на 100%)
@@ -120,8 +144,8 @@ var sim = {
   sprayActive: false,         // Впрыск холодной воды в паровое пространство КД
   ipuKdOpen: false,           // Открыт ли ИПУ КД (аварийный сброс давления в барботер)
   primaryLeakActive: false,   // Малая течь теплоносителя 1-го контура
-  subcoolingMarginC: 19.5,    // Запас до кипения ΔTs в горячих нитках (°C)
-  kqMax: 1.25,
+  subcoolingMarginC: 19.46,   // Запас до кипения ΔTs в горячих нитках (°C)
+  kqMax: 1.27,
 
   // 4 петли ГЦК и 4 горизонтальных парогенератора ПГВ-1000МКП
   loops: [
@@ -133,7 +157,7 @@ var sim = {
 
   // 2-й контур и турбоагрегат К-1200-6,8/50
   steamHeaderPressMPa: 7.00,  // Давление в ГПК (МПа)
-  steamTempC: 285.8,          // Температура насыщенного пара (°C)
+  steamTempC: 285.83,         // Температура насыщенного пара (°C)
   feedwaterFlowPct: 100.0,    // Производительность ПЭН (%)
   turbineValvePct: 100.0,     // Открытие РК турбины (%)
   turbineRpm: 3000,           // Обороты ротора (3000 об/мин = 50 Гц)
@@ -142,7 +166,7 @@ var sim = {
   bruAOpen: false,            // БРУ-А (сброс пара в атмосферу)
 
   // Системы пассивной и активной безопасности Поколения III+ (В-491)
-  saozActive: false,          // Гидроемкости САОЗ первой/второй ступени
+  saozActive: false,          // Гидроемкости САОЗ первой ступени (ГЕ-1)
   saozWaterPct: 100.0,        // Запас борированной воды (16 г/кг) в гидроемкостях (%)
   spotActive: false,          // СПОТ (Система пассивного отвода тепла через дефлекторы)
   ulrCoolingActive: false,    // Подача охлаждающей воды в шахту УЛР (ловушки расплава)
@@ -162,8 +186,17 @@ var sim = {
  * @returns {number} температура насыщения (°C)
  */
 function calcSaturationTempC(pMPa) {
-  const p = Math.max(0.2, pMPa);
-  return 179.88 * Math.pow(p, 0.2378); // При 16.2 МПа ~ 348.4 °C, при 7.0 МПа ~ 285.8 °C
+  // Обратное уравнение области 4 IAPWS-IF97: при 7.0 МПа 285.83 °C, при 16.2 МПа 348.36 °C
+  const p = Math.max(0.2, Math.min(22.0, pMPa));
+  const beta = Math.pow(p, 0.25);
+  const E = beta * beta - 0.17073846940092e2 * beta + 0.14915108613530e2;
+  const F = 0.11670521452767e4 * beta * beta + 0.12020824702470e5 * beta - 0.48232657361591e4;
+  const G = -0.72421316703206e6 * beta * beta - 0.32325550322333e7 * beta + 0.40511340542057e6;
+  const D = (2.0 * G) / (-F - Math.sqrt(F * F - 4.0 * E * G));
+  const n9 = -0.23855557567849;
+  const n10 = 0.65017534844798e3;
+  const sum = n10 + D;
+  return (sum - Math.sqrt(sum * sum - 4.0 * (n9 + n10 * D))) / 2.0 - 273.15;
 }
 
 /**
@@ -186,6 +219,7 @@ function triggerAZ1(reason) {
   sim.az1Tripped = true;
   sim.armEnabled = false;
   sim.withdrawing1to9 = false;
+  sim.turbineValvePct = 0.0; // Защита закрывает стопорные клапаны турбины
 
   const btnARM = typeof document !== 'undefined' ? document.getElementById('btnARM') : null;
   if (btnARM) {
@@ -226,8 +260,10 @@ function resetPhysicsToNominal(targetSim = sim) {
   targetSim.nominalPowerMW = 3200.0;
   targetSim.neutronFlux = 1.0;
   targetSim.precursors = 1.0;
-  targetSim.decayHeatMW = 195.0;
-  targetSim.group10Pos = 80.0;
+  targetSim.decayHeatMW = NUCLEAR_CONSTANTS.DECAY_HEAT.NOMINAL_MW;
+  targetSim.delayedPrecursors = null;
+  targetSim.decayGroups = null;
+  targetSim.group10Pos = 72.4;
   targetSim.groups1to9Pos = 100.0;
   targetSim.boronConc = 6.20;
   targetSim.iodine135 = 1.0;
@@ -239,7 +275,7 @@ function resetPhysicsToNominal(targetSim = sim) {
   targetSim.pressurizerLevelM = 8.40;
   targetSim.heatersMode = 'AUTO';
   targetSim.heatersPowerKW = 900;
-  targetSim.subcoolingMarginC = 19.5;
+  targetSim.subcoolingMarginC = 19.46;
   targetSim.steamHeaderPressMPa = 7.00;
   targetSim.steamTempC = calcSaturationTempC(7.00);
   targetSim.feedwaterFlowPct = 100.0;
@@ -271,7 +307,8 @@ function stepPhysics(dtReal) {
 
   // Ограничиваем шаг и выполняем подинтегральные шаги для абсолютной численной устойчивости
   const totalSimDt = Math.min(dtReal, 0.05) * scale;
-  const subSteps = scale > 10 ? 12 : 4;
+  // Шаг не больше 0.02 с: быстрые связи (мгновенный скачок, ТЭНы, АРМ) иначе теряют устойчивость
+  const subSteps = Math.max(4, Math.ceil(totalSimDt / 0.02));
   const dt = totalSimDt / subSteps;
 
   for (let s = 0; s < subSteps; s++) {
@@ -280,51 +317,58 @@ function stepPhysics(dtReal) {
     // 1. ДВИЖЕНИЕ ОР СУЗ (ШЭМ-3)
     if (sim.az1Tripped) {
       // Гравитационный сброс всех групп ОР СУЗ в активную зону за ~3.5 секунды
-      sim.group10Pos = Math.max(0, sim.group10Pos - 32.0 * dt);
-      sim.groups1to9Pos = Math.max(0, sim.groups1to9Pos - 32.0 * dt);
+      sim.group10Pos = Math.max(0, sim.group10Pos - 28.0 * dt);
+      sim.groups1to9Pos = Math.max(0, sim.groups1to9Pos - 28.0 * dt);
     } else {
       if (sim.withdrawing1to9 && sim.groups1to9Pos < 100) {
-        sim.groups1to9Pos = Math.min(100, sim.groups1to9Pos + 4.5 * dt);
+        sim.groups1to9Pos = Math.min(100, sim.groups1to9Pos + NUCLEAR_CONSTANTS.ROD_SPEED_PCT_PER_S * dt);
         if (sim.groups1to9Pos >= 100) {
           sim.withdrawing1to9 = false;
-          safeLog('Группы ОР СУЗ №1–9 выведены на верхний концевик (100%).', 'ok');
+          safeLog('Группы ОР СУЗ №1–11 выведены на верхний концевик (100%).', 'ok');
         }
       }
       // Работа АРМ (Автоматический регулятор мощности)
       if (sim.armEnabled && sim.groups1to9Pos > 85) {
         const powerErrMW = sim.armTargetMW - sim.thermalPowerMW;
         const rateErr = -sim.rhoTotal * 2.2;
-        const rodVel = Math.max(-2.5, Math.min(2.5, (powerErrMW * 0.008 + rateErr * 0.015)));
+        const rodSpeed = NUCLEAR_CONSTANTS.ROD_SPEED_PCT_PER_S;
+        const rodVel = Math.max(-rodSpeed, Math.min(rodSpeed, (powerErrMW * 0.008 + rateErr * 0.015)));
         sim.group10Pos = Math.max(5, Math.min(100, sim.group10Pos + rodVel * dt));
+      } else if (sim.rodCommand) {
+        sim.group10Pos = Math.max(0, Math.min(100, sim.group10Pos + sim.rodCommand * NUCLEAR_CONSTANTS.ROD_SPEED_PCT_PER_S * dt));
       }
     }
 
     // 2. СИСТЕМА БОРНОГО РЕГУЛИРОВАНИЯ (СБР) И САОЗ
+    // Водообмен: dC/dt = (G/M)·(C_вх − C)
     if (sim.boronMode === 1) {
-      // Ввод концентрата борной кислоты H3BO3 (40 г/кг)
-      sim.boronConc = Math.min(16.0, sim.boronConc + 0.045 * dt);
+      sim.boronConc += NUCLEAR_CONSTANTS.BORON_EXCHANGE_PER_S * (NUCLEAR_CONSTANTS.BORON_CONCENTRATE_G_KG - sim.boronConc) * dt;
     } else if (sim.boronMode === -1) {
-      // Ввод чистого дистиллята (разбавление бора)
-      sim.boronConc = Math.max(0.0, sim.boronConc - 0.038 * dt);
+      sim.boronConc = Math.max(0.0, sim.boronConc - NUCLEAR_CONSTANTS.BORON_EXCHANGE_PER_S * sim.boronConc * dt);
     }
 
-    // Если активны гидроемкости САОЗ (ГЕ-1..3), они подают высокоборированную воду (16 г/кг)
+    // Если активны гидроемкости САОЗ, они подают высокоборированную воду (16 г/кг)
     if (sim.saozActive && sim.saozWaterPct > 0) {
       sim.saozWaterPct = Math.max(0, sim.saozWaterPct - 1.2 * dt);
       sim.boronConc = Math.min(16.0, sim.boronConc + (16.0 - sim.boronConc) * 0.06 * dt);
     }
 
     // 3. ДИНАМИКА КСЕНОНА-135 (ЙОДНАЯ ЯМА)
-    // В равновесии при потоке Ф=1.0: I=1.0, Xe=1.0
-    const dI = (sim.neutronFlux - sim.iodine135) * 0.012;
-    const dXe = (0.85 * sim.iodine135 + 0.15 * sim.neutronFlux - (0.28 + 0.72 * sim.neutronFlux) * sim.xenon135) * 0.018;
+    // Концентрации отнесены к равновесию на 100%: при Φ = 1 I = 1 и Xe = 1
+    const xenon = NUCLEAR_CONSTANTS.XENON_CONSTANTS;
+    const iodineShare = xenon.YIELD_IODINE / (xenon.YIELD_IODINE + xenon.YIELD_XENON);
+    const dI = xenon.LAMBDA_IODINE * (sim.neutronFlux - sim.iodine135);
+    const dXe = xenon.LAMBDA_XENON * (
+      (1.0 + xenon.BURNUP_RATIO) * (iodineShare * sim.iodine135 + (1.0 - iodineShare) * sim.neutronFlux)
+      - (1.0 + xenon.BURNUP_RATIO * sim.neutronFlux) * sim.xenon135
+    );
     sim.iodine135 = Math.max(0.05, Math.min(3.0, sim.iodine135 + dI * dt));
     sim.xenon135 = Math.max(0.05, Math.min(2.8, sim.xenon135 + dXe * dt));
 
     // 4. РАСЧЕТ БАЛАНСА РЕАКТИВНОСТИ ВВЭР-1200 (ВНУТРЕННЯЯ САМОЗАЩИЩЕННОСТЬ ПВР)
-    // Эффективность рабочей группы №10 (~900 pcm), групп 1-9 (~6500 pcm)
-    // В номинале: Гр. 1-9 = 100%, Гр. 10 = 80% -> rhoRods = 0 pcm
-    const rhoG10 = (sim.group10Pos - 80.0) * NUCLEAR_CONSTANTS.FEEDBACKS.ROD_WORTH_G10;
+    // Эффективность рабочей группы №12 (~900 pcm), групп АЗ (~6500 pcm)
+    // В номинале: группы АЗ = 100%, Гр. 12 = 72.4% -> rhoRods = 0 pcm
+    const rhoG10 = (sim.group10Pos - 72.4) * NUCLEAR_CONSTANTS.FEEDBACKS.ROD_WORTH_G10;
     const rhoG19 = (sim.groups1to9Pos - 100.0) * NUCLEAR_CONSTANTS.FEEDBACKS.ROD_WORTH_G19;
     sim.rhoRods = rhoG10 + rhoG19;
 
@@ -353,18 +397,35 @@ function stepPhysics(dtReal) {
     const rhoClamped = Math.max(-8000, Math.min(580, sim.rhoTotal));
     const rhoAbs = rhoClamped * 1e-5;
     const beta = NUCLEAR_CONSTANTS.BETA_EFF;
-    const lambda = 0.085;
-    // Квазистационарное приближение мгновенного скачка + динамика предшественников
-    const targetFlux = Math.max(0.0001, sim.precursors * (beta / Math.max(0.0008, beta - rhoAbs)));
+    const delayedGroups = NUCLEAR_CONSTANTS.DELAYED_GROUPS;
+    // Сценарий задаёт sim.precursors одним числом: раскладываем его по 6 группам
+    if (!sim.delayedPrecursors || Math.abs(sim.precursors - sim.precursorsSynced) > 1e-9) {
+      sim.delayedPrecursors = delayedGroups.map(() => sim.precursors);
+    }
+    // Приближение мгновенного скачка: n = Σ(β_i·c_i) / (β − ρ)
+    const delayedSource = delayedGroups.reduce((acc, g, i) => acc + g.beta * sim.delayedPrecursors[i], 0);
+    const targetFlux = Math.max(0.0001, delayedSource / Math.max(0.0008 * beta / 0.0065, beta - rhoAbs));
     sim.neutronFlux += (targetFlux - sim.neutronFlux) * Math.min(1.0, 9.0 * dt);
-    sim.precursors += lambda * (sim.neutronFlux - sim.precursors) * dt;
     sim.neutronFlux = Math.max(0.00005, Math.min(1.35, sim.neutronFlux));
+    delayedGroups.forEach((g, i) => {
+      sim.delayedPrecursors[i] += g.lambda * (sim.neutronFlux - sim.delayedPrecursors[i]) * dt;
+    });
+    sim.precursors = delayedGroups.reduce((acc, g, i) => acc + g.beta * sim.delayedPrecursors[i], 0) / beta;
+    sim.precursorsSynced = sim.precursors;
 
-    // Остаточное энерговыделение продуктов деления (~6.1% от номинала, спадает после останова)
-    const targetDecayMW = 195.0 * sim.neutronFlux + 22.0;
-    sim.decayHeatMW += (targetDecayMW - sim.decayHeatMW) * 0.04 * dt;
+    // Остаточное тепловыделение: каждая группа стремится к своей доле от текущего деления
+    const decay = NUCLEAR_CONSTANTS.DECAY_HEAT;
+    if (!sim.decayGroups || Math.abs(sim.decayHeatMW - sim.decaySynced) > 1e-6) {
+      sim.decayGroups = decay.FRACTIONS.map((f) => f * sim.decayHeatMW);
+    }
+    decay.LAMBDAS.forEach((l, i) => {
+      const equilibrium = decay.FRACTIONS[i] * decay.NOMINAL_MW * sim.neutronFlux;
+      sim.decayGroups[i] += (equilibrium - sim.decayGroups[i]) * (1.0 - Math.exp(-l * dt));
+    });
+    sim.decayHeatMW = sim.decayGroups.reduce((acc, v) => acc + v, 0);
+    sim.decaySynced = sim.decayHeatMW;
 
-    const fissionPowerMW = 3005.0 * sim.neutronFlux;
+    const fissionPowerMW = decay.FISSION_NOMINAL_MW * sim.neutronFlux;
     sim.thermalPowerMW = fissionPowerMW + sim.decayHeatMW;
 
     // 6. ТЕПЛОГИДРАВЛИКА 4 ПЕТЕЛЬ ГЦК И АКТИВНОЙ ЗОНЫ
@@ -372,10 +433,10 @@ function stepPhysics(dtReal) {
     for (let i = 0; i < 4; i++) {
       const lp = sim.loops[i];
       if (lp.pumpOn) {
-        lp.rpm += (1000 - lp.rpm) * Math.min(1, 1.8 * dt);
+        lp.rpm += (1000 - lp.rpm) * Math.min(1, 0.25 * dt);
       } else {
-        // Выбег ГЦНА-1391 на маховике и переход на естественную циркуляцию (ЕЦ ~7.5% расхода)
-        lp.rpm = Math.max(0, lp.rpm - 120 * dt);
+        // Выбег на маховике: n(t) = n₀ / (1 + t/τ), τ = 30 с; далее естественная циркуляция
+        lp.rpm = lp.rpm < 5 ? 0 : lp.rpm - (lp.rpm * lp.rpm / (1000.0 * 30.0)) * dt;
       }
       const natCircPct = 6.8 + 2.2 * ((sim.coreOutletTempC - sim.coreInletTempC) / 30.7);
       lp.flowPct = lp.pumpOn ? (lp.rpm / 1000) * 100 : Math.max(natCircPct, (lp.rpm / 1000) * 100);
@@ -397,36 +458,54 @@ function stepPhysics(dtReal) {
 
     // Потребление пара турбиной К-1200-6,8/50
     const turbineSteamDemandMW = (sim.turbineValvePct / 100.0) * 3200.0 * (sim.steamHeaderPressMPa / 7.0);
-    const totalSecondarySinkMW = turbineSteamDemandMW + spotHeatRemovalMW + bruKHeatMW + bruAHeatMW;
+    const steamGen = NUCLEAR_CONSTANTS.STEAM_GEN;
+    const autoReliefMW = Math.min(3200.0, Math.max(0, sim.steamHeaderPressMPa - steamGen.AUTO_RELIEF_PRESS_MPA) * steamGen.AUTO_RELIEF_MW_PER_MPA);
+    const totalSecondarySinkMW = turbineSteamDemandMW + spotHeatRemovalMW + bruKHeatMW + bruAHeatMW + autoReliefMW;
 
-    // Баланс энергии 2-го контура (давление в ГПК и температура насыщения)
-    const heatTransferPrimaryToSecondaryMW = (avgCoolantTempC - sim.steamTempC) * (3200.0 / 27.75) * Math.pow(avgFlowFrac, 0.35);
-    const dSteamPress = (heatTransferPrimaryToSecondaryMW - totalSecondarySinkMW) * 0.00024;
+    // Теплота, отданная в ПГ, равна G·cp·(Tгор − Tхол) по каждой петле
+    const heatTransferPrimaryToSecondaryMW = sim.loops.reduce((acc, lp) => (
+      acc + 800.0 * (Math.max(0.065, lp.flowPct / 100.0)) * ((lp.tHot - lp.tCold) / 30.7)
+    ), 0);
+    // Избыток тепла греет теплоноситель, воду ПГ и металл вместе: dT = Q / C, dP = dT / (dT_нас/dP)
+    const tsatSlope = (calcSaturationTempC(sim.steamHeaderPressMPa + 0.01) - sim.steamTempC) / 0.01;
+    const dSteamTemp = (heatTransferPrimaryToSecondaryMW - totalSecondarySinkMW) / steamGen.THERMAL_CAPACITY_MJ_PER_K;
+    const dSteamPress = dSteamTemp / Math.max(1.0, tsatSlope);
     sim.steamHeaderPressMPa = Math.max(0.8, Math.min(8.6, sim.steamHeaderPressMPa + dSteamPress * dt));
     sim.steamTempC = calcSaturationTempC(sim.steamHeaderPressMPa);
 
     // Обновление температур горячей и холодной ниток по всем 4 петлям
     let sumCold = 0;
+    let sumColdFlow = 0;
     for (let i = 0; i < 4; i++) {
       const lp = sim.loops[i];
-      const loopFlowFactor = Math.max(0.07, lp.flowPct / 100.0);
-      const targetTHot = sim.coreInletTempC + (sim.thermalPowerMW / 3200.0) / loopFlowFactor * 30.7;
+      const loopFlowFactor = Math.max(0.065, lp.flowPct / 100.0);
+      // Горячие нитки питаются из общей камеры над зоной: T_вых одна на все петли
+      const targetTHot = sim.coreInletTempC + coreDeltaT;
       lp.tHot += (Math.min(365, targetTHot) - lp.tHot) * Math.min(1, 1.5 * dt);
 
       // Холодная нитка охлаждается в ПГВ-1000МКП до температуры пара + температурный напор
       const sgEff = Math.max(0.15, Math.min(1.0, lp.sgLevelM / 2.1));
-      const targetTCold = sim.steamTempC + (lp.tHot - sim.steamTempC) * (1.0 - 0.712 * sgEff);
+      // Эффективность теплообменника ε = 1 − exp(−NTU), NTU ~ G^(−0.65)
+      const sgNtu = steamGen.NTU_NOMINAL * Math.pow(loopFlowFactor, -0.65);
+      const sgEffectiveness = (1.0 - Math.exp(-sgNtu)) * sgEff;
+      const targetTCold = sim.steamTempC + (lp.tHot - sim.steamTempC) * (1.0 - sgEffectiveness);
       lp.tCold += (targetTCold - lp.tCold) * Math.min(1, 1.5 * dt);
-      sumCold += lp.tCold;
+      // Смешение в напорной камере: вход в зону взвешен по расходам петель
+      sumCold += lp.tCold * loopFlowFactor;
+      sumColdFlow += loopFlowFactor;
 
       // Уровень котловой воды в ПГВ-1000МКП (норма 2.10 м)
-      const steamGenOutPct = (heatTransferPrimaryToSecondaryMW / 3200.0) * 100.0;
-      const dLevel = (sim.feedwaterFlowPct - steamGenOutPct) * 0.0018;
+      // Регулятор питания держит уровень; feedwaterFlowPct задаёт доступную производительность ПЭН
+      // Конденсат СПОТ возвращается в ПГ, поэтому уровень этим отводом не расходуется
+      const steamGenOutPct = (Math.max(0, heatTransferPrimaryToSecondaryMW - spotHeatRemovalMW) / 3200.0) * 100.0;
+      const feedDemandPct = steamGenOutPct + (2.10 - lp.sgLevelM) * 50.0;
+      const feedActualPct = Math.max(0, Math.min(feedDemandPct, sim.feedwaterFlowPct * 1.15));
+      const dLevel = (feedActualPct - steamGenOutPct) * 0.0018;
       lp.sgLevelM = Math.max(0.4, Math.min(3.2, lp.sgLevelM + dLevel * dt));
       lp.sgPressMPa = sim.steamHeaderPressMPa + (i * 0.01 - 0.015);
     }
 
-    sim.coreInletTempC = sumCold / 4.0;
+    sim.coreInletTempC = sumCold / sumColdFlow;
     sim.coreOutletTempC = Math.min(370.0, sim.coreInletTempC + coreDeltaT);
 
     // 7. КОМПЕНСАТОР ДАВЛЕНИЯ (КД) И ДАВЛЕНИЕ 1-ГО КОНТУРА
@@ -476,10 +555,10 @@ function stepPhysics(dtReal) {
     }
     sim.primaryPressureMPa = Math.max(1.5, Math.min(19.5, sim.primaryPressureMPa));
 
-    // Автоматический запуск гидроемкостей САОЗ ГЕ-1..3 при падении P1 < 5.9 МПа
+    // Автоматический запуск гидроемкостей САОЗ при падении P1 < 5.9 МПа
     if (sim.primaryPressureMPa < 5.9 && !sim.saozActive && sim.saozWaterPct > 0) {
       sim.saozActive = true;
-      safeLog('ПАССИВНАЯ ЗАЩИТА САОЗ: Давление 1-го контура ниже 5,9 МПа! Открыты обратные клапаны гидроемкостей ГЕ-1, ГЕ-2, ГЕ-3.', 'danger');
+      safeLog('ПАССИВНАЯ ЗАЩИТА САОЗ: Давление 1-го контура ниже 5,9 МПа! Открыты обратные клапаны гидроемкостей ГЕ САОЗ.', 'danger');
       triggerAZ1('Снижение давления 1-го контура ниже уставки САОЗ (5,9 МПа)');
     }
 
@@ -514,12 +593,18 @@ function stepPhysics(dtReal) {
       const a = assemblies[i];
       let localDepression = 1.0;
       if (a.hasRod) {
-        if (a.rodGroup === 10) localDepression = g10Factor;
+        if (a.rodGroup === 12) localDepression = g10Factor;
         else localDepression = g19Factor;
       }
       a.currentKq = a.baseKq * localDepression;
+    }
+    // Стержни перераспределяют поле, но среднее Kq по зоне остаётся равным 1
+    const kqMean = assemblies.reduce((acc, a) => acc + a.currentKq, 0) / assemblies.length;
+    for (let i = 0; i < assemblies.length; i++) {
+      const a = assemblies[i];
+      a.currentKq /= kqMean;
       if (a.currentKq > maxKq) maxKq = a.currentKq;
-      a.powerMW = (sim.thermalPowerMW / 163.0) * a.currentKq;
+      a.powerMW = (sim.thermalPowerMW / assemblies.length) * a.currentKq;
       a.outletTemp = sim.coreInletTempC + (sim.coreOutletTempC - sim.coreInletTempC) * a.currentKq;
     }
     sim.kqMax = maxKq;

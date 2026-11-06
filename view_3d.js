@@ -389,18 +389,18 @@ const VVER_SPECS = {
 };
 
 // Сопоставление узлов GLB (имена после санитизации GLTFLoader) с карточками VVER_SPECS.
-// Цвета — из THERMAL_COLOR_SCALE и палитры Slate (см. PROJECT_MAP.md, раздел 4.6).
+// PBR-материалы задаются в самом GLB (исходник docs/blender/VVER1200_primary_circuit.blend).
 const EQUIPMENT_PARTS = [
-  { match: /^reactor/, id: 'eq_reactor', color: 0x64748b },
-  { match: /^D_02/, id: 'eq_sg', color: 0xcbd5e1 },
-  { match: /^D_03/, id: 'eq_rcp', color: 0x94a3b8 },
-  { match: /^D_04/, id: 'eq_pressurizer', color: 0xcbd5e1 },
-  { match: /^D_05/, id: 'eq_bubbler', color: 0x94a3b8 },
-  { match: /^D_07/, id: 'eq_passive', color: 0x94a3b8 },
-  { match: /^D_08/, id: 'eq_catcher', color: 0x64748b },
-  { match: /^Hydraulic_capacity_SAOZ/, id: 'eq_saoz', color: 0x0ea5e9 },
-  { match: /^Pipeline_0/, id: 'eq_loop', color: 0xef4444 },
-  { match: /^Pipeline/, id: 'eq_pipes', color: 0x06b6d4 }
+  { match: /^reactor/, id: 'eq_reactor' },
+  { match: /^D_02/, id: 'eq_sg' },
+  { match: /^D_03/, id: 'eq_rcp' },
+  { match: /^D_04/, id: 'eq_pressurizer' },
+  { match: /^D_05/, id: 'eq_bubbler' },
+  { match: /^D_07/, id: 'eq_passive' },
+  { match: /^D_08/, id: 'eq_catcher' },
+  { match: /^Hydraulic_capacity_SAOZ/, id: 'eq_saoz' },
+  { match: /^Pipeline_(Hot|Cold)/, id: 'eq_loop' },
+  { match: /^Pipeline/, id: 'eq_pipes' }
 ];
 
 const EQUIPMENT_NODE_LABELS = {
@@ -445,7 +445,8 @@ const threeCtrl = {
   equipmentModel: null,
   equipmentMeshes: [],
   equipmentMaterials: {},
-  detailMesh: null,
+  detailMeshes: [],
+  equipmentEnvironment: null,
   interactableMeshes: [],
   interactiveMeshes: [],
   componentGroups: {},
@@ -930,12 +931,16 @@ const threeCtrl = {
           if (!child.isMesh) return;
           const part = EQUIPMENT_PARTS.find((p) => p.match.test(child.name));
           const id = part ? part.id : 'eq_pipes';
-          const color = part ? part.color : 0x94a3b8;
 
-          if (!this.equipmentMaterials[id]) {
-            this.equipmentMaterials[id] = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.42), roughness: 0.55, metalness: 0.2 });
+          // Отдельная копия на узел: подсветка не должна задевать другие узлы с тем же материалом
+          const key = id + ':' + child.material.uuid;
+          if (!this.equipmentMaterials[key]) {
+            const material = child.material.clone();
+            material.userData.componentId = id;
+            material.envMapIntensity = 0.45;
+            this.equipmentMaterials[key] = material;
           }
-          child.material = this.equipmentMaterials[id];
+          child.material = this.equipmentMaterials[key];
           child.userData.componentId = id;
 
           const spec = VVER_SPECS[id];
@@ -1003,9 +1008,12 @@ const threeCtrl = {
     } else {
       const node = this.equipmentMeshes.find((mesh) => mesh.userData.componentId === componentId);
       if (!node) return;
+      // Петля ГЦТ состоит из двух мешей: горячей и холодной нитки с одним номером
+      const loopNumber = componentId === 'eq_loop' ? node.name.slice(-2) : null;
+      this.detailMeshes = this.equipmentMeshes.filter((mesh) => mesh === node
+        || (loopNumber && mesh.userData.componentId === componentId && mesh.name.endsWith(loopNumber)));
       this.state.equipmentMode = true;
-      this.detailMesh = node;
-      this.equipmentMeshes.forEach((mesh) => { mesh.visible = mesh === node; });
+      this.equipmentMeshes.forEach((mesh) => { mesh.visible = this.detailMeshes.includes(mesh); });
       this.applyViewState();
       this.selectComponent(componentId, false);
       this.frameNode();
@@ -1014,8 +1022,10 @@ const threeCtrl = {
   },
 
   frameNode() {
-    if (!this.detailMesh) return;
-    const box = new THREE.Box3().setFromObject(this.detailMesh);
+    if (!this.detailMeshes.length) return;
+    this.equipmentModel.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    this.detailMeshes.forEach((mesh) => box.expandByObject(mesh));
     const center = box.getCenter(new THREE.Vector3());
     const radius = box.getSize(new THREE.Vector3()).length() / 2;
     const halfFovTan = Math.tan((this.camera.fov * Math.PI) / 360);
@@ -1027,6 +1037,30 @@ const threeCtrl = {
     this.updateHudZoom();
   },
 
+  // Карта отражений: без неё металлы с высоким metalness выглядят почти чёрными
+  getEquipmentEnvironment() {
+    if (this.equipmentEnvironment || !this.renderer) return this.equipmentEnvironment;
+
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x475569);
+    const panel = (color, y, size) => {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(size, size),
+        new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+      );
+      mesh.position.y = y;
+      mesh.rotation.x = Math.PI / 2;
+      envScene.add(mesh);
+    };
+    panel(0xffffff, 6, 8);
+    panel(0x0f172a, -6, 14);
+
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.equipmentEnvironment = pmrem.fromScene(envScene, 0.05).texture;
+    pmrem.dispose();
+    return this.equipmentEnvironment;
+  },
+
   applyViewState() {
     const { equipmentMode, detailId } = this.state;
     const isOverview = equipmentMode && !detailId;
@@ -1035,7 +1069,11 @@ const threeCtrl = {
     if (this.equipmentModel) this.equipmentModel.visible = equipmentMode;
     if (this.rpvModel) this.rpvModel.visible = isReactor;
     if (this.envGroup) this.envGroup.visible = isReactor;
-    if (this.scene) this.scene.fog = equipmentMode ? null : new THREE.FogExp2(0x070c14, 0.0085);
+    if (this.scene) {
+      this.scene.fog = equipmentMode ? null : new THREE.FogExp2(0x070c14, 0.0085);
+      this.scene.environment = equipmentMode ? this.getEquipmentEnvironment() : null;
+      if (this.renderer) this.renderer.toneMappingExposure = equipmentMode ? 0.72 : 1.15;
+    }
     if (this.controls) this.controls.maxDistance = equipmentMode ? 130.0 : 85.0;
 
     this.updateLabelsVisibility();
@@ -1066,9 +1104,10 @@ const threeCtrl = {
   },
 
   setEquipmentHighlight(componentId) {
-    Object.entries(this.equipmentMaterials).forEach(([id, mat]) => {
-      mat.emissive.setHex(id === componentId ? 0x0284c7 : 0x000000);
-      mat.emissiveIntensity = id === componentId ? 0.45 : 0;
+    Object.values(this.equipmentMaterials).forEach((mat) => {
+      const on = mat.userData.componentId === componentId;
+      mat.emissive.setHex(on ? 0x0284c7 : 0x000000);
+      mat.emissiveIntensity = on ? 0.45 : 0;
     });
   },
 
@@ -1922,7 +1961,8 @@ const threeCtrl = {
     this.equipmentModel = null;
     this.equipmentMeshes = [];
     this.equipmentMaterials = {};
-    this.detailMesh = null;
+    this.detailMeshes = [];
+    this.equipmentEnvironment = null;
     this.state.equipmentMode = true;
     this.state.detailId = null;
     this.explodedProgress = 0.0;

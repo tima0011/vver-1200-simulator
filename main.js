@@ -660,7 +660,14 @@ window.THERMAL_COLOR_SCALE = THERMAL_COLOR_SCALE;
       }
 
       if (section.parameters && section.parameters.length > 0) {
-        html += `<div style="font-size:11px; font-weight:700; color:#0F172A; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">Ключевые физические параметры и константы</div>`;
+        const tableTitles = {
+          kinetics: "ПАРАМЕТРЫ ЗАПАЗДЫВАЮЩИХ НЕЙТРОНОВ И ВРЕМЕНИ ЖИЗНИ (В-491)",
+          feedbacks: "ДИФФЕРЕНЦИАЛЬНЫЕ КОЭФФИЦИЕНТЫ И ЭФФЕКТЫ РЕАКТИВНОСТИ",
+          poisoning: "ХАРАКТЕРИСТИКИ ИЗОТОПОВ И ПАРАМЕТРЫ ЙОДНОЙ ЯМЫ",
+          thermohydraulics: "НОМИНАЛЬНЫЕ ЭКСПЛУАТАЦИОННЫЕ ПАРАМЕТРЫ КОНТУРОВ РУ В-491"
+        };
+        const titleText = section.tableTitle || tableTitles[tabKey] || "КЛЮЧЕВЫЕ ФИЗИЧЕСКИЕ ПАРАМЕТРЫ";
+        html += `<div class="theory-table-title" style="font-size:11px; font-weight:700; color:#0F172A; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;">${escapeHtml(titleText)}</div>`;
         html += `
           <div class="theory-table-card">
             <table class="theory-params-table">

@@ -1,0 +1,469 @@
+/* ==========================================================================
+   ЭКРАН [ГЛАВНАЯ] (#hub) — обзор платформы ReactorLab
+   Палитра строго Slate Light (PROJECT_MAP.md, раздел 4.1):
+   фон #F2F2F2, панели #FFFFFF, границы #C4C4C4,
+   текст #0F172A, вторичный #64748B, акцент #0284C7.
+   ========================================================================== */
+.hub-screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: #DDDDDD !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.hub-screen.active {
+  display: block;
+}
+
+.hub-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 12px 24px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- Hero --- */
+.hub-hero {
+  background: #FFFFFF !important;
+  border: 1px solid #C4C4C4 !important;
+  border-left: 3px solid #0284C7 !important;
+  border-radius: 8px;
+  padding: 12px 20px;
+  display: block;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.hub-hero-text {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.hub-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0284C7;
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+}
+
+.hub-title {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
+
+.hub-subtitle {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #64748B;
+}
+
+/* --- Кнопки --- */
+.hub-btn {
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.hub-btn-primary {
+  flex-shrink: 0;
+  background: #0284C7;
+  color: #FFFFFF;
+  border: 1px solid #0284C7;
+  padding: 11px 18px;
+  font-size: 13px;
+}
+
+.hub-btn-primary:hover {
+  background: #FFFFFF;
+  color: #0284C7;
+}
+
+.hub-btn-secondary {
+  align-self: flex-start;
+  margin-top: auto;
+  background: #FFFFFF;
+  color: #0284C7;
+  border: 1px solid #0284C7;
+  padding: 6px 12px;
+}
+
+.hub-btn-secondary:hover {
+  background: #0284C7;
+  color: #FFFFFF;
+}
+
+.hub-btn-disabled {
+  align-self: flex-start;
+  margin-top: auto;
+  background: #F2F2F2;
+  color: #64748B;
+  border: 1px solid #C4C4C4;
+  padding: 6px 12px;
+  cursor: not-allowed;
+}
+
+.hub-btn:focus-visible {
+  outline: 2px solid #0284C7;
+  outline-offset: 2px;
+}
+
+/* --- Секции и сетки --- */
+.hub-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.hub-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  padding-top: 2px;
+}
+
+.hub-section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: #0284C7;
+  flex-shrink: 0;
+}
+
+.hub-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.hub-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hub-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hub-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* --- Карточки --- */
+.hub-card {
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.hub-card:hover {
+  transform: translateY(-2px);
+  border-color: #94A3B8;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10);
+}
+
+.hub-module.is-active:hover {
+  border-color: #0284C7;
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.18);
+}
+
+.hub-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hub-code {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-card-sub {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.hub-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #0F172A;
+}
+
+.hub-list {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Пункты направлений: строки без маркеров с тонким разделителем */
+.hub-list li {
+  list-style: none !important;
+  padding: 3px 0;
+  margin: 0 !important;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #475569;
+  border-bottom: 1px solid #F2F2F2;
+}
+
+.hub-list li:last-child {
+  border-bottom: none;
+}
+
+.hub-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748B;
+}
+
+/* --- Карточки направлений с компактным фото-превью (110px) --- */
+.hub-direction {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.hub-pillar-media {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  background: #E5E5E5;
+  border-bottom: 1px solid #C4C4C4;
+  flex-shrink: 0;
+}
+
+.hub-pillar-media::before {
+  content: attr(data-fallback);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #64748B;
+}
+
+.hub-pillar-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hub-pillar-media.is-fallback .hub-pillar-img {
+  display: none;
+}
+
+.hub-direction-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  padding: 9px 12px 10px;
+  border-top: 2px solid #0284C7;
+}
+
+/* --- Модули --- */
+.hub-module.is-active {
+  border: 2px solid #0284C7;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+}
+
+.hub-module.is-roadmap {
+  background: #F7F7F7;
+  border: 1px solid #C4C4C4;
+}
+
+.hub-module.is-roadmap .hub-card-title {
+  color: #0F172A;
+}
+
+/* Карточка модуля: фото-баннер во всю ширину + тело с отступами */
+.hub-module {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.hub-module-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  padding: 9px 14px 11px;
+}
+
+/* --- Фото-баннер --- */
+.hub-banner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 108px;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid #C4C4C4;
+  /* Подложка-заглушка: видна, пока фото грузится или если файла нет */
+  background: linear-gradient(135deg, #E5E5E5 0%, #C4C4C4 100%);
+}
+
+.hub-banner::before {
+  content: attr(data-fallback);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #64748B;
+}
+
+.hub-banner-img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hub-banner.is-fallback .hub-banner-img {
+  display: none;
+}
+
+.hub-module.is-roadmap .hub-banner-img {
+  filter: grayscale(0.45);
+}
+
+/* --- Статус поверх фото (правый верхний угол) --- */
+.hub-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.hub-badge-active {
+  color: #FFFFFF;
+  background: #0284C7;
+  border-color: #0284C7;
+}
+
+/* --- Чипы возможностей модуля 1 --- */
+.hub-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 1px 0 4px;
+}
+
+.hub-chip {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0F172A;
+  background: #F2F2F2;
+  border: 1px solid #C4C4C4;
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+
+.hub-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.hub-spec-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11.5px;
+  padding: 2px 0;
+  border-bottom: 1px solid #C4C4C4;
+}
+
+.hub-spec-row dt {
+  color: #64748B;
+  flex-shrink: 0;
+}
+
+.hub-spec-row dd {
+  color: #0F172A;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Адаптация (ноутбуки от 1366×768) --- */
+@media (max-height: 820px) {
+  .hub-inner { padding: 8px 24px 10px; gap: 8px; }
+  .hub-hero { padding: 9px 18px; }
+  .hub-title { font-size: 19px; margin-bottom: 2px; }
+  .hub-subtitle { font-size: 12px; line-height: 1.35; }
+  .hub-section { gap: 5px; }
+  .hub-section-title { font-size: 12.5px; padding-bottom: 3px; }
+  .hub-pillar-media { height: 88px; }
+  .hub-direction-body { padding: 7px 11px 8px; gap: 3px; }
+  .hub-card-title { font-size: 13px; }
+  .hub-list li { padding: 1px 0; line-height: 1.45; }
+  .hub-banner { max-height: 88px; }
+  .hub-module-body { padding: 7px 12px 9px; gap: 3px; }
+  .hub-spec-row { padding: 1.5px 0; font-size: 11px; }
+  .hub-btn-secondary,
+  .hub-btn-disabled { padding: 4px 10px; font-size: 11.5px; }
+}
+
+@media (max-width: 1280px) {
+  .hub-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1100px) {
+  .hub-hero { flex-direction: column; align-items: flex-start; }
+  .hub-grid-3 { grid-template-columns: minmax(0, 1fr); }
+}
+

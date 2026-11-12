@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReactorLab // Цифровой двойник ВВЭР-1200</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%230284C7%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%274%27 fill=%27white%27/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+  <script src="theory_data.js"></script>
+  <script src="physics_engine.js"></script>
+  <script src="view_3d.js"></script>
+  <script src="views_2d.js"></script>
+  <script src="core_cartogram.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+    onerror="window.__threeLoadError = true;"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"
+    onerror="window.__threeLoadError = true;"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="controls_panel.css">
+    <link rel="stylesheet" href="containment_view.css">
+    <link rel="stylesheet" href="hub_view.css">
+</head>
+
+<body>
+
+  <div class="iaea-shell">
+    <!-- 1. ЕДИНЫЙ КОМПАКТНЫЙ SCADA-БЛОК ШАПКИ (ДВУХСТОРОННЯЯ ВЕРСТКА: ЛОГОТИП + ВКЛАДКИ СЛЕВА | УПРАВЛЕНИЕ СПРАВА) -->
+    <header class="topbar top-header navbar">
+      <!-- СЛЕВА: Логотип "ReactorLab // Инженерная платформа" + 4 навигационные вкладки модуля В-491 -->
+      <div class="header-left">
+        <div class="brand-block" id="brandHome" role="button" tabindex="0" title="Вернуться на главную страницу ReactorLab">
+          <div class="atom-logo" title="ReactorLab // Инженерная платформа">
+            <svg width="22" height="22" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="18" cy="18" rx="14.5" ry="5.2" stroke="#0284C7" stroke-width="1.5" />
+              <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(60 18 18)" stroke="#0284C7" stroke-width="1.5" />
+              <ellipse cx="18" cy="18" rx="14.5" ry="5.2" transform="rotate(120 18 18)" stroke="#0284C7" stroke-width="1.5" />
+              <circle cx="18" cy="18" r="3.2" fill="#0F172A" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-title">ReactorLab</div>
+            <div class="brand-sub">Инженерная платформа</div>
+          </div>
+        </div>
+
+        <!-- ПЕРЕКЛЮЧАТЕЛИ РЕЖИМОВ МОДУЛЯ В-491 В ШАПКЕ (СКРЫТЫ НА ГЛАВНОЙ) -->
+        <nav class="mode-tabs" id="modeTabsNav" aria-label="Режимы симулятора" style="display: none;">
+          <div id="v491-nav-group" class="nav-module-group" style="display: none;">
+            <button class="view-tab" data-view="systems" id="tabSystems">
+              <span class="tab-code">[СИСТЕМЫ]</span>
+            </button>
+            <button class="view-tab" data-view="controls" id="btnTabControls">
+              <span class="tab-code">[УПРАВЛЕНИЕ]</span>
+            </button>
+            <button class="view-tab" data-view="core" id="tabCore">
+              <span class="tab-code">[АКТИВНАЯ ЗОНА]</span>
+            </button>
+            <button class="view-tab" data-view="3d" id="tab3D">
+              <span class="tab-code">[3D МОДЕЛЬ]</span>
+            </button>
+          </div>
+        </nav>
+
+        <button id="btnTheory" class="nav-btn-theory" type="button" style="display: none;"
+          title="Инженерный базис: математическая модель и источники">[ТЕОРИЯ]</button>
+      </div>
+
+      <!-- ВСТРОЕННАЯ СТРОКА ОПЕРАТИВНОЙ ТЕЛЕМЕТРИИ БЛОКА В ЕДИНОЙ ШАПКЕ (ЖЕСТКО СКРЫТА В ОБЩИЙ КОНТЕЙНЕР, СОХРАНЕНА В DOM) -->
+      <div id="hidden-telemetry-container" class="telemetry-bar" style="display: none !important;">
+        <div id="modeBadge" class="mode-badge">НОМИНАЛ 100%</div>
+        <button id="btnResetNominal" class="btn-reset-nominal" style="display:none;" title="Восстановить проектный номинал 100% (3200 МВт)">ВОССТАНОВИТЬ 100% НОМИНАЛ</button>
+
+        <div class="kpi-strip">
+          <div class="kpi-box" title="Тепловая мощность активной зоны реактора (номинал 3200 МВт)">
+            <span class="kpi-label">Nт</span>
+            <span class="kpi-val" id="kpiThermal">3200.0 МВт (100.0%)</span>
+          </div>
+          <div class="kpi-box" title="Электрическая мощность турбогенератора ТЗВ-1200-2 (номинал 1200 МВт)">
+            <span class="kpi-label">Nэ</span>
+            <span class="kpi-val" id="kpiElec">1200.0 МВт</span>
+          </div>
+          <div class="kpi-box" title="Давление теплоносителя 1-го контура вверху реактора (номинал 16,2 МПа)">
+            <span class="kpi-label">P₁</span>
+            <span class="kpi-val" id="kpiP1">16.20 МПа</span>
+          </div>
+          <div class="kpi-box" title="Запас до температуры насыщения (кипения) в горячих нитках ГЦК">
+            <span class="kpi-label">ΔTs</span>
+            <span class="kpi-val" id="kpiSubcool">19.5 °C</span>
+          </div>
+          <div class="kpi-box" title="Концентрация борной кислоты H₃BO₃ в теплоносителе 1-го контура">
+            <span class="kpi-label">H₃BO₃</span>
+            <span class="kpi-val" id="kpiBoron">6.20 г/кг</span>
+          </div>
+          <div class="kpi-box" title="Суммарная реактивность активной зоны в pcm (10⁻⁵ Δk/k)">
+            <span class="kpi-label">ρ</span>
+            <span class="kpi-val" id="kpiReactivity">0.0 pcm</span>
+          </div>
+        </div>
+
+        <div class="kpi-secondary">
+          <b id="kpiFreq">50.00 Гц</b> • P₂: <b id="kpiP2">7.00 МПа</b>
+        </div>
+      </div>
+
+      <!-- СПРАВА: СЦЕНАРИЙ, СКОРОСТЬ ВРЕМЕНИ, ТАЙМСКИП, ЗВУК -->
+      <div class="top-controls header-right" style="display: none;">
+        <span class="header-divider" aria-hidden="true"></span>
+        <select id="scenarioSelect" class="scenario-select" title="Выбор сценария или эксплуатационного режима">
+          <option value="nominal">1. Номинальный режим (100% Nном — 3200 МВт)</option>
+          <option value="startup">2. Подъём мощности 3 → 50 % Nном</option>
+          <option value="xenon">3. Компенсация ксенонового отравления (100% → 30%)</option>
+          <option value="blackout">4. Полное обесточивание: СПОТ ПГ</option>
+          <option value="loca">5. Течь 1-го контура Ду 200: САОЗ и ГО</option>
+        </select>
+        <button type="button" class="btn-mini brief-btn" id="btnScenarioBrief" aria-controls="scenarioBrief"
+          title="Брифинг сценария: исходное состояние, процесс, задача оператора">?</button>
+
+        <div class="btn-group" title="Масштаб времени моделирования">
+          <button class="btn-mini" data-speed="0" id="spd0" title="Остановить время моделирования">Пауза</button>
+          <button class="btn-mini active" data-speed="1" id="spd1">1x</button>
+          <button class="btn-mini" data-speed="10" id="spd10">10x</button>
+          <button class="btn-mini" data-speed="60" id="spd60">60x</button>
+        </div>
+
+        <div class="timeskip-dropdown" id="timeskipDropdown">
+          <button type="button" class="btn-mini timeskip-btn" id="btnTimeskip" aria-haspopup="true" aria-expanded="false"
+            title="Дискретный макро-шаг времени (выгорание кампании и йодная яма)">
+            [ТАЙМСКИП ▾]
+          </button>
+          <div class="timeskip-menu" id="timeskipMenu" role="menu" aria-label="Варианты таймскипа">
+            <button type="button" class="timeskip-item" data-skip="8h" role="menuitem">+8 часов (Йодная яма / Ксенон)</button>
+            <button type="button" class="timeskip-item" data-skip="1m" role="menuitem">+1 месяц (Выгорание топлива)</button>
+            <button type="button" class="timeskip-item" data-skip="6m" role="menuitem">+6 месяцев (Середина кампании — МАК)</button>
+            <button type="button" class="timeskip-item" data-skip="12m" role="menuitem">+12 месяцев (Конец кампании — КАК)</button>
+          </div>
+        </div>
+
+        <button id="btnAudio" class="btn-icon-toggle" type="button" title="Звук: выключен" aria-label="Звук: выключен"
+          aria-pressed="false">🔇</button>
+
+      </div>
+    </header>
+
+    <!-- Брифинг выбранного сценария (показывается при смене сценария и по кнопке «?») -->
+    <aside class="scenario-brief" id="scenarioBrief" role="dialog" aria-label="Брифинг сценария" hidden>
+      <div class="scenario-brief-head">
+        <b id="scenarioBriefTitle">Сценарий</b>
+        <button type="button" class="scenario-brief-close" id="btnScenarioBriefClose" aria-label="Закрыть брифинг">✕</button>
+      </div>
+      <dl class="scenario-brief-body">
+        <div><dt>Исходное состояние</dt><dd id="scenarioBriefStart"></dd></div>
+        <div><dt>Суть процесса</dt><dd id="scenarioBriefProcess"></dd></div>
+        <div><dt>Задача оператора</dt><dd id="scenarioBriefTask"></dd></div>
+      </dl>
+    </aside>
+
+    <!-- 3. ГЛАВНАЯ ПОЛНОЭКРАННАЯ РАБОЧАЯ ОБЛАСТЬ -->
+    <main class="workspace-stage">
+
+      <!-- ЭКРАН [ГЛАВНАЯ]: обзор платформы, направления, модули, академический трек (наполняется hub_view.js) -->
+      <section id="tab-hub" class="tab-pane hub-screen active" aria-label="Главная"></section>
+
+      <!-- ЭКРАН ХОЛСТА (ОБСЛУЖИВАЕТ [SYSTEMS], [CORE] И [3D TWIN]) -->
+      <section class="viewport-screen" id="viewportScreen">
+        <div class="canvas-container core-container" id="canvasContainer">
+          <canvas id="simCanvas"></canvas>
+          <aside id="coreInfoPanel" class="core-info-panel" aria-live="polite"
+            style="position:absolute;right:12px;top:52px;width:320px;pointer-events:none;opacity:0;z-index:-1;"></aside>
+
+          <!-- Верхняя панель управления холстом (видна в [SYSTEMS] и [CORE]) -->
+          <div class="canvas-overlay-top" id="canvasOverlayTop">
+            <div class="overlay-group" id="systemsSubSwitch">
+              <button class="sub-view-btn" id="btnSubPanorama" style="display: none;" hidden
+                title="Широкая панорамная мнемосхема контуров слева направо (в стиле тренажера МАГАТЭ)">
+                Панорама P&amp;ID энергоблока В-491
+              </button>
+              <button class="sub-view-btn active" id="btnSubCross" title="Вертикальный разрез реакторного отделения В-491 (ЛАЭС-2)">
+                Разрез гермооболочки В-491
+              </button>
+            </div>
+
+            <div class="overlay-group" id="canvasViewControls" style="margin-left:auto;">
+              <button class="btn-mini active" id="btnToggleParticles"
+                style="border:1px solid var(--border-dim);border-radius:4px;">Потоки</button>
+              <button class="btn-mini" id="btnZoomIn"
+                style="border:1px solid var(--border-dim);border-radius:4px;">+</button>
+              <button class="btn-mini" id="btnZoomOut"
+                style="border:1px solid var(--border-dim);border-radius:4px;">−</button>
+              <span class="zoom-readout" id="hudZoom" title="Масштаб схемы">100%</span>
+              <button class="btn-mini" id="btnResetView"
+                style="border:1px solid var(--border-dim);border-radius:4px;">Сброс вида</button>
+            </div>
+          </div>
+
+          <!-- Верхняя лента технологических этапов [01]–[06] (РУ В-491) -->
+          <div class="stages-ribbon" id="stagesRibbon">
+            <div class="stage-card">
+              <span class="stage-code">[01]</span>
+              <span class="stage-name" title="РЕАКТОР В-491 И САОЗ">РЕАКТОР В-491 И САОЗ</span>
+            </div>
+            <div class="stage-card">
+              <span class="stage-code">[02]</span>
+              <span class="stage-name" title="4 ПЕТЛИ Ду-850 И ПГВ-1000МКП">4 ПЕТЛИ Ду-850 И ПГВ-1000МКП</span>
+            </div>
+            <div class="stage-card">
+              <span class="stage-code">[03]</span>
+              <span class="stage-name" title="КД 79 м³ И БАРБОТЕР">КД 79 м³ И БАРБОТЕР</span>
+            </div>
+            <div class="stage-card">
+              <span class="stage-code">[04]</span>
+              <span class="stage-name" title="ГПК 7.0 МПа И БРУ-К/А">ГПК 7.0 МПа И БРУ-К/А</span>
+            </div>
+            <div class="stage-card">
+              <span class="stage-code">[05]</span>
+              <span class="stage-name" title="ТУРБИНА К-1200 И ТЗВ-1200">ТУРБИНА К-1200 И ТЗВ-1200</span>
+            </div>
+            <div class="stage-card">
+              <span class="stage-code">[06]</span>
+              <span class="stage-name" title="ДЕАЭРАТОР 0.871 МПа И ПЭН 225 °C">ДЕАЭРАТОР 0.871 МПа И ПЭН 225 °C</span>
+            </div>
+          </div>
+
+          <!-- Полноэкранный контейнер Three.js (Вкладка [3D TWIN]) -->
+          <div id="threeContainer" class="three-container"></div>
+
+          <div id="threeToolbar" class="three-toolbar">
+            <button class="three-cam-btn" id="btnThreeOverview">Вся установка</button>
+            <button class="three-cam-btn active" id="btnThreeReactor">Корпус реактора</button>
+            <button class="three-cam-btn active" id="btnThreeAutoRotate">Автовращение</button>
+            <div class="three-explode" id="threeExplodeGroup" title="Послойная разборка корпуса реактора вбок: корпус и шахта — влево, БЗТ и верхний блок с ШЭМ-3 — вправо">
+              <button class="three-cam-btn" id="btnThreeExplode" type="button" aria-pressed="false" title="Разобрать корпус по слоям или собрать обратно">Разобрать</button>
+              <button class="three-cam-btn" id="btnThreeXRay" type="button" aria-pressed="false" title="Корпус и верхний блок полупрозрачные, внутренние узлы видны">Рентген</button>
+            </div>
+          </div>
+
+          <div id="threeHelpBadge" class="three-help-badge">
+            ЛКМ — вращение • ПКМ — сдвиг • колесо — масштаб • клик по узлу — карточка
+          </div>
+
+          <div id="webglErrorBanner" class="webgl-error-banner">
+            <div style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px;">ОШИБКА ИНИЦИАЛИЗАЦИИ 3D
+              WEBGL / THREE.JS</div>
+            <div id="webglErrorText" style="font-size:12px;color:var(--text-muted);max-width:480px;">
+              Не удалось загрузить библиотеку Three.js или контекст WebGL был потерян. Вы можете продолжать работу в
+              2D-режимах ([SYSTEMS], [CONTROLS], [CORE]).
+            </div>
+          </div>
+
+          <!-- Всплывающий инженерный тултип с блоком «Простыми словами» -->
+          <div id="canvasTooltip" class="canvas-tooltip">
+            <div class="tt-title" id="ttTitle">Корпус реактора ВВЭР-1200</div>
+            <div class="tt-sub" id="ttSub">Индекс: В-491 • Поколение III+ (ЛАЭС-2)</div>
+            <div class="tt-desc" id="ttDesc">Описание компонента</div>
+            <div class="tt-simple" id="ttSimple"><b>Простыми словами:</b> Назначение узла.</div>
+            <div class="tt-telemetry" id="ttTelemetry">Параметры</div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ЭКРАН [CONTROLS]: КАРКАС БЩУ (3 ЧИСТЫХ ГРИД-СЕКЦИИ) -->
+      <section class="controls-screen" id="controlsScreen">
+        <div class="controls-grid" id="tabControls">
+          <!-- СЕКЦИЯ 1: Пост ВИУР (реактор, 121 привод СУЗ, бор, АЗ-1) -->
+          <div class="bshu-panel" id="panelViur">
+            <div class="bshu-panel-header">
+              <span class="bshu-panel-title">ПОСТ ВИУР // РЕАКТОР И СУЗ</span>
+              <span class="bshu-panel-badge">БЩУ В-491</span>
+            </div>
+            <div class="bshu-panel-content">
+            </div>
+          </div>
+
+          <!-- СЕКЦИЯ 2: Пост ВИУТ (турбина К-1200, 4 ПГ, пар, ПЭН, БРУ-К) -->
+          <div class="bshu-panel" id="panelViut">
+            <div class="bshu-panel-header">
+              <span class="bshu-panel-title">ПОСТ ВИУТ // ТУРБИНА И ПАРОГЕНЕРАТОРЫ</span>
+              <span class="bshu-panel-badge">БЩУ В-491</span>
+            </div>
+            <div class="bshu-panel-content">
+            </div>
+          </div>
+
+          <!-- СЕКЦИЯ 3: Журнал событий и технологические сигналы -->
+          <div class="bshu-panel" id="panelTelemetry">
+            <div class="bshu-panel-header">
+              <span class="bshu-panel-title">ОПЕРАТИВНЫЙ ЖУРНАЛ И СИГНАЛИЗАЦИЯ</span>
+              <span class="bshu-panel-badge">ТЕЛЕМЕТРИЯ</span>
+            </div>
+            <div class="bshu-panel-content">
+              <div class="event-log" id="eventLog"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Нижняя полоса баланса реактивности: видна только на вкладке [УПРАВЛЕНИЕ] -->
+        <div class="canvas-hud-bottom reactivity-bar" id="globalTelemetryBar">
+          <div class="hud-pill">
+            <span class="lbl">Баланс реактивности, pcm:</span>
+            <span title="Вклад органов СУЗ">ρ<sub>СУЗ</sub> <b id="hudRhoRods">0</b></span>
+            <span title="Вклад борной кислоты">ρ<sub>бор</sub> <b id="hudRhoBoron">0</b></span>
+            <span title="Доплер-эффект (температура топлива)">ρ<sub>Доплер</sub> <b id="hudRhoDoppler">0</b></span>
+            <span title="Температурный эффект теплоносителя">ρ<sub>тепл</sub> <b id="hudRhoMod">0</b></span>
+            <span title="Отравление ксеноном-135">ρ<sub>Xe</sub> <b id="hudRhoXe">0</b></span>
+          </div>
+          <div class="hud-pill">
+            <span class="lbl">T<sub>топл</sub> ср. <b id="hudTfuel">680 °C</b></span>
+            <span class="lbl">K<sub>q</sub> макс <b id="hudKqMax">1.27</b></span>
+            <span class="lbl">Выгорание <b id="hudBurnup">24.4 ГВт·сут/т</b></span>
+            <span class="lbl">Кампания <b id="hudCampaignDays">0.0 сут</b></span>
+          </div>
+        </div>
+      </section>
+
+  </div>
+
+  <!-- ПОЛНОЭКРАННОЕ МОДАЛЬНОЕ ОКНО [ИНЖЕНЕРНЫЙ БАЗИС] (#theory) -->
+  <aside id="modalTheory" class="theory-drawer modal-theory" role="dialog" aria-modal="true" aria-label="Инженерный базис ReactorLab">
+    <div class="theory-nav-bar">
+      <div class="theory-drawer-header">
+        <div class="theory-drawer-title-group">
+          <h2 class="theory-drawer-title">ReactorLab // Инженерный базис</h2>
+          <div class="theory-drawer-subtitle">ВВЭР-1200 (проект В-491, ЛАЭС-2) • Математическая модель и нормативная база</div>
+        </div>
+        <button id="btnCloseTheory" class="theory-close-btn" title="Закрыть и вернуться к предыдущему экрану" aria-label="Закрыть">✕ Закрыть</button>
+      </div>
+
+      <!-- Переключатель вкладок по 4 разделам физики + первоисточники -->
+      <div class="theory-tabs" role="tablist">
+        <button class="theory-tab active" data-theory-tab="kinetics">Кинетика</button>
+        <button class="theory-tab" data-theory-tab="feedbacks">Обратные связи</button>
+        <button class="theory-tab" data-theory-tab="poisoning">Отравление Xe</button>
+        <button class="theory-tab" data-theory-tab="thermohydraulics">Теплогидравлика</button>
+        <button class="theory-tab" data-theory-tab="safety">Аварии и защиты</button>
+        <button id="tabTheorySources" class="theory-tab" data-theory-tab="sources">Источники</button>
+      </div>
+    </div>
+
+    <!-- Контейнер вывода формул с пояснениями -->
+    <div class="theory-drawer-body" id="theoryDrawerContent"></div>
+  </aside>
+  <div id="theoryBackdrop" class="theory-backdrop" title="Закрыть справочник"></div>
+
+  <script src="main.js"></script>
+  <script src="controls_panel.js"></script>
+  <script src="containment_view.js"></script>
+  <script src="hub_view.js"></script>
+</body>
+
+</html>

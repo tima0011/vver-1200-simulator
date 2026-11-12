@@ -1,0 +1,646 @@
+/* ==========================================================================
+   РАЗРЕЗ ГЕРМООБОЛОЧКИ В-491 (containment_view.js) — Slate Light SCADA
+   ========================================================================== */
+.ctn-root {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  display: none;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  transition: grid-template-columns 0.3s ease;
+  gap: 8px;
+  padding: 0 8px 8px;
+  background: #DDDDDD;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
+}
+
+/* ---------- Схема ---------- */
+.ctn-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+}
+
+.ctn-svg {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  user-select: none;
+}
+
+.ctn-ground { fill: #F2F2F2; }
+.ctn-grade { stroke: #94A3B8; stroke-width: 1.2; stroke-dasharray: 10 6; }
+.ctn-building, .ctn-aux { fill: #FFFFFF; stroke: #C4C4C4; stroke-width: 1.5; }
+.ctn-zone { font-size: 11px; font-weight: 700; fill: #94A3B8; letter-spacing: 0.06em; }
+
+/* Оболочки: ж/б со штриховкой, у внутренней — стальная облицовка */
+.ctn-outer-edge { fill: none; stroke: #64748B; stroke-width: 17; stroke-linejoin: round; }
+.ctn-outer { fill: none; stroke: url(#ctnConcrete); stroke-width: 14; stroke-linejoin: round; }
+.ctn-inner-edge { fill: none; stroke: #334155; stroke-width: 10; stroke-linejoin: round; }
+.ctn-inner { fill: none; stroke: url(#ctnConcrete); stroke-width: 7.5; stroke-linejoin: round; }
+.ctn-liner { fill: none; stroke: #1E293B; stroke-width: 1.5; }
+.ctn-inner-fill { fill: #FFFFFF; }
+.ctn-basemat { stroke: #64748B; stroke-width: 1; }
+.ctn-concrete { stroke: #64748B; stroke-width: 1; }
+
+/* Трубопроводы: строго 4 цвета */
+.ctn-halo { fill: none; stroke: #FFFFFF; stroke-width: 7; stroke-linejoin: round; stroke-linecap: round; }
+.ctn-pipe, .ctn-flow { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.ctn-pipe { stroke-width: 2.5; }
+.ctn-hot { stroke-width: 3; }
+.ctn-cold { stroke-width: 3; }
+.ctn-steam { stroke-width: 3; }
+.ctn-feed { stroke-width: 2.5; }
+.ctn-safety { stroke-width: 2.5; }
+.ctn-pipe.ctn-thin { stroke-width: 1.8; }
+.ctn-relief { stroke-width: 1.8; stroke-dasharray: 6 4; }
+.ctn-vent { stroke-width: 1.8; stroke-dasharray: 6 4; }
+
+/* Поток: светлые штрихи поверх трубы, только при активной симуляции */
+.ctn-flow {
+  display: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.3;
+  stroke-dasharray: 5 13;
+  animation: ctnDash 1.4s linear infinite;
+}
+.ctn-flow.on { display: inline; }
+.ctn-root.is-paused .ctn-flow { animation-play-state: paused; }
+
+@keyframes ctnDash {
+  to { stroke-dashoffset: -36; }
+}
+
+.ctn-arrow-steam { fill: #DC2626; }
+.ctn-arrow-feed { fill: #15803D; }
+
+/* Оборудование: тёмный стальной контур, белая заливка */
+.ctn-equip { fill: #FFFFFF; stroke: #1E293B; stroke-width: 2; stroke-linejoin: round; }
+.ctn-outline, .ctn-tank-outline { fill: none; stroke: #1E293B; stroke-width: 2; }
+.ctn-tank { fill: #FFFFFF; stroke: none; }
+.ctn-flange { stroke-width: 2; }
+.ctn-belt { stroke: #334155; stroke-width: 1; }
+.ctn-internals { stroke: #94A3B8; stroke-width: 1; stroke-dasharray: 3 3; }
+.ctn-drive { fill: #F7F7F7; stroke: #1E293B; stroke-width: 2; }
+.ctn-drive-line { stroke: #334155; stroke-width: 1.2; }
+/* Активная зона: градиент подогрева (стопы задаёт refreshCore по мощности) */
+.ctn-core-heat { stroke: none; }
+#coreHeatGradient stop { transition: stop-color 0.8s ease; }
+.ctn-core { stroke: none; pointer-events: none; }
+.ctn-core-outline { fill: none; stroke: #1E293B; stroke-width: 1.8; }
+.ctn-core-label {
+  font-family: 'JetBrains Mono', ui-monospace, 'Consolas', monospace;
+  font-size: 6.4px;
+  font-weight: 700;
+  fill: #FFFFFF;
+  stroke: rgba(15, 23, 42, 0.7);
+  stroke-width: 1.6px;
+  paint-order: stroke;
+  letter-spacing: -0.1px;
+  pointer-events: none;
+}
+.ctn-core-power { font-size: 7px; }
+
+/* ОР СУЗ: АЗ 1–11 синие, рабочая группа №12 янтарная (как на картограмме) */
+.ctn-rod { stroke-width: 2.4; stroke-linecap: butt; }
+.ctn-rod-az .ctn-rod { stroke: #0284C7; }
+.ctn-rod-work .ctn-rod { stroke: #D97706; }
+.ctn-rod-g { transition: transform 0.6s ease-in-out; }
+/* АЗ-1: ОР падают под собственным весом — движение с ускорением */
+#ctnRods.is-trip .ctn-rod-g { transition: transform 1.2s cubic-bezier(0.55, 0, 1, 0.45); }
+
+.ctn-guide { fill: none; stroke: #1E293B; stroke-width: 3; stroke-linecap: round; }
+.ctn-catcher { stroke: #1E293B; stroke-width: 2; stroke-linejoin: round; }
+.ctn-catcher-cavity { fill: #FFFFFF; stroke: #1E293B; stroke-width: 1.2; }
+#ctnCatcherWater { transition: y 0.6s, height 0.6s; }
+
+.ctn-bundle { fill: none; stroke: #64748B; stroke-width: 1.2; stroke-dasharray: 4 2; }
+.ctn-collector { fill: #FFFFFF; stroke: #1E293B; stroke-width: 1.5; }
+
+/* Состояние оборудования: красный — включено, зелёный — отключено (советская условность) */
+.ctn-pump { fill: #16A34A; stroke: #1E293B; stroke-width: 2; }
+.ctn-pump-tri { fill: #FFFFFF; }
+.is-on > .ctn-pump { fill: #DC2626; }
+.is-coast > .ctn-pump { stroke: #D97706; stroke-width: 3; }
+
+.ctn-valve { fill: #16A34A; stroke: #1E293B; stroke-width: 1.5; stroke-linejoin: round; }
+.ctn-valve.open { fill: #DC2626; }
+
+/* Уровни: штриховка среды и чёткое зеркало */
+.ctn-level-fill { transition: y 0.6s, height 0.6s; }
+.ctn-level-line { stroke: #1E293B; stroke-width: 1.2; transition: all 0.6s; }
+.ctn-baffle { stroke: #64748B; stroke-width: 1; stroke-dasharray: 3 2; }
+.ctn-n2 { font-size: 9px; font-weight: 700; fill: #64748B; pointer-events: none; }
+
+.ctn-heaters { fill: none; stroke: #94A3B8; stroke-width: 1.5; }
+.ctn-heaters.on { stroke: #DC2626; }
+
+.ctn-root.saoz-ready #ctnPins .ctn-pin[data-n='5'] circle { animation: ctnReady 2.4s ease-in-out infinite; }
+.ctn-root.is-paused.saoz-ready #ctnPins .ctn-pin[data-n='5'] circle { animation: none; }
+
+@keyframes ctnReady {
+  0%, 100% { stroke: #1E293B; }
+  50% { stroke: #16A34A; stroke-width: 2.5; }
+}
+
+.ctn-steam-out { fill: none; stroke: #94A3B8; stroke-width: 1.5; stroke-linecap: round; }
+.ctn-coil { fill: none; stroke: #334155; stroke-width: 1.5; }
+.ctn-spray-header { fill: none; stroke: #15803D; stroke-width: 2.5; }
+.ctn-nozzle { fill: #15803D; }
+.ctn-par-grid { stroke: #334155; stroke-width: 1; }
+.ctn-fan { fill: none; stroke: #334155; stroke-width: 1.5; }
+.ctn-filter { stroke: #334155; stroke-width: 1.2; }
+
+.ctn-leak circle { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2; animation: ctnBlink 1s steps(2) infinite; }
+.ctn-leak path { fill: #DC2626; }
+.ctn-leak text { font-size: 11px; font-weight: 800; fill: #DC2626; }
+
+@keyframes ctnBlink {
+  50% { opacity: 0.35; }
+}
+
+/* Подписи */
+.ctn-label { pointer-events: none; }
+.ctn-name { font-size: 14px; font-weight: 700; fill: #0F172A; paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; }
+.ctn-small { font-size: 12.5px; font-weight: 600; fill: #475569; paint-order: stroke; stroke: #F7F7F7; stroke-width: 4px; }
+.ctn-tiny { font-size: 11.5px; font-weight: 600; fill: #334155; paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; }
+
+/* Интерактивность */
+.ctn-node { cursor: pointer; transition: opacity 0.2s; }
+.ctn-hit { fill: transparent; }
+.ctn-hit-line { fill: none; stroke: transparent; stroke-width: 18; }
+/* Выбор, изоляция систем, приглушение */
+.ctn-line { transition: opacity 0.2s; }
+.ctn-node.is-dim, .ctn-pin.is-dim, .ctn-line.is-dim { opacity: 0.35; }
+.ctn-node.is-off-sys, .ctn-pin.is-off-sys, .ctn-line.is-off-sys { opacity: 0.15; }
+.ctn-line.is-iso .ctn-pipe { stroke-width: 4.5; }
+.ctn-line.is-iso .ctn-halo { stroke-width: 9; }
+.ctn-node.is-iso .ctn-equip, .ctn-node.is-iso .ctn-outline, .ctn-node.is-iso .ctn-tank-outline, .ctn-node.is-iso .ctn-pump { stroke-width: 2.8; }
+.ctn-node.is-focus { filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.8)); }
+.ctn-node.is-selected { filter: drop-shadow(0 0 4px #38BDF8); }
+.ctn-node.is-selected .ctn-equip, .ctn-node.is-selected .ctn-outline, .ctn-node.is-selected .ctn-tank-outline,
+.ctn-node.is-selected .ctn-pump, .ctn-node.is-selected .ctn-catcher, .ctn-node.is-selected .ctn-drive,
+.ctn-node.is-selected .ctn-outer-edge, .ctn-node.is-selected .ctn-inner-edge, .ctn-node.is-selected .ctn-spray-header { stroke: #0284C7; }
+.ctn-node.is-selected .ctn-pump-tri, .ctn-node.is-selected .ctn-nozzle { fill: #0284C7; }
+
+.ctn-pin { cursor: pointer; }
+.ctn-pin circle { fill: #FFFFFF; stroke: #0F172A; stroke-width: 1.8; transition: fill 0.2s; }
+.ctn-pin text { font-size: 11px; font-weight: 700; fill: #0F172A; pointer-events: none; }
+.ctn-pin[data-state='active'] circle { stroke: #0284C7; stroke-width: 2.5; }
+.ctn-pin[data-state='warn'] circle { fill: #FEF3C7; stroke: #D97706; stroke-width: 2.5; }
+.ctn-pin[data-state='danger'] circle { fill: #FEE2E2; stroke: #DC2626; stroke-width: 2.5; }
+.ctn-pin.is-focus circle { fill: #0284C7; stroke: #0284C7; }
+.ctn-pin.is-selected circle { fill: #0284C7; stroke: #38BDF8; stroke-width: 3.5; }
+.ctn-pin.is-focus text, .ctn-pin.is-selected text { fill: #FFFFFF; }
+
+/* Легенда линий */
+.ctn-legend-svg text { font-size: 10.5px; font-weight: 600; fill: #0F172A; }
+.ctn-legend-box { fill: rgba(255, 255, 255, 0.95); stroke: #E5E5E5; stroke-width: 1; }
+.ctn-legend-svg line { stroke-linecap: butt; }
+.ctn-strong { font-weight: 700; fill: #334155; }
+
+/* Тултип */
+.ctn-tooltip {
+  position: absolute;
+  z-index: 5;
+  display: none;
+  width: 280px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+}
+.ctn-tt-head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.ctn-tt-code { margin: 4px 0 6px 30px; font-size: 11px; color: #64748B; }
+.ctn-tt-state { display: flex; gap: 6px; align-items: baseline; font-size: 11.5px; line-height: 1.35; }
+
+/* ---------- Реестр ---------- */
+.ctn-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.06);
+  cursor: default;
+}
+.ctn-panel-head { padding: 12px 12px 8px; border-bottom: 1px solid #C4C4C4; }
+.ctn-panel-title { font-size: 13px; font-weight: 700; }
+.ctn-panel-sub { margin-top: 2px; font-size: 11px; color: #64748B; }
+.ctn-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: #0F172A;
+  background: #F7F7F7;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  outline: none;
+}
+.ctn-search:focus { border-color: #0284C7; background: #FFFFFF; }
+.ctn-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.ctn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  background: #F7F7F7;
+  border: 1px solid #C4C4C4;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ctn-chip i { width: 8px; height: 8px; border-radius: 50%; opacity: 0.4; }
+.ctn-chip.on { color: #0F172A; background: #FFFFFF; border-color: #C4C4C4; }
+.ctn-chip.on i { opacity: 1; }
+
+.ctn-detail-top { display: flex; align-items: flex-start; gap: 10px; }
+.ctn-detail-top > div { flex: 1; min-width: 0; }
+.ctn-detail-name { font-size: 13px; font-weight: 700; line-height: 1.25; }
+.ctn-detail-code { margin-top: 2px; font-size: 11px; color: #64748B; }
+.ctn-close {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: #64748B;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ctn-detail-group { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; color: #475569; }
+.ctn-detail-group i, .ctn-group-title i { width: 8px; height: 8px; border-radius: 50%; }
+
+.ctn-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 6px 10px; }
+.ctn-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.ctn-group-title span { margin-left: auto; font-weight: 600; color: #94A3B8; }
+.ctn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px;
+  font: inherit;
+  text-align: left;
+  color: #0F172A;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ctn-row:hover, .ctn-row.is-hover { background: #F2F2F2; }
+.ctn-row.is-selected { background: #E0F2FE; border-color: #7DD3FC; }
+.ctn-row-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ctn-row-text b { font-size: 12px; font-weight: 600; line-height: 1.25; }
+.ctn-row-text small { overflow: hidden; font-size: 10.5px; color: #64748B; white-space: nowrap; text-overflow: ellipsis; }
+.ctn-row-num {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1.5px solid #0F172A;
+  border-radius: 50%;
+}
+.ctn-row-num.big { width: 28px; height: 28px; font-size: 13px; }
+.ctn-row.is-selected .ctn-row-num { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+.ctn-empty { padding: 20px; font-size: 12px; text-align: center; color: #94A3B8; }
+
+.ctn-dot { flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; background: #16A34A; }
+.ctn-dot[data-state='idle'] { background: #94A3B8; }
+.ctn-dot[data-state='struct'] { background: #64748B; }
+.ctn-dot[data-state='active'] { background: #0284C7; }
+.ctn-dot[data-state='warn'] { background: #D97706; }
+.ctn-dot[data-state='danger'] { background: #DC2626; }
+
+@media (max-width: 1100px) {
+  .ctn-root { grid-template-columns: minmax(0, 1fr) 260px; }
+  .ctn-panel-inner { min-width: 260px; }
+}
+
+/* ---------- Сворачиваемый реестр ---------- */
+.ctn-root.is-collapsed { grid-template-columns: minmax(0, 1fr) 0px; gap: 0; }
+.ctn-root.is-collapsed .ctn-panel { border-width: 0; box-shadow: none; }
+.ctn-panel { position: relative; min-width: 0; overflow: hidden; }
+.ctn-panel-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 320px;
+  height: 100%;
+  min-height: 0;
+  transition: transform 0.3s ease;
+}
+.ctn-root.is-collapsed .ctn-panel-inner { transform: translateX(100%); }
+.ctn-clear, .ctn-trace-btn {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ctn-clear:hover, .ctn-trace-btn:hover:not(:disabled) { border-color: #0284C7; }
+.ctn-trace-btn.on { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+.ctn-trace-btn:disabled {
+  color: #94A3B8;
+  background: #F7F7F7;
+  border-color: #C4C4C4;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* ---------- Карточка инспектора ---------- */
+.ctn-card { padding: 10px; background: #FFFFFF; border: 1px solid #C4C4C4; border-radius: 6px; box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.06); }
+.ctn-card-head { display: flex; align-items: flex-start; gap: 8px; }
+.ctn-card-title { flex: 1; min-width: 0; }
+.ctn-pill {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: #166534;
+  background: #DCFCE7;
+  border-radius: 999px;
+}
+.ctn-pill[data-state='idle'] { color: #475569; background: #F2F2F2; }
+.ctn-pill[data-state='struct'] { color: #334155; background: #E5E5E5; }
+.ctn-pill[data-state='active'] { color: #075985; background: #E0F2FE; }
+.ctn-pill[data-state='warn'] { color: #92400E; background: #FEF3C7; }
+.ctn-pill[data-state='danger'] { color: #FFFFFF; background: #DC2626; }
+
+/* Параметры: фиксированная сетка «название 46 % | значение 54 %», значение прижато к названию
+   (без пустой дыры по центру), длинные значения переносятся внутри своей колонки */
+.ctn-table { width: 100%; margin-top: 6px; border-collapse: collapse; table-layout: fixed; font-size: 11.5px; }
+.ctn-table th:first-child, .ctn-table td:first-child { width: 46%; }
+.ctn-table th {
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  color: #94A3B8;
+  border-bottom: 1px solid #C4C4C4;
+}
+.ctn-table th:last-child, .ctn-table td:last-child { text-align: left; }
+.ctn-table td {
+  padding: 3px 6px;
+  line-height: 1.3;
+  color: #334155;
+  border-bottom: 1px solid #EBEBEB;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.ctn-table td:first-child { padding-left: 0; }
+.ctn-table th:first-child { padding-left: 0; }
+.ctn-table tr:last-child td { border-bottom: none; }
+.ctn-val { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-size: 11.5px; font-weight: 700; color: #0F172A; }
+.ctn-unit { font-size: 10.5px; color: #94A3B8; }
+.ctn-table-tt { margin-top: 6px; }
+
+.ctn-conn { margin-top: 8px; padding-top: 8px; border-top: 1px solid #C4C4C4; }
+.ctn-conn-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; font-weight: 700; color: #0F172A; }
+.ctn-conn-list { margin: 6px 0 0; padding: 0; list-style: none; font-size: 11.5px; line-height: 1.4; color: #334155; }
+.ctn-conn-list li { padding: 2px 0 2px 10px; border-left: 2px solid #C4C4C4; margin-bottom: 3px; }
+.ctn-conn-list b { color: #0369A1; }
+.ctn-conn-none { margin: 6px 0 0; font-size: 11.5px; color: #94A3B8; }
+
+.ctn-spec { margin-top: 8px; padding-top: 6px; border-top: 1px solid #C4C4C4; }
+.ctn-spec summary { font-size: 11.5px; font-weight: 700; color: #334155; cursor: pointer; list-style: none; }
+.ctn-spec summary::-webkit-details-marker { display: none; }
+.ctn-spec summary::before { display: inline-block; width: 14px; content: '►'; font-size: 9px; color: #64748B; }
+.ctn-spec[open] summary::before { content: '▼'; }
+.ctn-spec p { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: #475569; }
+
+.ctn-summary { margin-top: 8px; padding: 8px 10px; background: #FFFFFF; border: 1px solid #C4C4C4; border-radius: 6px; }
+.ctn-summary-title { font-size: 11.5px; font-weight: 700; color: #0F172A; }
+.ctn-summary-row { margin-top: 4px; font-size: 11.5px; color: #334155; }
+.ctn-sum-yes { font-weight: 800; color: #16A34A; }
+.ctn-sum-no { font-weight: 800; color: #64748B; }
+
+/* Подсказка */
+.ctn-tt-pill { margin: 2px 0 0 30px; }
+
+/* ---------- Реестр: флажки ---------- */
+.ctn-row { outline: none; }
+.ctn-row:focus-visible { box-shadow: 0 0 0 2px #7DD3FC; }
+.ctn-check { display: inline-flex; flex: 0 0 auto; align-items: center; cursor: pointer; }
+.ctn-check input { width: 15px; height: 15px; margin: 0; accent-color: #0284C7; cursor: pointer; }
+.ctn-check span { display: none; }
+
+/* ---------- Трассировка связей на схеме ---------- */
+.ctn-trace { display: none; fill: none; stroke: #0F172A; stroke-width: 1.6; stroke-dasharray: 8 6; stroke-linecap: butt; animation: ctnDash 0.9s linear infinite; }
+.ctn-line.is-trace { opacity: 1; }
+.ctn-line.is-trace .ctn-trace { display: inline; }
+.ctn-line.is-trace .ctn-halo { stroke: #7DD3FC; stroke-width: 11; }
+.ctn-line.is-trace .ctn-pipe { stroke-width: 4; }
+.ctn-line.is-far { opacity: 0.15; }
+.ctn-root.is-paused .ctn-trace { animation-play-state: paused; }
+.ctn-node.is-partner { filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.7)); }
+.ctn-pin.is-partner circle { stroke: #0284C7; stroke-width: 2.2; stroke-dasharray: 3 2; }
+.ctn-pin.is-active circle { stroke: #0F172A; }
+
+@media (max-width: 1100px) {
+  .ctn-panel-inner { min-width: 260px; }
+}
+
+/* ---------- Шапка реестра ---------- */
+.ctn-panel-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ctn-collapse {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ctn-collapse:hover { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+
+/* ---------- Плавающие элементы на схеме ---------- */
+.ctn-corner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ctn-selchip, .ctn-drawer-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+.ctn-selchip[hidden], .ctn-drawer-open[hidden] { display: none; }
+.ctn-selchip { background: #F0F9FF; border-color: #7DD3FC; }
+.ctn-selchip-reset {
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0369A1;
+  background: #FFFFFF;
+  border: 1px solid #BAE6FD;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ctn-selchip-reset:hover { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+.ctn-drawer-open { padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; }
+.ctn-drawer-open:hover { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+
+/* ---------- Строка состояния выбранной позиции ---------- */
+.ctn-status {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0 10px 10px;
+  padding: 6px 6px 6px 10px;
+  font-size: 12.5px;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+}
+.ctn-status[hidden] { display: none; }
+.ctn-st-tabs { display: flex; gap: 2px; padding-right: 8px; border-right: 1px solid #C4C4C4; }
+.ctn-st-tab {
+  min-width: 26px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  background: #F7F7F7;
+  border: 1px solid #C4C4C4;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.ctn-st-tab.on { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+.ctn-st-name { overflow: hidden; min-width: 0; white-space: nowrap; text-overflow: ellipsis; }
+.ctn-status .ctn-pill { margin-top: 0; }
+.ctn-st-params { display: flex; flex: 1 1 auto; gap: 14px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.ctn-st-param { padding-left: 12px; border-left: 1px solid #C4C4C4; }
+.ctn-st-sym { color: #64748B; }
+.ctn-st-actions { display: flex; flex: 0 0 auto; gap: 6px; margin-left: auto; }
+.ctn-st-btn {
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ctn-st-btn:hover { border-color: #0284C7; }
+.ctn-st-more.on { color: #FFFFFF; background: #0284C7; border-color: #0284C7; }
+.ctn-st-close { width: 30px; padding: 5px 0; }
+
+/* ---------- Выезжающая карточка «Параметры и связи» ---------- */
+.ctn-flyout {
+  position: absolute;
+  top: 52px;
+  right: 10px;
+  bottom: 62px;
+  z-index: 8;
+  width: 400px;
+  overflow-x: hidden;
+  max-width: calc(100% - 20px);
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #C4C4C4;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  opacity: 0;
+  transform: translateX(calc(100% + 24px));
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.ctn-flyout.open { opacity: 1; transform: none; pointer-events: auto; }
+.ctn-flyout .ctn-card { border: none; border-radius: 0; }
+.ctn-flyout .ctn-summary { margin: 0 10px 10px; }
+
+/* ---------- Окраска сред по ГОСТ 14202-69 ---------- */
+.ctn-line[data-media='water'] .ctn-pipe { stroke: #15803D; }
+.ctn-line[data-media='steam'] .ctn-pipe { stroke: #DC2626; }
+.ctn-line[data-media='air'] .ctn-pipe { stroke: #2563EB; }
+.ctn-line[data-media='alkali'] .ctn-pipe { stroke: #7C3AED; }
+/* Жёлтые предупреждающие кольца: радиоактивная среда */
+.ctn-rings { fill: none; stroke: #EAB308; stroke-width: 8; stroke-dasharray: 3 34; stroke-linecap: butt; }
+.ctn-line.is-iso .ctn-rings { stroke-width: 10; }
+.ctn-leg { font-size: 11.5px; font-weight: 600; fill: #475569; paint-order: stroke; stroke: #FFFFFF; stroke-width: 3px; }
+.ctn-legend-note { font-size: 10px !important; font-weight: 500 !important; fill: #64748B !important; }
+
+/* Точка соединения трубопроводов (ветвление); простое пересечение линий — без точки */
+.ctn-junction {
+  fill: #15803D;
+  stroke: #FFFFFF;
+  stroke-width: 1;
+}

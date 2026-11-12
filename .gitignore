@@ -1,0 +1,26 @@
+# Локальные зависимости и ОС
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Конфиги локальных инструментов и утилит запуска
+.claude/
+start_site.bat
+
+# Исходники и тяжёлые/сторонние 3D-материалы
+aemtech_models/
+docs/blender/
+*.blend
+*.blend1
+
+# Документы, PDF-источники, архивы и скриншоты
+*.pdf
+docs/sources/
+docs/screenshots/
+docs/archive/
+PROJECT_MAP.md
+
+# Временные бэкапы и скриншоты в корне
+*.png
+*.old.js
+*.backup.js
